@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8.android.demo
 
 import android.app.Application
+import android.bluetooth.BluetoothManager
 import android.util.Log
 import androidx.core.content.getSystemService
 import androidx.preference.PreferenceManager
@@ -9,6 +10,7 @@ import nl.tudelft.ipv8.*
 import nl.tudelft.ipv8.android.IPv8Android
 import nl.tudelft.ipv8.android.demo.service.DemoService
 import nl.tudelft.ipv8.android.keyvault.AndroidCryptoProvider
+import nl.tudelft.ipv8.android.messaging.bluetooth.BluetoothLeDiscovery
 import nl.tudelft.ipv8.android.peerdiscovery.NetworkServiceDiscovery
 import nl.tudelft.ipv8.attestation.trustchain.*
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainSQLiteStore
@@ -76,9 +78,15 @@ class DemoApplication : Application() {
         val randomWalk = RandomWalk.Factory()
         val randomChurn = RandomChurn.Factory()
         val periodicSimilarity = PeriodicSimilarity.Factory()
+
+        val nsd = NetworkServiceDiscovery.Factory(getSystemService()!!)
+        val bluetoothManager = getSystemService<BluetoothManager>()
+            ?: throw IllegalStateException("BluetoothManager not available")
+        val ble = BluetoothLeDiscovery.Factory(this, bluetoothManager)
+
         return OverlayConfiguration(
             DiscoveryCommunity.Factory(),
-            listOf(randomWalk, randomChurn, periodicSimilarity)
+            listOf(randomWalk, randomChurn, periodicSimilarity, nsd, ble)
         )
     }
 
@@ -95,10 +103,9 @@ class DemoApplication : Application() {
 
     private fun createDemoCommunity(): OverlayConfiguration<DemoCommunity> {
         val randomWalk = RandomWalk.Factory()
-        val nsd = NetworkServiceDiscovery.Factory(getSystemService()!!)
         return OverlayConfiguration(
             Overlay.Factory(DemoCommunity::class.java),
-            listOf(randomWalk, nsd)
+            listOf(randomWalk)
         )
     }
 

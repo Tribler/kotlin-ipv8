@@ -3,6 +3,8 @@ package nl.tudelft.ipv8.peerdiscovery
 import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.messaging.BaseAddress
+import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import kotlin.math.min
 
 class Network {
@@ -10,6 +12,11 @@ class Network {
      * All known addresses, mapped to (introduction peer MID, service ID)
      */
     val allAddresses: MutableMap<Address, Pair<String, String?>> = mutableMapOf()
+
+    /**
+     * All discovered Bluetooth addresses.
+     */
+    val bluetoothAddresses: MutableSet<BluetoothAddress> = mutableSetOf()
 
     /**
      * All verified peer objects (peer.address must be in [allAddresses])
@@ -61,6 +68,12 @@ class Network {
         }
     }
 
+    fun discoverBluetoothAddress(address: BluetoothAddress) {
+        synchronized(graphLock) {
+            bluetoothAddresses.add(address)
+        }
+    }
+
     /**
      * A peer has advertised some services he can use.
      *
@@ -87,12 +100,17 @@ class Network {
             // This may just be an address update
             for (known in verifiedPeers) {
                 if (known.mid == peer.mid) {
-                    known.address = peer.address
+                    if (!peer.address.isEmpty()) {
+                        known.address = peer.address
+                    }
                     if (!peer.lanAddress.isEmpty()) {
                         known.lanAddress = peer.lanAddress
                     }
                     if (!peer.wanAddress.isEmpty()) {
                         known.wanAddress = peer.wanAddress
+                    }
+                    if (peer.bluetoothAddress != null) {
+                        known.bluetoothAddress = peer.bluetoothAddress
                     }
                     return
                 }
@@ -191,6 +209,15 @@ class Network {
         }
     }
 
+    fun getConnectableBluetoothAddresses(): Set<BluetoothAddress> {
+        synchronized(graphLock) {
+            val connectedAddresses = verifiedPeers
+                .mapNotNull { it.bluetoothAddress }
+                .toSet()
+            return bluetoothAddresses - connectedAddresses
+        }
+    }
+
     /**
      * Get a verified peer by its IP address. If multiple peers use the same IP address,
      * this method returns only one of those peers.
@@ -198,9 +225,25 @@ class Network {
      * @param address The address to search for.
      * @return The [Peer] object for this address or null.
      */
-    fun getVerifiedByAddress(address: Address): Peer? {
+    fun getVerifiedByAddress(address: BaseAddress): Peer? {
         synchronized(graphLock) {
-            return verifiedPeers.find { it.address == address }
+            return when (address) {
+                is Address -> verifiedPeers.find { it.address == address }
+                is BluetoothAddress -> getVerifiedByBluetoothAddress(address)
+                else -> null
+            }
+        }
+    }
+
+    /**
+     * Get a verified peer by its Bluetooth address.
+     *
+     * @param address The address to search for.
+     * @return The [Peer] object for this address or null.
+     */
+    fun getVerifiedByBluetoothAddress(address: BluetoothAddress): Peer? {
+        synchronized(graphLock) {
+            return verifiedPeers.find { it.bluetoothAddress == address }
         }
     }
 

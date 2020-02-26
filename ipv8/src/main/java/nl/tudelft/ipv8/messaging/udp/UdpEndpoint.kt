@@ -14,7 +14,7 @@ private val logger = KotlinLogging.logger {}
 open class UdpEndpoint(
     private val port: Int,
     private val ip: InetAddress
-) : Endpoint() {
+) : Endpoint<Address>() {
     private var socket: DatagramSocket? = null
 
     private val job = SupervisorJob()

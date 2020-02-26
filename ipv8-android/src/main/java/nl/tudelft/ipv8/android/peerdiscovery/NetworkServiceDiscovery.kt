@@ -149,16 +149,15 @@ class NetworkServiceDiscovery(
     override fun load() {
         logger.debug { "NetworkServiceDiscovery load" }
 
-        val endpoint = overlay.endpoint
-        if (endpoint is UdpEndpoint) {
+        val endpoint = overlay.endpoint.udpEndpoint
+        if (endpoint != null) {
             val socketPort = endpoint.getSocketPort()
             val serviceName = overlay.serviceId + "_" + Random.nextInt(10000)
             logger.debug { "Registering service $serviceName on port $socketPort" }
             registerService(socketPort, serviceName)
-        } else {
-            logger.error { "Overlay endpoint is not UdpEndpoint" }
+
+            discoverServices()
         }
-        discoverServices()
     }
 
     override fun takeStep() {

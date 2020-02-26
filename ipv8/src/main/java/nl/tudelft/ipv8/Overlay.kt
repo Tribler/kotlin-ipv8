@@ -2,6 +2,7 @@ package nl.tudelft.ipv8
 
 import nl.tudelft.ipv8.keyvault.CryptoProvider
 import nl.tudelft.ipv8.messaging.Endpoint
+import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.peerdiscovery.Network
 
@@ -12,7 +13,7 @@ interface Overlay : EndpointListener {
     val serviceId: String
 
     var myPeer: Peer
-    var endpoint: Endpoint
+    var endpoint: EndpointAggregator
     var network: Network
     var maxPeers: Int
     var cryptoProvider: CryptoProvider

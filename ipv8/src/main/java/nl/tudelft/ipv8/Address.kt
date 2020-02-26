@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8
 
 import nl.tudelft.ipv8.messaging.*
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 
@@ -10,7 +11,7 @@ import java.net.SocketAddress
 data class Address(
     val ip: String,
     val port: Int
-) : Serializable {
+) : Serializable, BaseAddress {
     override fun serialize(): ByteArray {
         val parts = ip.split(".")
         val ipBytes = ByteArray(4)

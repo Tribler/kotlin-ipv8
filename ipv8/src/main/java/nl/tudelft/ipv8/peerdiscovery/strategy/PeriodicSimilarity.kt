@@ -11,7 +11,7 @@ class PeriodicSimilarity(
     override fun takeStep() {
         val peer = overlay.network.getRandomPeer()
         if (peer != null) {
-            overlay.sendSimilarityRequest(peer.address)
+            overlay.sendSimilarityRequest(peer)
         }
     }
 

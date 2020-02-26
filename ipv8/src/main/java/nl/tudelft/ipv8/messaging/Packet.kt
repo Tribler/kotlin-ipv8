@@ -4,12 +4,13 @@ import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.exception.PacketDecodingException
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
+import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.messaging.payload.BinMemberAuthenticationPayload
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
 import java.lang.IllegalArgumentException
 
 class Packet(
-    val source: Address,
+    val source: BaseAddress,
     val data: ByteArray
 ) {
     /**
@@ -72,7 +73,7 @@ class Packet(
             throw PacketDecodingException("Incoming packet has an invalid signature")
 
         // Return the peer and remaining payloads
-        val peer = Peer(publicKey, source)
+        val peer = Peer.createFromAddress(publicKey, source)
         val remainder = data.copyOfRange(authOffset + authSize,
             data.size - publicKey.getSignatureLength())
         return Pair(peer, remainder)

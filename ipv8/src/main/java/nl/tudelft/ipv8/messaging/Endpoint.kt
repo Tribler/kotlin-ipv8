@@ -5,7 +5,7 @@ import nl.tudelft.ipv8.Address
 
 private val logger = KotlinLogging.logger {}
 
-abstract class Endpoint {
+abstract class Endpoint<A> {
     private val listeners = mutableListOf<EndpointListener>()
     private var estimatedLan: Address? = null
 
@@ -43,7 +43,7 @@ abstract class Endpoint {
     }
 
     abstract fun isOpen(): Boolean
-    abstract fun send(address: Address, data: ByteArray)
+    abstract fun send(address: A, data: ByteArray)
     abstract fun open()
     abstract fun close()
 }

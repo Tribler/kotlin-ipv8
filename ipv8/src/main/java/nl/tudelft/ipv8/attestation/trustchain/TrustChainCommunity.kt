@@ -12,6 +12,7 @@ import nl.tudelft.ipv8.util.random
 import nl.tudelft.ipv8.attestation.trustchain.payload.*
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainStore
 import nl.tudelft.ipv8.attestation.trustchain.validation.ValidationErrors
+import nl.tudelft.ipv8.messaging.BaseAddress
 import nl.tudelft.ipv8.util.toHex
 import kotlin.coroutines.Continuation
 import kotlin.math.max
@@ -129,49 +130,49 @@ open class TrustChainCommunity(
      */
 
     /**
-     * Send a block to a specific address, or do a broadcast to known peers if no peer is specified.
+     * Send a block to a specific peer, or do a broadcast to known peers if no peer is specified.
      */
-    fun sendBlock(block: TrustChainBlock, address: Address? = null, ttl: Int = 1) {
-        if (address != null) {
-            logger.debug("Sending block to $address")
+    fun sendBlock(block: TrustChainBlock, peer: Peer? = null, ttl: Int = 1) {
+        if (peer != null) {
+            logger.debug("Sending block to $peer")
             val payload = HalfBlockPayload.fromHalfBlock(block)
             logger.debug("-> $payload")
             val packet = serializePacket(MessageId.HALF_BLOCK, payload, false)
-            send(address, packet)
+            send(peer, packet)
         } else {
             val payload = HalfBlockBroadcastPayload.fromHalfBlock(block, ttl.toUInt())
             logger.debug("-> $payload")
             val packet = serializePacket(MessageId.HALF_BLOCK_BROADCAST, payload, false)
             val randomPeers = getPeers().random(settings.broadcastFanout)
-            for (peer in randomPeers) {
-                send(peer.address, packet)
+            for (randomPeer in randomPeers) {
+                send(randomPeer, packet)
             }
             relayedBroadcasts.add(block.blockId)
         }
     }
 
     /**
-     * Send a half block pair to a specific address, or do a broadcast to known peers if no peer
+     * Send a half block pair to a specific peer, or do a broadcast to known peers if no peer
      * is specified.
      */
     fun sendBlockPair(
         block1: TrustChainBlock,
         block2: TrustChainBlock,
-        address: Address? = null,
+        peer: Peer? = null,
         ttl: UInt = 1u
     ) {
-        if (address != null) {
+        if (peer != null) {
             val payload = HalfBlockPairPayload.fromHalfBlocks(block1, block2)
             logger.debug("-> $payload")
             val packet = serializePacket(MessageId.HALF_BLOCK_PAIR, payload, false)
-            send(address, packet)
+            send(peer, packet)
         } else {
             val payload = HalfBlockPairBroadcastPayload.fromHalfBlocks(block1, block2, ttl)
             logger.debug("-> $payload")
             val packet = serializePacket(MessageId.HALF_BLOCK_PAIR_BROADCAST, payload,
                 false)
-            for (peer in network.getRandomPeers(settings.broadcastFanout)) {
-                send(peer.address, packet)
+            for (randomPeer in network.getRandomPeers(settings.broadcastFanout)) {
+                send(randomPeer, packet)
             }
             relayedBroadcasts.add(block1.blockId)
         }
@@ -252,7 +253,7 @@ open class TrustChainCommunity(
         val peer = network.getVerifiedByPublicKeyBin(block.linkPublicKey)
         if (peer != null) {
             // If there is a counterparty to sign, we send it
-            sendBlock(block, address = peer.address)
+            sendBlock(block, peer = peer)
         }
     }
 
@@ -290,7 +291,7 @@ open class TrustChainCommunity(
             logger.debug("-> $payload")
             val packet = serializePacket(MessageId.CRAWL_REQUEST, payload)
 
-            endpoint.send(peer.address, packet)
+            endpoint.send(peer, packet)
         }
 
         crawlRequestCache.remove(crawlId)
@@ -347,11 +348,11 @@ open class TrustChainCommunity(
      * We've received a half block, either because we sent a signed half block to someone or we are
      * crawling.
      */
-    internal fun onHalfBlock(sourceAddress: Address, payload: HalfBlockPayload) {
+    internal fun onHalfBlock(sourceAddress: BaseAddress, payload: HalfBlockPayload) {
         logger.debug("<- $payload")
 
         val publicKey = cryptoProvider.keyFromPublicBin(payload.publicKey)
-        val peer = Peer(publicKey, sourceAddress)
+        val peer = Peer.createFromAddress(publicKey, sourceAddress)
 
         scope.launch {
             try {
@@ -410,7 +411,7 @@ open class TrustChainCommunity(
             logger.debug("-> $payload")
             val packet = serializePacket(MessageId.EMPTY_CRAWL_RESPONSE,
                 responsePayload, false)
-            send(peer.address, packet)
+            send(peer, packet)
         } else {
             sendCrawlResponses(blocks, peer, payload.crawlId)
         }
@@ -435,7 +436,7 @@ open class TrustChainCommunity(
 
         logger.debug("-> $payload")
         val packet = serializePacket(MessageId.CRAWL_RESPONSE, payload, false)
-        send(peer.address, packet)
+        send(peer, packet)
     }
 
     /**
@@ -455,7 +456,7 @@ open class TrustChainCommunity(
         }
     }
 
-    private fun onCrawlResponse(sourceAddress: Address, payload: CrawlResponsePayload) {
+    private fun onCrawlResponse(sourceAddress: BaseAddress, payload: CrawlResponsePayload) {
         logger.debug("<- $payload")
 
         onHalfBlock(sourceAddress, payload.block)

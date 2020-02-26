@@ -5,9 +5,7 @@ import mu.KotlinLogging
 import nl.tudelft.ipv8.keyvault.CryptoProvider
 import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
 import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.messaging.Endpoint
-import nl.tudelft.ipv8.messaging.Packet
-import nl.tudelft.ipv8.messaging.Serializable
+import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.messaging.payload.*
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.addressIsLan
@@ -29,7 +27,7 @@ abstract class Community : Overlay {
     val messageHandlers = mutableMapOf<Int, (Packet) -> Unit>()
 
     override lateinit var myPeer: Peer
-    override lateinit var endpoint: Endpoint
+    override lateinit var endpoint: EndpointAggregator
     override lateinit var network: Network
     override var maxPeers: Int = 20
     override var cryptoProvider: CryptoProvider = JavaCryptoProvider
@@ -197,7 +195,7 @@ abstract class Community : Overlay {
             // TODO: Seems like a bad practice to send a packet in the create method...
             val packet = createPunctureRequest(requester.lanAddress, requester.wanAddress,
                 identifier)
-            send(intro.address, packet)
+            send(intro, packet)
         }
 
         logger.debug("-> $payload")
@@ -302,7 +300,9 @@ abstract class Community : Overlay {
 
     internal fun onPunctureRequestPacket(packet: Packet) {
         val payload = packet.getPayload(PunctureRequestPayload.Deserializer)
-        onPunctureRequest(packet.source, payload)
+        if (packet.source is Address) {
+            onPunctureRequest(packet.source, payload)
+        }
     }
 
     /*
@@ -332,7 +332,7 @@ abstract class Community : Overlay {
             payload.identifier
         )
 
-        send(peer.address, packet)
+        send(peer, packet)
     }
 
     open fun onIntroductionResponse(
@@ -423,7 +423,11 @@ abstract class Community : Overlay {
         send(target, packet)
     }
 
-    protected fun send(address: Address, data: ByteArray) {
+    protected fun send(peer: Peer, data: ByteArray) {
+        endpoint.send(peer, data)
+    }
+
+    protected fun send(address: BaseAddress, data: ByteArray) {
         val probablePeer = network.getVerifiedByAddress(address)
         if (probablePeer != null) {
             probablePeer.lastRequest = Date()
@@ -432,7 +436,7 @@ abstract class Community : Overlay {
     }
 
     companion object {
-        val DEFAULT_ADDRESSES = listOf<Address>(
+        val DEFAULT_ADDRESSES = listOf(
             // Dispersy
             // Address("130.161.119.206", 6421),
             // Address("130.161.119.206", 6422),
