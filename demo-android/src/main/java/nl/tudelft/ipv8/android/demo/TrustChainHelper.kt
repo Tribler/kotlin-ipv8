@@ -23,7 +23,7 @@ class TrustChainHelper(
      * Returns the number of blocks stored for the given public key.
      */
     fun getStoredBlockCountForUser(publicKeyBin: ByteArray): Long {
-        return trustChainCommunity.database.getStoredBlockCountForUser(publicKeyBin)
+        return trustChainCommunity.database.getBlockCount(publicKeyBin)
     }
 
     /**

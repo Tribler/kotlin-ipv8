@@ -8,6 +8,7 @@ import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver.Companion.IN_MEMOR
 import nl.tudelft.ipv8.attestation.trustchain.*
 import nl.tudelft.ipv8.keyvault.LibNaClSK
 import nl.tudelft.ipv8.keyvault.PrivateKey
+import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.sqldelight.Database
 import nl.tudelft.ipv8.util.hexToBytes
 import org.junit.Assert
@@ -302,5 +303,55 @@ class TrustChainStoreTest {
         Assert.assertEquals(2, store.getAllLinked(block1).size)
 
         Assert.assertEquals(3, store.getMutualBlocks(publicKey).size)
+    }
+
+    @Test
+    fun getBlockCount() {
+        val publicKey = getPrivateKey().pub().keyToBin()
+        val publicKey2 = defaultCryptoProvider.generateKey().pub().keyToBin()
+
+        val block1 = TrustChainBlock(
+            "custom1",
+            "hello".toByteArray(Charsets.US_ASCII),
+            publicKey,
+            1u,
+            ANY_COUNTERPARTY_PK,
+            0u,
+            GENESIS_HASH,
+            EMPTY_SIG,
+            Date()
+        )
+
+        val block2 = TrustChainBlock(
+            "custom1",
+            "hello".toByteArray(Charsets.US_ASCII),
+            publicKey,
+            2u,
+            publicKey,
+            1u,
+            GENESIS_HASH,
+            EMPTY_SIG,
+            Date()
+        )
+
+        val block3 = TrustChainBlock(
+            "custom1",
+            "hello".toByteArray(Charsets.US_ASCII),
+            publicKey2,
+            10u,
+            publicKey,
+            1u,
+            GENESIS_HASH,
+            EMPTY_SIG,
+            Date()
+        )
+
+        val store = createTrustChainStore()
+        store.addBlock(block1)
+        store.addBlock(block2)
+        store.addBlock(block3)
+
+        Assert.assertEquals(3, store.getBlockCount())
+        Assert.assertEquals(2, store.getBlockCount(publicKey))
     }
 }

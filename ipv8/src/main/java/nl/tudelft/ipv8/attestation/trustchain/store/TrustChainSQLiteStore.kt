@@ -172,7 +172,11 @@ class TrustChainSQLiteStore(
             .executeAsList()
     }
 
-    override fun getStoredBlockCountForUser(publicKey: ByteArray): Long {
-        return dao.getStoredBlockCountForUser(publicKey).executeAsOne()
+    override fun getBlockCount(publicKey: ByteArray?): Long {
+        return if (publicKey != null) {
+            dao.getBlockCountWithPublicKey(publicKey).executeAsOne()
+        } else {
+            dao.getBlockCount().executeAsOne()
+        }
     }
 }

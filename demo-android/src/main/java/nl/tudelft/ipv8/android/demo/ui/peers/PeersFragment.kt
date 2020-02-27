@@ -50,12 +50,6 @@ class PeersFragment : BaseFragment(R.layout.fragment_peers) {
     private fun loadNetworkInfo() {
         lifecycleScope.launchWhenStarted {
             while (isActive) {
-                val overlays = getIpv8().overlays
-
-                for ((_, overlay) in overlays) {
-                    logger.debug(overlay.javaClass.simpleName + ": " + overlay.getPeers().size + " peers")
-                }
-
                 val demoCommunity = getDemoCommunity()
                 val peers = demoCommunity.getPeers()
 
@@ -77,6 +71,9 @@ class PeersFragment : BaseFragment(R.layout.fragment_peers) {
                     R.plurals.x_peers, peers.size,
                     peers.size
                 )
+                val textColorResId = if (peers.isNotEmpty()) R.color.green else R.color.red
+                val textColor = resources.getColor(textColorResId, null)
+                binding.txtPeerCount.setTextColor(textColor)
                 binding.imgEmpty.isVisible = items.isEmpty()
 
                 delay(1000)
