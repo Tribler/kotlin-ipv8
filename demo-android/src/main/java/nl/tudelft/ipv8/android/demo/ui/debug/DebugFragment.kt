@@ -1,7 +1,14 @@
 package nl.tudelft.ipv8.android.demo.ui.debug
 
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.style.ForegroundColorSpan
 import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.text.buildSpannedString
+import androidx.core.text.inSpans
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.*
 import nl.tudelft.ipv8.Community
@@ -10,6 +17,7 @@ import nl.tudelft.ipv8.android.demo.databinding.FragmentDebugBinding
 import nl.tudelft.ipv8.android.demo.ui.BaseFragment
 import nl.tudelft.ipv8.android.demo.util.viewBinding
 import nl.tudelft.ipv8.util.toHex
+import java.util.*
 
 class DebugFragment : BaseFragment(R.layout.fragment_debug) {
     private val binding by viewBinding(FragmentDebugBinding::bind)
@@ -37,9 +45,30 @@ class DebugFragment : BaseFragment(R.layout.fragment_debug) {
             it.javaClass.simpleName + " (" + it.getPeers().size + " peers)"
         }
 
+        binding.txtOverlays.text = buildSpannedString {
+            ipv8.overlays.values.forEachIndexed { index, overlay ->
+                if (index > 0) append("\n")
+                append(overlay.javaClass.simpleName)
+                append(" (")
+                val textColorResId = if (overlay.getPeers().isNotEmpty()) R.color.green else R.color.red
+                val textColor = resources.getColor(textColorResId, null)
+                inSpans(ForegroundColorSpan(textColor)) {
+                    val peers = overlay.getPeers()
+                    val peersCountStr = resources.getQuantityString(
+                        R.plurals.x_peers, peers.size,
+                        peers.size
+                    )
+                    append(peersCountStr)
+                }
+                append(")")
+            }
+        }
+
+        updateBootstrapList()
+
         lifecycleScope.launch {
             val blockCount = withContext(Dispatchers.IO) {
-                getTrustChainCommunity().database.getAllBlocks().size
+                getTrustChainCommunity().database.getBlockCount(null)
             }
             binding.txtBlockCount.text = blockCount.toString()
         }
@@ -49,6 +78,30 @@ class DebugFragment : BaseFragment(R.layout.fragment_debug) {
                 getTrustChainCommunity().getChainLength()
             }
             binding.txtChainLength.text = chainLength.toString()
+        }
+    }
+
+    private fun updateBootstrapList() {
+        val demo = getDemoCommunity()
+        binding.bootstrapContainer.removeAllViews()
+        Community.DEFAULT_ADDRESSES.forEach { address ->
+            val lastResponse = demo.lastTrackerResponses[address]
+            val isAlive = lastResponse != null && Date().time - lastResponse.time < 120_000
+            val view = TextView(requireContext())
+            val layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            view.layoutParams = layoutParams
+            view.text = address.toString()
+            val resId = if (isAlive) R.drawable.indicator_online else
+                R.drawable.indicator_offline
+            val drawable = resources.getDrawable(resId, null)
+            view.setCompoundDrawablesWithIntrinsicBounds(null, null, drawable, null)
+            view.compoundDrawablePadding = resources.getDimensionPixelSize(R.dimen.indicator_padding)
+            view.typeface = Typeface.MONOSPACE
+            view.setTextColor(Color.BLACK)
+            binding.bootstrapContainer.addView(view)
         }
     }
 }

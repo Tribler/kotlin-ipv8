@@ -2,6 +2,8 @@ package nl.tudelft.ipv8.android.demo
 
 import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.Community
+import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.messaging.payload.IntroductionResponsePayload
 import java.util.*
 
 class DemoCommunity : Community() {
@@ -9,17 +11,19 @@ class DemoCommunity : Community() {
 
     val discoveredAddressesContacted: MutableMap<Address, Date> = mutableMapOf()
 
+    val lastTrackerResponses = mutableMapOf<Address, Date>()
+
     override fun walkTo(address: Address) {
         super.walkTo(address)
 
         discoveredAddressesContacted[address] = Date()
     }
 
-    override fun load() {
-        super.load()
-    }
+    override fun onIntroductionResponse(peer: Peer, payload: IntroductionResponsePayload) {
+        super.onIntroductionResponse(peer, payload)
 
-    override fun unload() {
-        super.unload()
+        if (peer.address in DEFAULT_ADDRESSES) {
+            lastTrackerResponses[peer.address] = Date()
+        }
     }
 }
