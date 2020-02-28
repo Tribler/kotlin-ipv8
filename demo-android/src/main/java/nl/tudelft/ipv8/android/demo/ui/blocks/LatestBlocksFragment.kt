@@ -2,15 +2,13 @@ package nl.tudelft.ipv8.android.demo.ui.blocks
 
 import androidx.recyclerview.widget.LinearLayoutManager
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
-import kotlin.math.min
 
 class LatestBlocksFragment : BlocksFragment() {
     override val isNewBlockAllowed = false
 
     override fun getBlocks(): List<TrustChainBlock> {
-        val allBlocks = getTrustChainCommunity().database.getAllBlocks()
+        return getTrustChainCommunity().database.getRecentBlocks(1000)
             .sortedByDescending { it.insertTime }
-        return allBlocks.subList(0, min(1000, allBlocks.size))
     }
 
     override fun getPublicKey(): ByteArray {

@@ -5,6 +5,7 @@ import android.text.InputType
 import android.view.*
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
@@ -43,10 +44,6 @@ open class BlocksFragment : BaseFragment(R.layout.fragment_blocks) {
                 updateView()
                 delay(1000)
             }
-        }
-
-        lifecycleScope.launchWhenStarted {
-            crawlChain()
         }
 
         adapter.registerRenderer(BlockItemRenderer(
@@ -96,6 +93,14 @@ open class BlocksFragment : BaseFragment(R.layout.fragment_blocks) {
         return when (item.itemId) {
             R.id.item_new_block -> {
                 showNewBlockDialog()
+                true
+            }
+            R.id.item_crawl -> {
+                lifecycleScope.launch {
+                    Toast.makeText(requireContext(), "Crawl started", Toast.LENGTH_SHORT).show()
+                    crawlChain()
+                    Toast.makeText(requireContext(), "Crawl finished", Toast.LENGTH_SHORT).show()
+                }
                 true
             }
             else -> super.onOptionsItemSelected(item)

@@ -6,4 +6,9 @@
         android:title="New Block"
         android:icon="@drawable/ic_add_black_24dp"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/item_crawl"
+        android:title="Crawl"
+        android:icon="@drawable/ic_refresh_white_24dp"
+        app:showAsAction="always" />
 </menu>
