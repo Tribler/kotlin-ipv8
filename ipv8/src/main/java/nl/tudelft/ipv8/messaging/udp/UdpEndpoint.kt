@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8.messaging.udp
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.NonCancellable.isActive
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.messaging.Endpoint
@@ -15,10 +16,12 @@ open class UdpEndpoint(
     private val ip: InetAddress
 ) : Endpoint() {
     private var socket: DatagramSocket? = null
-    private var bindThread: BindThread? = null
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
+
+    private var bindJob: Job? = null
+    private var lanEstimationJob: Job? = null
 
     override fun isOpen(): Boolean {
         return socket?.isBound == true
@@ -48,9 +51,7 @@ open class UdpEndpoint(
 
         startLanEstimation()
 
-        val bindThread = BindThread(socket)
-        bindThread.start()
-        this.bindThread = bindThread
+        bindJob = bindSocket(socket)
     }
 
     /**
@@ -72,18 +73,29 @@ open class UdpEndpoint(
 
         stopLanEstimation()
 
+        bindJob?.cancel()
+        bindJob = null
+
         socket?.close()
         socket = null
-
-        bindThread = null
     }
 
     open fun startLanEstimation() {
+        lanEstimationJob = scope.launch {
+            while (isActive) {
+                estimateLan()
+                delay(60_000)
+            }
+        }
+    }
+
+    private fun estimateLan() {
         val interfaces = NetworkInterface.getNetworkInterfaces()
         for (intf in interfaces) {
             for (intfAddr in intf.interfaceAddresses) {
                 if (intfAddr.address is Inet4Address && !intfAddr.address.isLoopbackAddress) {
-                    val estimatedAddress = Address(intfAddr.address.hostAddress, getSocketPort())
+                    val estimatedAddress =
+                        Address(intfAddr.address.hostAddress, getSocketPort())
                     setEstimatedLan(estimatedAddress)
                 }
             }
@@ -91,33 +103,33 @@ open class UdpEndpoint(
     }
 
     open fun stopLanEstimation() {
+        lanEstimationJob?.cancel()
+        lanEstimationJob = null
     }
 
     fun getSocketPort(): Int {
         return socket?.localPort ?: port
     }
 
-    inner class BindThread(
-        private val socket: DatagramSocket
-    ) : Thread() {
-        override fun run() {
-            try {
-                val receiveData = ByteArray(1500)
-                while (isAlive) {
-                    val receivePacket = DatagramPacket(receiveData, receiveData.size)
+    private fun bindSocket(socket: DatagramSocket) = scope.launch {
+        try {
+            val receiveData = ByteArray(1500)
+            while (isActive) {
+                val receivePacket = DatagramPacket(receiveData, receiveData.size)
+                withContext(Dispatchers.IO) {
                     socket.receive(receivePacket)
-                    val sourceAddress =
-                        Address(receivePacket.address.hostAddress, receivePacket.port)
-                    val packet =
-                        Packet(sourceAddress, receivePacket.data.copyOf(receivePacket.length))
-                    logger.debug(
-                        "Received packet (${receivePacket.length} B) from $sourceAddress"
-                    )
-                    notifyListeners(packet)
                 }
-            } catch (e: IOException) {
-                e.printStackTrace()
+                val sourceAddress =
+                    Address(receivePacket.address.hostAddress, receivePacket.port)
+                val packet =
+                    Packet(sourceAddress, receivePacket.data.copyOf(receivePacket.length))
+                logger.debug(
+                    "Received packet (${receivePacket.length} B) from $sourceAddress"
+                )
+                notifyListeners(packet)
             }
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
 }
