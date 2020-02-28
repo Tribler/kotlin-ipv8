@@ -92,7 +92,7 @@ object IPv8Android {
                 bleAdvertiser, network)
 
             val endpointAggregator = EndpointAggregator(
-                null,
+                udpEndpoint,
                 bluetoothEndpoint
             )
 

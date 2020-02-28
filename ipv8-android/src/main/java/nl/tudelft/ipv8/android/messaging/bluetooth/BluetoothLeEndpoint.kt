@@ -6,11 +6,8 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
-import nl.tudelft.ipv8.messaging.Endpoint
-import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.SERIALIZED_PUBLIC_KEY_SIZE
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothEndpoint

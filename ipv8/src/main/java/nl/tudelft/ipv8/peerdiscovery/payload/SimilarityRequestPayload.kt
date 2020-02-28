@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.peerdiscovery.payload
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.messaging.payload.ConnectionType
 import nl.tudelft.ipv8.util.hexToBytes
@@ -8,8 +8,8 @@ import nl.tudelft.ipv8.util.toHex
 
 data class SimilarityRequestPayload(
     val identifier: Int,
-    val lanAddress: Address,
-    val wanAddress: Address,
+    val lanAddress: IPv4Address,
+    val wanAddress: IPv4Address,
     val connectionType: ConnectionType,
 
     /**
@@ -33,10 +33,10 @@ data class SimilarityRequestPayload(
             var localOffset = 0
             val identifier = deserializeUShort(buffer, offset)
             localOffset += SERIALIZED_USHORT_SIZE
-            val (lanAddress, _) = Address.deserialize(buffer, offset + localOffset)
-            localOffset += Address.SERIALIZED_SIZE
-            val (wanAddress, _) = Address.deserialize(buffer, offset + localOffset)
-            localOffset += Address.SERIALIZED_SIZE
+            val (lanAddress, _) = IPv4Address.deserialize(buffer, offset + localOffset)
+            localOffset += IPv4Address.SERIALIZED_SIZE
+            val (wanAddress, _) = IPv4Address.deserialize(buffer, offset + localOffset)
+            localOffset += IPv4Address.SERIALIZED_SIZE
             val (connectionType, _) = ConnectionType.deserialize(buffer, offset + localOffset)
             localOffset++
             val preferenceListSerialized = buffer.copyOfRange(offset + localOffset, buffer.size)

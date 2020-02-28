@@ -1,11 +1,10 @@
 package nl.tudelft.ipv8.peerdiscovery
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.messaging.BaseAddress
+import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.*
 import nl.tudelft.ipv8.peerdiscovery.payload.PingPayload
@@ -151,7 +150,7 @@ class DiscoveryCommunity : Community(), PingOverlay {
     }
 
     internal fun onPing(
-        address: BaseAddress,
+        address: Address,
         payload: PingPayload
     ) {
         logger.debug("<- $payload")

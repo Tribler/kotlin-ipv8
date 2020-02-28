@@ -1,7 +1,6 @@
 package nl.tudelft.ipv8
 
 import nl.tudelft.ipv8.keyvault.CryptoProvider
-import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.peerdiscovery.Network
@@ -18,8 +17,8 @@ interface Overlay : EndpointListener {
     var maxPeers: Int
     var cryptoProvider: CryptoProvider
 
-    var myEstimatedWan: Address
-    var myEstimatedLan: Address
+    var myEstimatedWan: IPv4Address
+    var myEstimatedLan: IPv4Address
 
     private val globalTime: ULong
         get() = myPeer.lamportTimestamp
@@ -65,7 +64,7 @@ interface Overlay : EndpointListener {
      *
      * @param address The address to walk to.
      */
-    fun walkTo(address: Address)
+    fun walkTo(address: IPv4Address)
 
     /**
      * Get a new IP address to walk to from a random, or selected peer.
@@ -82,7 +81,7 @@ interface Overlay : EndpointListener {
     /**
      * Get the list of addresses we can walk to on this overlay.
      */
-    fun getWalkableAddresses(): List<Address>
+    fun getWalkableAddresses(): List<IPv4Address>
 
     /**
      * Get a peer for introduction.

@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.peerdiscovery.payload
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.messaging.payload.ConnectionType
 import nl.tudelft.ipv8.util.toHex
 import org.junit.Assert.assertEquals
@@ -10,8 +10,8 @@ class SimilarityRequestPayloadTest {
     @Test
     fun serializeAndDeserialize() {
         val identifier = 1
-        val lan = Address("1.2.3.4", 1234)
-        val wan = Address("2.2.3.4", 2234)
+        val lan = IPv4Address("1.2.3.4", 1234)
+        val wan = IPv4Address("2.2.3.4", 2234)
         val connectionType = ConnectionType.UNKNOWN
         val preferenceList = listOf("7e313685c1912a141279f8248fc8db5899c5df5a", "60793bdb9cc0b60c96f88069d78aee327a6241d2")
         val payload = SimilarityRequestPayload(identifier, lan, wan, connectionType, preferenceList)

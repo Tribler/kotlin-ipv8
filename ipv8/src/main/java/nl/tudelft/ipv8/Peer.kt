@@ -1,9 +1,8 @@
 package nl.tudelft.ipv8
 
 import nl.tudelft.ipv8.keyvault.Key
-import nl.tudelft.ipv8.messaging.BaseAddress
+import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
-import nl.tudelft.ipv8.messaging.bluetooth.BluetoothConnection
 import nl.tudelft.ipv8.util.toHex
 import java.util.*
 import kotlin.math.max
@@ -17,17 +16,17 @@ data class Peer(
     /**
      * The address of this peer it contacted us from (can be LAN or WAN).
      */
-    var address: Address = Address.EMPTY,
+    var address: IPv4Address = IPv4Address.EMPTY,
 
     /**
      * The LAN address of this peer they believe they have.
      */
-    var lanAddress: Address = Address.EMPTY,
+    var lanAddress: IPv4Address = IPv4Address.EMPTY,
 
     /**
      * The WAN address of this peer they believe they have.
      */
-    var wanAddress: Address = Address.EMPTY,
+    var wanAddress: IPv4Address = IPv4Address.EMPTY,
 
     /**
      * The discovered Bluetooth address of a nearby peer.
@@ -109,9 +108,9 @@ data class Peer(
     companion object {
         const val MAX_PINGS = 5
 
-        fun createFromAddress(publicKey: Key, source: BaseAddress): Peer {
+        fun createFromAddress(publicKey: Key, source: Address): Peer {
             return when (val address = source) {
-                is Address -> Peer(publicKey, address = address)
+                is IPv4Address -> Peer(publicKey, address = address)
                 is BluetoothAddress -> Peer(publicKey, bluetoothAddress = address)
                 else -> Peer(publicKey)
             }

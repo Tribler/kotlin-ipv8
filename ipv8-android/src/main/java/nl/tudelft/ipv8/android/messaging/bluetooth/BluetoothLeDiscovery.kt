@@ -5,11 +5,9 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
-import android.util.Log
 import kotlinx.coroutines.*
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Overlay
-import nl.tudelft.ipv8.android.IPv8Android
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
 
@@ -43,8 +41,8 @@ class BluetoothLeDiscovery(
 
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
-            //val success = device.fetchUuidsWithSdp()
-            //Log.d(TAG, "onScanResult $callbackType " + device.address + " " + device.name + " " + success + " " + device.uuids)
+            // val success = device.fetchUuidsWithSdp()
+            // Log.d(TAG, "onScanResult $callbackType " + device.address + " " + device.name + " " + success + " " + device.uuids)
             val uuids = result.scanRecord?.serviceUuids?.map {
                 it.uuid
             } ?: listOf()

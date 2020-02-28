@@ -19,8 +19,8 @@ abstract class Community : Overlay {
     protected val prefix: ByteArray
         get() = ByteArray(0) + 0.toByte() + VERSION + serviceId.hexToBytes()
 
-    override var myEstimatedWan: Address = Address.EMPTY
-    override var myEstimatedLan: Address = Address.EMPTY
+    override var myEstimatedWan: IPv4Address = IPv4Address.EMPTY
+    override var myEstimatedLan: IPv4Address = IPv4Address.EMPTY
 
     private var lastBootstrap: Date? = null
 
@@ -70,7 +70,7 @@ abstract class Community : Overlay {
         }
     }
 
-    override fun walkTo(address: Address) {
+    override fun walkTo(address: IPv4Address) {
         val packet = createIntroductionRequest(address)
         send(address, packet)
     }
@@ -109,7 +109,7 @@ abstract class Community : Overlay {
         }
     }
 
-    override fun getWalkableAddresses(): List<Address> {
+    override fun getWalkableAddresses(): List<IPv4Address> {
         return network.getWalkableAddresses(serviceId)
     }
 
@@ -146,7 +146,7 @@ abstract class Community : Overlay {
         }
     }
 
-    override fun onEstimatedLanChanged(address: Address) {
+    override fun onEstimatedLanChanged(address: IPv4Address) {
         myEstimatedLan = address
     }
 
@@ -154,7 +154,7 @@ abstract class Community : Overlay {
      * Introduction and puncturing requests creation
      */
 
-    internal fun createIntroductionRequest(socketAddress: Address): ByteArray {
+    internal fun createIntroductionRequest(socketAddress: IPv4Address): ByteArray {
         val globalTime = claimGlobalTime()
         val payload = IntroductionRequestPayload(
             socketAddress,
@@ -177,8 +177,8 @@ abstract class Community : Overlay {
         prefix: ByteArray = this.prefix
     ): ByteArray {
         val intro = introduction ?: getPeerForIntroduction(exclude = requester)
-        val introductionLan = intro?.lanAddress ?: Address.EMPTY
-        val introductionWan = intro?.wanAddress ?: Address.EMPTY
+        val introductionLan = intro?.lanAddress ?: IPv4Address.EMPTY
+        val introductionWan = intro?.wanAddress ?: IPv4Address.EMPTY
 
         val payload = IntroductionResponsePayload(
             requester.address,
@@ -203,7 +203,7 @@ abstract class Community : Overlay {
         return serializePacket(MessageId.INTRODUCTION_RESPONSE, payload, prefix = prefix)
     }
 
-    internal fun createPuncture(lanWalker: Address, wanWalker: Address, identifier: Int): ByteArray {
+    internal fun createPuncture(lanWalker: IPv4Address, wanWalker: IPv4Address, identifier: Int): ByteArray {
         val payload = PuncturePayload(lanWalker, wanWalker, identifier)
 
         logger.debug("-> $payload")
@@ -211,7 +211,11 @@ abstract class Community : Overlay {
         return serializePacket(MessageId.PUNCTURE, payload)
     }
 
-    internal fun createPunctureRequest(lanWalker: Address, wanWalker: Address, identifier: Int): ByteArray {
+    internal fun createPunctureRequest(
+        lanWalker: IPv4Address,
+        wanWalker: IPv4Address,
+        identifier: Int
+    ): ByteArray {
         logger.debug("-> punctureRequest")
         val payload = PunctureRequestPayload(lanWalker, wanWalker, identifier)
         return serializePacket(MessageId.PUNCTURE_REQUEST, payload, sign = false)
@@ -300,7 +304,7 @@ abstract class Community : Overlay {
 
     internal fun onPunctureRequestPacket(packet: Packet) {
         val payload = packet.getPayload(PunctureRequestPayload.Deserializer)
-        if (packet.source is Address) {
+        if (packet.source is IPv4Address) {
             onPunctureRequest(packet.source, payload)
         }
     }
@@ -381,7 +385,7 @@ abstract class Community : Overlay {
 
             // Assume LAN is same as ours (e.g. multiple instances running on a local machine),
             // and port same as for WAN (works only if NAT does not change port)
-            discoverAddress(peer, Address(myEstimatedLan.ip, payload.wanIntroductionAddress.port),
+            discoverAddress(peer, IPv4Address(myEstimatedLan.ip, payload.wanIntroductionAddress.port),
                 serviceId)
         }
     }
@@ -391,7 +395,7 @@ abstract class Community : Overlay {
         network.discoverServices(peer, listOf(serviceId))
     }
 
-    protected open fun discoverAddress(peer: Peer, address: Address, serviceId: String) {
+    protected open fun discoverAddress(peer: Peer, address: IPv4Address, serviceId: String) {
         // Prevent discovering its own address
         if (address != myEstimatedLan && address != myEstimatedWan && !address.isEmpty()) {
             network.discoverAddress(peer, address, serviceId)
@@ -407,7 +411,7 @@ abstract class Community : Overlay {
     }
 
     internal open fun onPunctureRequest(
-        address: Address,
+        address: IPv4Address,
         payload: PunctureRequestPayload
     ) {
         logger.debug("<- $payload")
@@ -427,7 +431,7 @@ abstract class Community : Overlay {
         endpoint.send(peer, data)
     }
 
-    protected fun send(address: BaseAddress, data: ByteArray) {
+    protected fun send(address: Address, data: ByteArray) {
         val probablePeer = network.getVerifiedByAddress(address)
         if (probablePeer != null) {
             probablePeer.lastRequest = Date()
@@ -453,9 +457,9 @@ abstract class Community : Overlay {
             // Address("81.171.27.194", 6527),
             // Address("81.171.27.194", 6528)
             // py-ipv8 + LibNaCL
-            Address("131.180.27.161", 6427),
+            IPv4Address("131.180.27.161", 6427),
             // kotlin-ipv8
-            Address("131.180.27.188", 1337)
+            IPv4Address("131.180.27.188", 1337)
         )
 
         // Timeout before we bootstrap again (bootstrap kills performance)

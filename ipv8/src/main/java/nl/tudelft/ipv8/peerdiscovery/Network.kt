@@ -1,9 +1,9 @@
 package nl.tudelft.ipv8.peerdiscovery
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.messaging.BaseAddress
+import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import kotlin.math.min
 
@@ -11,7 +11,7 @@ class Network {
     /**
      * All known addresses, mapped to (introduction peer MID, service ID)
      */
-    val allAddresses: MutableMap<Address, Pair<String, String?>> = mutableMapOf()
+    val allAddresses: MutableMap<IPv4Address, Pair<String, String?>> = mutableMapOf()
 
     /**
      * All discovered Bluetooth addresses.
@@ -26,7 +26,7 @@ class Network {
     /**
      * Peers we should not add to the network (e.g. bootstrap peers)
      */
-    val blacklist = mutableSetOf<Address>()
+    val blacklist = mutableSetOf<IPv4Address>()
 
     /**
      * Excluded mids
@@ -52,7 +52,7 @@ class Network {
      * @param address The introduced address.
      * @param serviceId The service through which we discovered the peer.
      */
-    fun discoverAddress(peer: Peer, address: Address, serviceId: String? = null) {
+    fun discoverAddress(peer: Peer, address: IPv4Address, serviceId: String? = null) {
         if (address in blacklist) {
             // TODO: Do we need to add the verified peer as it is already added in Community?
             addVerifiedPeer(peer)
@@ -179,14 +179,14 @@ class Network {
      *
      * @param serviceId The service ID to filter on.
      */
-    fun getWalkableAddresses(serviceId: String? = null): List<Address> {
+    fun getWalkableAddresses(serviceId: String? = null): List<IPv4Address> {
         synchronized(graphLock) {
             val known = if (serviceId != null) getPeersForService(serviceId) else verifiedPeers
             val knownAddresses = known.map { it.address }
             var out = (allAddresses.keys.toSet() - knownAddresses).toList()
 
             if (serviceId != null) {
-                val newOut = mutableListOf<Address>()
+                val newOut = mutableListOf<IPv4Address>()
 
                 for (address in out) {
                     val (introPeer, service) = allAddresses[address] ?: return listOf()
@@ -225,10 +225,10 @@ class Network {
      * @param address The address to search for.
      * @return The [Peer] object for this address or null.
      */
-    fun getVerifiedByAddress(address: BaseAddress): Peer? {
+    fun getVerifiedByAddress(address: Address): Peer? {
         synchronized(graphLock) {
             return when (address) {
-                is Address -> verifiedPeers.find { it.address == address }
+                is IPv4Address -> verifiedPeers.find { it.address == address }
                 is BluetoothAddress -> getVerifiedByBluetoothAddress(address)
                 else -> null
             }
@@ -265,7 +265,7 @@ class Network {
      * @param peer The peer to get the introductions for.
      * @return A list of the introduced addresses.
      */
-    fun getIntroductionFrom(peer: Peer): List<Address> {
+    fun getIntroductionFrom(peer: Peer): List<IPv4Address> {
         synchronized(graphLock) {
             return allAddresses
                 .filter { it.value.first == peer.mid }
@@ -278,7 +278,7 @@ class Network {
      *
      * @param address The address to remove.
      */
-    fun removeByAddress(address: Address) {
+    fun removeByAddress(address: IPv4Address) {
         synchronized(graphLock) {
             allAddresses.remove(address)
             verifiedPeers.removeAll { it.address == address }

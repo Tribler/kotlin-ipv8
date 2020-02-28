@@ -63,10 +63,10 @@ class CommunityTest {
 
         val community = getCommunity()
 
-        community.myEstimatedLan = Address("2.2.3.4", 2234)
-        community.myEstimatedWan = Address("3.2.3.4", 3234)
+        community.myEstimatedLan = IPv4Address("2.2.3.4", 2234)
+        community.myEstimatedWan = IPv4Address("3.2.3.4", 3234)
         val packet = community.createIntroductionRequest(
-            Address("1.2.3.4", 1234)
+            IPv4Address("1.2.3.4", 1234)
         )
         community.onPacket(Packet(myPeer.address, packet))
     }
@@ -75,10 +75,10 @@ class CommunityTest {
     fun createIntroductionRequest() {
         val community = spyk(getCommunity())
 
-        community.myEstimatedLan = Address("2.2.3.4", 2234)
-        community.myEstimatedWan = Address("3.2.3.4", 3234)
+        community.myEstimatedLan = IPv4Address("2.2.3.4", 2234)
+        community.myEstimatedWan = IPv4Address("3.2.3.4", 3234)
         community.createIntroductionRequest(
-            Address("1.2.3.4", 1234)
+            IPv4Address("1.2.3.4", 1234)
         )
     }
 
@@ -86,14 +86,14 @@ class CommunityTest {
     fun createIntroductionResponse() {
         val community = spyk(getCommunity())
 
-        community.myEstimatedLan = Address("2.2.3.4", 2234)
-        community.myEstimatedWan = Address("3.2.3.4", 3234)
-        every { community.getPeers() } returns listOf(Peer(JavaCryptoProvider.generateKey(), Address("5.2.3.4", 5234)))
+        community.myEstimatedLan = IPv4Address("2.2.3.4", 2234)
+        community.myEstimatedWan = IPv4Address("3.2.3.4", 3234)
+        every { community.getPeers() } returns listOf(Peer(JavaCryptoProvider.generateKey(), IPv4Address("5.2.3.4", 5234)))
         val peer = Peer(
             defaultCryptoProvider.generateKey().pub(),
-            Address("1.2.3.4", 1234),
-            Address("1.2.3.4", 1234),
-            Address("1.2.3.4", 1234)
+            IPv4Address("1.2.3.4", 1234),
+            IPv4Address("1.2.3.4", 1234),
+            IPv4Address("1.2.3.4", 1234)
         )
         community.createIntroductionResponse(
             peer,
@@ -107,14 +107,14 @@ class CommunityTest {
         val myPeer = Peer(myPrivateKey)
         val community = spyk(getCommunity())
 
-        community.myEstimatedLan = Address("2.2.3.4", 2234)
-        community.myEstimatedWan = Address("3.2.3.4", 3234)
-        every { community.getPeers() } returns listOf(Peer(JavaCryptoProvider.generateKey(), Address("5.2.3.4", 5234)))
+        community.myEstimatedLan = IPv4Address("2.2.3.4", 2234)
+        community.myEstimatedWan = IPv4Address("3.2.3.4", 3234)
+        every { community.getPeers() } returns listOf(Peer(JavaCryptoProvider.generateKey(), IPv4Address("5.2.3.4", 5234)))
         val peer = Peer(
             defaultCryptoProvider.generateKey().pub(),
-            Address("1.2.3.4", 1234),
-            Address("1.2.3.4", 1234),
-            Address("1.2.3.4", 1234)
+            IPv4Address("1.2.3.4", 1234),
+            IPv4Address("1.2.3.4", 1234),
+            IPv4Address("1.2.3.4", 1234)
         )
         val packet = community.createIntroductionResponse(
             peer,
@@ -167,8 +167,8 @@ class CommunityTest {
     fun createPuncture() {
         val community = spyk(getCommunity())
 
-        val lanWalker = Address("1.2.3.4", 1234)
-        val wanWalker = Address("2.3.4.5", 2345)
+        val lanWalker = IPv4Address("1.2.3.4", 1234)
+        val wanWalker = IPv4Address("2.3.4.5", 2345)
         val identifier = 1
         val payload = community.createPuncture(lanWalker, wanWalker, identifier)
         Assert.assertEquals("000260793bdb9cc0b60c96f88069d78aee327a6241d2f9004a4c69624e61434c504b3a7dc013cef4be5e4e051616a9b3cd9c8d8eb5192f037f3104f6323e43d83a934161ef4f7fe7ea4443da306cd998f830cf8bd543525afd929c83d641c7e9ba0ed300000000000000010102030404d202030405092900016e45d66684e87a35bddf5d971619dd21de92993639b1021f85be61d940c5ba1cbd943797cfb4058c962d24d0cf19fbd4a7f6ed41e75ea2fe8693a5d876da210f", payload.toHex())
@@ -192,8 +192,8 @@ class CommunityTest {
     fun createPunctureRequest() {
         val community = spyk(getCommunity())
 
-        val lanWalker = Address("1.2.3.4", 1234)
-        val wanWalker = Address("2.3.4.5", 2345)
+        val lanWalker = IPv4Address("1.2.3.4", 1234)
+        val wanWalker = IPv4Address("2.3.4.5", 2345)
         val identifier = 1
         val packet = community.createPunctureRequest(lanWalker, wanWalker, identifier)
         Assert.assertEquals("000260793bdb9cc0b60c96f88069d78aee327a6241d2fa00000000000000010102030404d20203040509290001", packet.toHex())
@@ -225,7 +225,7 @@ class CommunityTest {
     @Test
     fun getNewIntroduction_peer() {
         val community = getCommunity()
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(defaultCryptoProvider.generateKey(), address)
         community.network.addVerifiedPeer(peer)
         community.network.discoverServices(peer, listOf(community.serviceId))

@@ -1,16 +1,14 @@
 package nl.tudelft.ipv8.messaging
 
-import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.exception.PacketDecodingException
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
-import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.messaging.payload.BinMemberAuthenticationPayload
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
 import java.lang.IllegalArgumentException
 
 class Packet(
-    val source: BaseAddress,
+    val source: Address,
     val data: ByteArray
 ) {
     /**

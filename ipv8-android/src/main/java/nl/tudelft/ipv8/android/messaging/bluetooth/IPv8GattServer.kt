@@ -4,7 +4,6 @@ import android.bluetooth.*
 import android.content.Context
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.util.toHex
@@ -46,7 +45,7 @@ class IPv8GattServer(
             val bufferSize = bufferSizes[device.address] ?: 0
 
             if (value != null) {
-                logger.debug { "onCharacteristicWriteRequest: $device $requestId ${characteristic.uuid} $preparedWrite $responseNeeded $offset ${value.size}"}
+                logger.debug { "onCharacteristicWriteRequest: $device $requestId ${characteristic.uuid} $preparedWrite $responseNeeded $offset ${value.size}" }
 
                 for ((index, byte) in value.withIndex()) {
                     buffer[offset + index] = byte
@@ -85,10 +84,6 @@ class IPv8GattServer(
             characteristic: BluetoothGattCharacteristic
         ) {
             logger.debug { "onCharacteristicReadRequest: $device $requestId $offset ${characteristic.uuid}" }
-
-            // TODO: do we even need to support reading?
-            // val value = messages.value?.lastOrNull()?.message?.toByteArray()
-            // gattServer?.sendResponse(device, requestId, STATUS_OK, offset, value)
 
             if (characteristic.uuid == IDENTITY_CHARACTERISTIC_UUID) {
                 val publicKeyBin = myPeer.publicKey.keyToBin()

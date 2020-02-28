@@ -3,10 +3,7 @@ package nl.tudelft.ipv8
 import kotlinx.coroutines.*
 import nl.tudelft.ipv8.keyvault.CryptoProvider
 import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
-import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointAggregator
-import nl.tudelft.ipv8.messaging.bluetooth.BluetoothEndpoint
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
 import java.lang.IllegalStateException

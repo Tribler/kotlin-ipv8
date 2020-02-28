@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.messaging.payload
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.messaging.*
 
 /**
@@ -11,18 +11,18 @@ data class IntroductionRequestPayload(
      * The address of the receiver. Effectively this should be the wan address that others can
      * use to contact the receiver.
      */
-    val destinationAddress: Address,
+    val destinationAddress: IPv4Address,
 
     /**
      * The lan address of the sender. Nodes in the same LAN should use this address to communicate.
      */
-    val sourceLanAddress: Address,
+    val sourceLanAddress: IPv4Address,
 
     /**
      * The wan address of the sender. Nodes not in the same LAN should use this address
      * to communicate.
      */
-    val sourceWanAddress: Address,
+    val sourceWanAddress: IPv4Address,
 
     /**
      * When True the receiver will introduce the sender to a new node.  This introduction will be
@@ -52,12 +52,12 @@ data class IntroductionRequestPayload(
     companion object Deserializer : Deserializable<IntroductionRequestPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<IntroductionRequestPayload, Int> {
             var localOffset = 0
-            val (destinationAddress, _) = Address.deserialize(buffer, offset + localOffset)
-            localOffset += Address.SERIALIZED_SIZE
-            val (sourceLanAddress, _) = Address.deserialize(buffer, offset + localOffset)
-            localOffset += Address.SERIALIZED_SIZE
-            val (sourceWanAddress, _) = Address.deserialize(buffer, offset + localOffset)
-            localOffset += Address.SERIALIZED_SIZE
+            val (destinationAddress, _) = IPv4Address.deserialize(buffer, offset + localOffset)
+            localOffset += IPv4Address.SERIALIZED_SIZE
+            val (sourceLanAddress, _) = IPv4Address.deserialize(buffer, offset + localOffset)
+            localOffset += IPv4Address.SERIALIZED_SIZE
+            val (sourceWanAddress, _) = IPv4Address.deserialize(buffer, offset + localOffset)
+            localOffset += IPv4Address.SERIALIZED_SIZE
             val (advice, connectionType) = deserializeConnectionByte(buffer[offset + localOffset])
             localOffset++
             val identifier = deserializeUShort(buffer, offset + localOffset)

@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.messaging
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothEndpoint
@@ -37,9 +37,9 @@ class EndpointAggregator(
     /**
      * Sends a packet to the specified address.
      */
-    fun send(address: BaseAddress, data: ByteArray) {
+    fun send(address: Address, data: ByteArray) {
         when (address) {
-            is Address -> udpEndpoint?.send(address, data)
+            is IPv4Address -> udpEndpoint?.send(address, data)
             is BluetoothAddress -> bluetoothEndpoint?.send(address, data)
         }
     }
@@ -76,7 +76,7 @@ class EndpointAggregator(
         notifyListeners(packet)
     }
 
-    override fun onEstimatedLanChanged(address: Address) {
+    override fun onEstimatedLanChanged(address: IPv4Address) {
         setEstimatedLan(address)
     }
 }

@@ -12,7 +12,7 @@ import nl.tudelft.ipv8.util.random
 import nl.tudelft.ipv8.attestation.trustchain.payload.*
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainStore
 import nl.tudelft.ipv8.attestation.trustchain.validation.ValidationErrors
-import nl.tudelft.ipv8.messaging.BaseAddress
+import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.util.toHex
 import kotlin.coroutines.Continuation
 import kotlin.math.max
@@ -348,7 +348,7 @@ open class TrustChainCommunity(
      * We've received a half block, either because we sent a signed half block to someone or we are
      * crawling.
      */
-    internal fun onHalfBlock(sourceAddress: BaseAddress, payload: HalfBlockPayload) {
+    internal fun onHalfBlock(sourceAddress: Address, payload: HalfBlockPayload) {
         logger.debug("<- $payload")
 
         val publicKey = cryptoProvider.keyFromPublicBin(payload.publicKey)
@@ -456,7 +456,7 @@ open class TrustChainCommunity(
         }
     }
 
-    private fun onCrawlResponse(sourceAddress: BaseAddress, payload: CrawlResponsePayload) {
+    private fun onCrawlResponse(sourceAddress: Address, payload: CrawlResponsePayload) {
         logger.debug("<- $payload")
 
         onHalfBlock(sourceAddress, payload.block)

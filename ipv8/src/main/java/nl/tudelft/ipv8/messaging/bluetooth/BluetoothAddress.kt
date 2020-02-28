@@ -1,10 +1,10 @@
 package nl.tudelft.ipv8.messaging.bluetooth
 
-import nl.tudelft.ipv8.messaging.BaseAddress
+import nl.tudelft.ipv8.messaging.Address
 
 data class BluetoothAddress(
     val mac: String
-) : BaseAddress {
+) : Address {
     override fun toString(): String {
         return mac
     }
