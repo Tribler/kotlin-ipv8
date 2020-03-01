@@ -34,7 +34,7 @@ class IPv8BluetoothLeAdvertiser(
 
     fun start() {
         val settings = AdvertiseSettings.Builder()
-            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
+            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
             .setTimeout(0)
             // make sure the server is connectable!
             .setConnectable(true)

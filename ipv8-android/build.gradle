@@ -63,6 +63,10 @@ dependencies {
     implementation "com.goterl.lazycode:lazysodium-android:4.1.0@aar"
     implementation 'net.java.dev.jna:jna:5.5.0@aar'
 
+    // BLE
+    implementation 'no.nordicsemi.android:ble:2.2.0-alpha06'
+    implementation 'no.nordicsemi.android.support.v18:scanner:1.4.2'
+
     implementation 'io.github.microutils:kotlin-logging:1.7.7'
     api "com.squareup.sqldelight:android-driver:$sqldelight_version"
 

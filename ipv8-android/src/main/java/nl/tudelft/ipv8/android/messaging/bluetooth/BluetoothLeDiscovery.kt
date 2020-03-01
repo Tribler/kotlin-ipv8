@@ -41,15 +41,11 @@ class BluetoothLeDiscovery(
 
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
-            // val success = device.fetchUuidsWithSdp()
-            // Log.d(TAG, "onScanResult $callbackType " + device.address + " " + device.name + " " + success + " " + device.uuids)
             val uuids = result.scanRecord?.serviceUuids?.map {
                 it.uuid
             } ?: listOf()
 
-            // logger.debug { "onScanResult $callbackType " + device.address + " " + device.name + " " + uuids }
-
-            if (uuids.contains(IPv8GattServer.SERVICE_UUID)) {
+            if (uuids.contains(GattServerManager.SERVICE_UUID)) {
                 logger.debug { "Discovered Bluetooth device: ${device.address}" }
                 overlay.network.discoverBluetoothAddress(BluetoothAddress(device.address))
             }
@@ -105,8 +101,8 @@ class BluetoothLeDiscovery(
         isScanning = true
 
         val settingsBuilder = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
-            .setMatchMode(ScanSettings.MATCH_MODE_STICKY)
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+            .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
             .setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
             .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
 
@@ -118,7 +114,7 @@ class BluetoothLeDiscovery(
 
         leScanner.startScan(null, settingsBuilder.build(), scanCallback)
 
-        // TODO: Stop scanning after a pre-defined scan period.
+        // TODO: Stop scanning after scan period
         /*
         scanJob = scope.launch {
             if (isActive) {
@@ -126,7 +122,7 @@ class BluetoothLeDiscovery(
                 stopScan()
             }
         }
-         */
+        */
     }
 
     private fun stopScan() {
