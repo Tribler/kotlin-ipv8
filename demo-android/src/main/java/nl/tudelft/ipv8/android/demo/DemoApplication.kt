@@ -37,7 +37,7 @@ class DemoApplication : Application() {
             createDiscoveryCommunity(),
             createTrustChainCommunity(),
             createDemoCommunity()
-        ), walkerInterval = 1.0)
+        ), walkerInterval = 5.0)
 
         IPv8Android.Factory(this)
             .setConfiguration(config)

@@ -62,6 +62,7 @@ abstract class Community : Overlay {
     }
 
     override fun bootstrap() {
+        if (endpoint.udpEndpoint == null) return
         if (Date().time - (lastBootstrap?.time ?: 0L) < BOOTSTRAP_TIMEOUT_MS) return
         lastBootstrap = Date()
 
@@ -85,7 +86,7 @@ abstract class Community : Overlay {
             val available = getPeers()
             address = if (available.isNotEmpty()) {
                 // With a small chance, try to remedy any disconnected network phenomena.
-                if (Random.nextFloat() < 0.5f) {
+                if (Random.nextFloat() < 0.5f && endpoint.udpEndpoint != null) {
                     DEFAULT_ADDRESSES.random()
                 } else {
                     available.random().address

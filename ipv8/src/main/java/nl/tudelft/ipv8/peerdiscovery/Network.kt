@@ -229,21 +229,9 @@ class Network {
         synchronized(graphLock) {
             return when (address) {
                 is IPv4Address -> verifiedPeers.find { it.address == address }
-                is BluetoothAddress -> getVerifiedByBluetoothAddress(address)
+                is BluetoothAddress -> verifiedPeers.find { it.bluetoothAddress == address }
                 else -> null
             }
-        }
-    }
-
-    /**
-     * Get a verified peer by its Bluetooth address.
-     *
-     * @param address The address to search for.
-     * @return The [Peer] object for this address or null.
-     */
-    fun getVerifiedByBluetoothAddress(address: BluetoothAddress): Peer? {
-        synchronized(graphLock) {
-            return verifiedPeers.find { it.bluetoothAddress == address }
         }
     }
 
@@ -281,7 +269,38 @@ class Network {
     fun removeByAddress(address: IPv4Address) {
         synchronized(graphLock) {
             allAddresses.remove(address)
-            verifiedPeers.removeAll { it.address == address }
+
+            // Remove peers that have only IPv4Address
+            val peer = verifiedPeers.find { it.address == address }
+            if (peer != null) {
+                peer.address = IPv4Address.EMPTY
+                if (!peer.isConnected()) {
+                    verifiedPeers.remove(peer)
+                }
+            }
+
+            // TODO: what about servicesPerPeer?
+        }
+    }
+
+    /**
+     * Remove addresses and verified peers using a certain Bluetooth address.
+     *
+     * @param address The address to remove.
+     */
+    fun removeByAddress(address: BluetoothAddress) {
+        synchronized(graphLock) {
+            bluetoothAddresses.remove(address)
+
+            // Remove peers that have only BluetoothAddress
+            val peer = getVerifiedByAddress(address)
+            if (peer != null) {
+                peer.bluetoothAddress = null
+                if (!peer.isConnected()) {
+                    verifiedPeers.remove(peer)
+                }
+            }
+
             // TODO: what about servicesPerPeer?
         }
     }

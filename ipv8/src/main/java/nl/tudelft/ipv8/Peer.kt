@@ -97,6 +97,10 @@ data class Peer(
         }
     }
 
+    fun isConnected(): Boolean {
+        return !address.isEmpty() || bluetoothAddress != null
+    }
+
     override fun equals(other: Any?): Boolean {
         return other is Peer && other.mid == mid
     }

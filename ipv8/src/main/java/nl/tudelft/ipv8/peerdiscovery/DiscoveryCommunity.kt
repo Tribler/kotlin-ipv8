@@ -125,6 +125,7 @@ class DiscoveryCommunity : Community(), PingOverlay {
     ) {
         logger.debug("<- $payload")
 
+        network.addVerifiedPeer(peer)
         network.discoverServices(peer, payload.preferenceList)
 
         val myPeerSet = network.serviceOverlays.values.map { it.myPeer }.toSet()

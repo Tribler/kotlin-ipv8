@@ -14,7 +14,7 @@ class IPv8(
     private val configuration: IPv8Configuration,
     val myPeer: Peer,
     private val cryptoProvider: CryptoProvider = JavaCryptoProvider,
-    private val network: Network
+    val network: Network = Network()
 ) {
     private val overlayLock = Object()
 

@@ -2,10 +2,11 @@ package nl.tudelft.ipv8.android.demo.ui.peers
 
 import com.mattskala.itemadapter.Item
 import nl.tudelft.ipv8.IPv4Address
+import nl.tudelft.ipv8.messaging.Address
 import java.util.*
 
 class AddressItem(
-    val address: IPv4Address,
+    val address: Address,
     val discovered: Date?,
     val contacted: Date?
 ) : Item() {
