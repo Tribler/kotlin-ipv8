@@ -42,7 +42,7 @@ class IPv8BluetoothLeAdvertiser(
 
         val advertiseData = AdvertiseData.Builder()
             .setIncludeDeviceName(false)
-            .addServiceUuid(ParcelUuid(IPv8GattServer.SERVICE_UUID))
+            .addServiceUuid(ParcelUuid(GattServerManager.SERVICE_UUID))
             .build()
 
         leAdvertiser.startAdvertising(settings, advertiseData, advertiseCallback)

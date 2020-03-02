@@ -40,7 +40,7 @@ class DiscoveryCommunityTest : BaseCommunityTest() {
         val community = spyk(getCommunity())
         community.network.registerServiceProvider(community.serviceId, community)
         val peer = Peer(JavaCryptoProvider.generateKey(), IPv4Address("5.2.3.4", 5234))
-        community.sendSimilarityRequest(peer.address)
+        community.sendSimilarityRequest(peer)
         verify { community.createSimilarityRequest(any()) }
     }
 
@@ -103,7 +103,7 @@ class DiscoveryCommunityTest : BaseCommunityTest() {
             2
         )
         community.onIntroductionResponse(peer, payload)
-        verify { community.sendSimilarityRequest(peer.address) }
+        verify { community.sendSimilarityRequest(peer) }
     }
 
     @Test

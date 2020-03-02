@@ -7,8 +7,8 @@ import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import nl.tudelft.ipv8.keyvault.*
+import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.Packet
-import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.hexToBytes
 import nl.tudelft.ipv8.util.toHex
@@ -17,17 +17,7 @@ import org.junit.Test
 
 private val lazySodium = LazySodiumJava(SodiumJava())
 
-class CommunityTest {
-    private fun getPrivateKey(): PrivateKey {
-        val privateKey = "81df0af4c88f274d5228abb894a68906f9e04c902a09c68b9278bf2c7597eaf6"
-        val signSeed = "c5c416509d7d262bddfcef421fc5135e0d2bdeb3cb36ae5d0b50321d766f19f2"
-        return LibNaClSK(privateKey.hexToBytes(), signSeed.hexToBytes(), lazySodium)
-    }
-
-    private fun getEndpoint(): UdpEndpoint {
-        return mockk(relaxed = true)
-    }
-
+class CommunityTest : BaseCommunityTest() {
     private fun getCommunity(): TestCommunity {
         val myPrivateKey = getPrivateKey()
         val myPeer = Peer(myPrivateKey)
@@ -219,7 +209,7 @@ class CommunityTest {
 
         community.getNewIntroduction()
 
-        verify { community.endpoint.send(any(), any()) }
+        verify { community.endpoint.send(any<Address>(), any()) }
     }
 
     @Test
@@ -232,6 +222,6 @@ class CommunityTest {
 
         community.getNewIntroduction()
 
-        verify { community.endpoint.send(any(), any()) }
+        verify { community.endpoint.send(any<Address>(), any()) }
     }
 }

@@ -22,6 +22,6 @@ class PeriodicSimilarityTest {
         periodicSimilarity.takeStep()
 
         verify { network.getRandomPeer() }
-        verify { overlay.sendSimilarityRequest(mockAddress) }
+        verify { overlay.sendSimilarityRequest(any()) }
     }
 }
