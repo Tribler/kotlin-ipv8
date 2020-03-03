@@ -1,5 +1,6 @@
 package nl.tudelft.ipv8.android.voting
 
+import android.util.Log
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainCommunity
@@ -43,8 +44,7 @@ class TrustChainHelper(
     /**
      * Creates a new proposal block, using a text message as the transaction content.
      */
-    fun createProposalBlock(message: String, publicKey: ByteArray) {
-        val blockType = "demo_block"
+    fun createProposalBlock(message: String, publicKey: ByteArray, blockType: String = "demo_block") {
         val transaction = mapOf("message" to message)
         trustChainCommunity.createProposalBlock(blockType, transaction, publicKey)
     }
@@ -53,6 +53,7 @@ class TrustChainHelper(
      * Creates an agreement block to a specified proposal block, using a custom transaction.
      */
     fun createAgreementBlock(link: TrustChainBlock, transaction: TrustChainTransaction) {
+        Log.e("vote_debug", "agreeing block")
         trustChainCommunity.createAgreementBlock(link, transaction)
     }
 

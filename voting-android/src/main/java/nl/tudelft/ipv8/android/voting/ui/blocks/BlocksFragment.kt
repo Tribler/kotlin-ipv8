@@ -5,6 +5,7 @@ import android.text.InputType
 import android.view.*
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
@@ -49,6 +50,9 @@ open class BlocksFragment : BaseFragment() {
 
         adapter.registerRenderer(BlockItemRenderer(
             onExpandClick = {
+                if (it.block.type.equals("voting_block") && !it.block.isAgreement) {
+                    showNewCastVoteDialog(it.block)
+                }
                 val blockId = it.block.blockId
                 if (expandedBlocks.contains(blockId)) {
                     expandedBlocks.remove(blockId)
@@ -63,6 +67,30 @@ open class BlocksFragment : BaseFragment() {
                 createAgreementBlock(it.block)
             }
         ))
+    }
+
+    /**
+     * Dialog for a new proposal vote
+     */
+    private fun showNewCastVoteDialog(block: TrustChainBlock) {
+        val builder: android.app.AlertDialog.Builder =
+            android.app.AlertDialog.Builder(requireContext())
+        builder.setTitle("Cast vote")
+        builder.setMessage(block.transaction.toString())
+
+
+        builder.setPositiveButton("YES") { _, _ ->
+            getVotingCommunity().respondToVote(true, block)
+        }
+
+        builder.setNegativeButton("NO") { dialog, _ ->
+            getVotingCommunity().respondToVote(false, block)
+            dialog.cancel()
+        }
+
+        builder.setCancelable(true)
+
+        builder.show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,8 +115,12 @@ open class BlocksFragment : BaseFragment() {
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(context)
         val dividerItemDecoration = DividerItemDecoration(context, LinearLayout.VERTICAL)
-        dividerItemDecoration.setDrawable(ResourcesCompat.getDrawable(resources,
-            R.drawable.list_divider, null)!!)
+        dividerItemDecoration.setDrawable(
+            ResourcesCompat.getDrawable(
+                resources,
+                R.drawable.list_divider, null
+            )!!
+        )
         recyclerView.addItemDecoration(dividerItemDecoration)
     }
 
@@ -102,7 +134,7 @@ open class BlocksFragment : BaseFragment() {
         return when (item.itemId) {
             R.id.item_new_block -> {
                 showNewBlockDialog()
-               true
+                true
             }
             else -> super.onOptionsItemSelected(item)
         }

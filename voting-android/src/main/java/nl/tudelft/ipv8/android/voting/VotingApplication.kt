@@ -32,7 +32,7 @@ class VotingApplication : Application() {
         val config = IPv8Configuration(overlays = listOf(
             createDiscoveryCommunity(),
             createTrustChainCommunity(),
-            createDemoCommunity()
+            createVotingCommunity()
         ), walkerInterval = 1.0)
 
         IPv8Android.Factory(this)
@@ -59,7 +59,7 @@ class VotingApplication : Application() {
 
         trustchain.registerBlockSigner(BLOCK_TYPE, object : BlockSigner {
             override fun onSignatureRequest(block: TrustChainBlock) {
-                trustchain.createAgreementBlock(block, mapOf<Any?, Any?>())
+//                trustchain.createAgreementBlock(block, mapOf<Any?, Any?>())
             }
         })
 
@@ -95,6 +95,14 @@ class VotingApplication : Application() {
         val randomWalk = RandomWalk.Factory()
         return OverlayConfiguration(
             Overlay.Factory(DemoCommunity::class.java),
+            listOf(randomWalk)
+        )
+    }
+
+    private fun createVotingCommunity(): OverlayConfiguration<VotingCommunity> {
+        val randomWalk = RandomWalk.Factory()
+        return OverlayConfiguration(
+            Overlay.Factory(VotingCommunity::class.java),
             listOf(randomWalk)
         )
     }

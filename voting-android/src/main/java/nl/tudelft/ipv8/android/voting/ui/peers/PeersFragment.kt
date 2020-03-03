@@ -63,23 +63,23 @@ class PeersFragment : BaseFragment() {
                     logger.debug(overlay.javaClass.simpleName + ": " + overlay.getPeers().size + " peers")
                 }
 
-                val demoCommunity = getDemoCommunity()
-                val peers = demoCommunity.getPeers()
+                val votingCommunity = getVotingCommunity()
+                val peers = votingCommunity.getPeers()
 
-                val discoveredAddresses = demoCommunity.network
-                    .getWalkableAddresses(demoCommunity.serviceId)
+                val discoveredAddresses = votingCommunity.network
+                    .getWalkableAddresses(votingCommunity.serviceId)
 
                 val peerItems = peers.map { PeerItem(it) }
 
                 val addressItems = discoveredAddresses.map { address ->
-                    val contacted = demoCommunity.discoveredAddressesContacted[address]
+                    val contacted = votingCommunity.discoveredAddressesContacted[address]
                     AddressItem(address, null, contacted)
                 }
 
                 val items = peerItems + addressItems
 
                 adapter.updateItems(items)
-                txtCommunityName.text = demoCommunity.javaClass.simpleName
+                txtCommunityName.text = votingCommunity.javaClass.simpleName
                 txtPeerCount.text = resources.getQuantityString(
                     R.plurals.x_peers, peers.size,
                     peers.size

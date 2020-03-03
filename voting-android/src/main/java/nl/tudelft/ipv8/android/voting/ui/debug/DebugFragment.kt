@@ -1,9 +1,13 @@
 package nl.tudelft.ipv8.android.voting.ui.debug
 
+import android.app.AlertDialog
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import kotlinx.android.synthetic.main.fragment_debug.*
 import kotlinx.coroutines.*
@@ -23,6 +27,9 @@ class DebugFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        proposeButton.setOnClickListener {
+            showNewVoteDialog();
+        }
 
         lifecycleScope.launchWhenStarted {
             while (isActive) {
@@ -32,12 +39,38 @@ class DebugFragment : BaseFragment() {
         }
     }
 
+    /**
+     * Dialog for a new proposal vote
+     */
+    private fun showNewVoteDialog() {
+        val builder: AlertDialog.Builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("New proposal vote")
+
+        val input = EditText(requireContext())
+        input.inputType = InputType.TYPE_CLASS_TEXT
+        input.setHint("p != np")
+        builder.setView(input)
+
+        builder.setPositiveButton("Create") { _, _ ->
+            val proposal = input.text.toString()
+            getVotingCommunity().startVote(proposal)
+            Toast.makeText(this.context, "Start voting procedure", Toast.LENGTH_SHORT).show()
+        }
+
+        builder.setNegativeButton("Cancel") { dialog, _ ->
+            dialog.cancel()
+        }
+
+        builder.show()
+
+    }
+
     private fun updateView() {
         val ipv8 = getIpv8()
-        val demo = getDemoCommunity()
+        val voting = getVotingCommunity()
         txtBootstrap.text = Community.DEFAULT_ADDRESSES.joinToString("\n")
-        txtLanAddress.text = demo.myEstimatedLan.toString()
-        txtWanAddress.text = demo.myEstimatedWan.toString()
+        txtLanAddress.text = voting.myEstimatedLan.toString()
+        txtWanAddress.text = voting.myEstimatedWan.toString()
         txtPeerId.text = ipv8.myPeer.mid
         txtPublicKey.text = ipv8.myPeer.publicKey.keyToBin().toHex()
         txtOverlays.text = ipv8.overlays.values.toList().joinToString("\n") {
