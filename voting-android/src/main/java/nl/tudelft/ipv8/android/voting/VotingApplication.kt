@@ -91,14 +91,6 @@ class VotingApplication : Application() {
         )
     }
 
-    private fun createDemoCommunity(): OverlayConfiguration<DemoCommunity> {
-        val randomWalk = RandomWalk.Factory()
-        return OverlayConfiguration(
-            Overlay.Factory(DemoCommunity::class.java),
-            listOf(randomWalk)
-        )
-    }
-
     private fun createVotingCommunity(): OverlayConfiguration<VotingCommunity> {
         val randomWalk = RandomWalk.Factory()
         return OverlayConfiguration(
@@ -125,6 +117,6 @@ class VotingApplication : Application() {
 
     companion object {
         private const val PREF_PRIVATE_KEY = "private_key"
-        private const val BLOCK_TYPE = "demo_block"
+        private const val BLOCK_TYPE = "voting_block"
     }
 }
