@@ -77,15 +77,17 @@ open class BlocksFragment : BaseFragment() {
         val builder: android.app.AlertDialog.Builder =
             android.app.AlertDialog.Builder(requireContext())
         builder.setTitle("Cast vote")
-        builder.setMessage(block.transaction.toString())
 
+        val voteSubject = block.transaction["VOTE_SUBJECT"].toString()
+        builder.setMessage(voteSubject)
 
         builder.setPositiveButton("YES") { _, _ ->
-            getVotingCommunity().respondToVote(true, block)
+            getVotingCommunity().respondToVote(voteSubject,true, block)
+            getVotingCommunity().countVotes("0.14", block.publicKey)
         }
 
         builder.setNegativeButton("NO") { dialog, _ ->
-            getVotingCommunity().respondToVote(false, block)
+            getVotingCommunity().respondToVote(voteSubject, false, block)
             dialog.cancel()
         }
 

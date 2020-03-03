@@ -38,16 +38,48 @@ class VotingCommunity : Community() {
     fun startVote(voteSubject: String) {
         // Loop through all peers in the voting community and send a proposal.
         for (peer in getVotingCommunity().getPeers()) {
-            trustchain.createProposalBlock(voteSubject, peer.publicKey.keyToBin(), "voting_block")
+            val transaction = mapOf("VOTE_SUBJECT" to voteSubject)
+            trustchain.createVoteProposalBlock(peer.publicKey.keyToBin(), transaction, "voting_block")
+
             Log.e("vote_debug", peer.publicKey.toString())
         }
     }
 
-    fun respondToVote(vote: Boolean, proposalBlock: TrustChainBlock) {
+    fun respondToVote(voteName: String, vote: Boolean, proposalBlock: TrustChainBlock) {
         // Reply to the vote with YES or NO.
-        val transaction = mapOf("vote" to if (vote) "YES" else "NO")
+        val transaction = mapOf("VOTE_SUBJECT" to voteName, "VOTE_REPLY" to if (vote) "YES" else "NO")
+//        val transaction = mapOf("vote" to if (vote) "YES" else "NO")
 
         trustchain.createAgreementBlock(proposalBlock, transaction)
         Log.e("vote_debug", transaction.toString())
+    }
+
+    fun countVotes(voteName: String, proposerKey: ByteArray): Int {
+        // Crawl through chain of proposer and find all votes with voteName.
+        Log.e("vote_debug", "Hit it")
+
+        var yesCount = 0
+        var noCount = 0
+
+        for (block in trustchain.getChainByUser(proposerKey)) {
+            Log.e("vote_debug", block.transaction.toString())
+
+            if (block.type === "voting_block" &&
+                block.transaction["VOTE_SUBJECT"] === voteName) {
+                if (block.transaction["VOTE_REPLY"] === "YES") {
+                    yesCount++
+                } else if (block.transaction["VOTE_REPLY"] === "NO") {
+                    noCount++
+                } else {
+                    Log.e("vote_debug", block.transaction["VOTE_REPLY"].toString())
+                }
+            }
+        }
+
+        Log.e("vote_debug", "Yes: $yesCount")
+        Log.e("vote_debug", "No: $noCount")
+
+        return if (yesCount > noCount) yesCount else noCount
+//        trustchain.crawlChain()
     }
 }

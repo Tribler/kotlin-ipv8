@@ -49,6 +49,10 @@ class TrustChainHelper(
         trustChainCommunity.createProposalBlock(blockType, transaction, publicKey)
     }
 
+    fun createVoteProposalBlock(publicKey: ByteArray, transaction: Map<String, String>, blockType: String = "voting_block") {
+        trustChainCommunity.createProposalBlock(blockType, transaction, publicKey)
+    }
+
     /**
      * Creates an agreement block to a specified proposal block, using a custom transaction.
      */
