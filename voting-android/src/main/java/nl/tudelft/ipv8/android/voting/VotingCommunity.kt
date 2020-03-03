@@ -38,7 +38,7 @@ class VotingCommunity : Community() {
     fun startVote(voteSubject: String) {
         // Loop through all peers in the voting community and send a proposal.
         for (peer in getVotingCommunity().getPeers()) {
-            val transaction = mapOf("VOTE_SUBJECT" to voteSubject)
+            val transaction = mapOf("message" to mapOf("VOTE_SUBJECT" to voteSubject).toString())
             trustchain.createVoteProposalBlock(peer.publicKey.keyToBin(), transaction, "voting_block")
 
             Log.e("vote_debug", peer.publicKey.toString())
@@ -47,7 +47,7 @@ class VotingCommunity : Community() {
 
     fun respondToVote(voteName: String, vote: Boolean, proposalBlock: TrustChainBlock) {
         // Reply to the vote with YES or NO.
-        val transaction = mapOf("VOTE_SUBJECT" to voteName, "VOTE_REPLY" to if (vote) "YES" else "NO")
+        val transaction = mapOf("message" to mapOf("VOTE_SUBJECT" to voteName, "VOTE_REPLY" to if (vote) "YES" else "NO").toString())
 //        val transaction = mapOf("vote" to if (vote) "YES" else "NO")
 
         trustchain.createAgreementBlock(proposalBlock, transaction)
@@ -63,15 +63,18 @@ class VotingCommunity : Community() {
 
         for (block in trustchain.getChainByUser(proposerKey)) {
             Log.e("vote_debug", block.transaction.toString())
-
+            val items = block.transaction["message"].toString().removePrefix("{").removeSuffix("}").split(",")
+            Log.e("vote_debug", items.toString())
+            val reply = items[1].toString().split("=")[1]
+            val subject = items[0].toString().split("=")[1]
             if (block.type === "voting_block" &&
-                block.transaction["VOTE_SUBJECT"] === voteName) {
-                if (block.transaction["VOTE_REPLY"] === "YES") {
+                subject === voteName) {
+                if (reply === "YES") {
                     yesCount++
-                } else if (block.transaction["VOTE_REPLY"] === "NO") {
+                } else if (reply === "NO") {
                     noCount++
                 } else {
-                    Log.e("vote_debug", block.transaction["VOTE_REPLY"].toString())
+                    Log.e("vote_debug", reply.toString())
                 }
             }
         }
