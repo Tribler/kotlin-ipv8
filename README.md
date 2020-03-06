@@ -31,34 +31,14 @@ The project is a composed of several modules:
 - `ipv8` (JVM library) – The core of IPv8 implementation, pure Kotlin library module.
 - `ipv8-android` (Android library) – Android-specific dependencies and helper classes (`IPv8Android`, `IPv8Android.Factory`) for running IPv8 on Android Runtime.
 - `ipv8-jvm` (JVM library) – JVM-specific dependencies for running IPv8 on JVM.
-- `demo-android` (Android app) – The Android app demonstrating the usage of `ipv8-android` library.
 - `demo-jvm` (JVM app) – The CLI app demonstrating the usage of `ipv8-jvm` library.
 - `tracker` (JVM app) – The bootstrap server implementation.
 
-Android apps using IPv8 should depend on the `ipv8-android` module, which also includes and exposes APIs of `ipv8` module.
-
-## Sample app
-
-The repository includes a sample app that depends on the IPv8 library and demonstrates its usage. It is  available both as a native app for Android, and as a command line application running locally on JVM on macOS, Linux, and Windows.
+## Sample apps
 
 ### Android
 
-The **TrustChain Explorer** app mostly demonstrates  interaction with TrustChainCommunity. It defines its own DemoCommunity to ensure that all users using the app are able to discover each other easily. The content of the app is split into several tabs:
-
-- **Peers:** A list of discovered peers in DemoCommunity. For each peer, there is a time since the last sent and received message, and an average ping latency. After clicking on the peer item, a list of mutual blocks in TrustChain is shown. It is possible to create and send a new proposal block by clicking on the plus icon.
-- **Chains:** A list of discovered chains in TrustChainComunity, ordered by their length. After clicking on the item, the list of stored blocks is shown.
-- **All Blocks:** A stream of all received blocks, updated in real-time as new blocks are received from the network.
-- **My Chain:** A list of blocks in which the current user is participating either as a sender or a receiver. It is possible to create a new self-signed block by clicking on the plus icon. It is posible to sign received blocks.
-- **Debug:** Various debug information including the number of connected peers in different overlays, estimated LAN and WAN address, and TrustChain statistics.
-
-Install the app on Android:
-```
-./gradlew :demo-android:installDebug
-```
-
-*Note: It is required to have an Android device connected with USB debugging enabled before running this command.*
-
-<img src="https://raw.githubusercontent.com/Tribler/kotlin-ipv8/master/doc/demo-android.png" width="180"> <img src="https://raw.githubusercontent.com/Tribler/kotlin-ipv8/master/doc/demo-android-trustchain.png" width="180"> <img src="https://raw.githubusercontent.com/Tribler/kotlin-ipv8/master/doc/demo-android-debug.png" width="180">
+Check out [TrustChain Super App](https://github.com/Tribler/trustchain-superapp) to see a collection of distributed Android apps implemented on top of IPv8.
 
 ### JVM
 
