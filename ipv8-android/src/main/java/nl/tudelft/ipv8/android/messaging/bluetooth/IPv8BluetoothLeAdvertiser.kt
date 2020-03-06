@@ -45,10 +45,10 @@ class IPv8BluetoothLeAdvertiser(
             .addServiceUuid(ParcelUuid(GattServerManager.SERVICE_UUID))
             .build()
 
-        leAdvertiser.startAdvertising(settings, advertiseData, advertiseCallback)
+        leAdvertiser?.startAdvertising(settings, advertiseData, advertiseCallback)
     }
 
     fun stop() {
-        leAdvertiser.stopAdvertising(advertiseCallback)
+        leAdvertiser?.stopAdvertising(advertiseCallback)
     }
 }

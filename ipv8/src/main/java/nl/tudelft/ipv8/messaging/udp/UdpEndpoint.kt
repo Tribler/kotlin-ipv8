@@ -64,7 +64,8 @@ open class UdpEndpoint(
                 // Try another port
             }
         }
-        throw IllegalStateException("No unused socket found")
+        // Use any available port
+        return DatagramSocket()
     }
 
     override fun close() {
