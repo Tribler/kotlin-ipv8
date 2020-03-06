@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.peerdiscovery
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
 import org.junit.Assert
@@ -11,7 +11,7 @@ class NetworkTest {
     fun discoverAddress_newPeer_newAddress() {
         val network = Network()
         val peer = Peer(JavaCryptoProvider.generateKey())
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val serviceId = "123"
         network.discoverAddress(peer, address, serviceId)
         Assert.assertEquals(Pair(peer.mid, serviceId), network.allAddresses[address])
@@ -21,7 +21,7 @@ class NetworkTest {
     fun discoverAddress_blacklist() {
         val network = Network()
         val peer = Peer(JavaCryptoProvider.generateKey())
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         network.blacklist.add(address)
         val serviceId = "123"
         network.discoverAddress(peer, address, serviceId)
@@ -63,8 +63,8 @@ class NetworkTest {
     @Test
     fun getIntroductionFrom() {
         val network = Network()
-        val peer = Peer(JavaCryptoProvider.generateKey(), Address("1.2.3.4", 1234))
-        val introducedAddress = Address("2.3.4.5", 2345)
+        val peer = Peer(JavaCryptoProvider.generateKey(), IPv4Address("1.2.3.4", 1234))
+        val introducedAddress = IPv4Address("2.3.4.5", 2345)
         network.discoverAddress(peer, introducedAddress)
         val introductions = network.getIntroductionFrom(peer)
         Assert.assertEquals(1, introductions.size)
@@ -74,7 +74,7 @@ class NetworkTest {
     @Test
     fun removeByAddress() {
         val network = Network()
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(JavaCryptoProvider.generateKey(), address)
         network.addVerifiedPeer(peer)
         network.removeByAddress(address)
@@ -85,7 +85,7 @@ class NetworkTest {
     @Test
     fun removePeer() {
         val network = Network()
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(JavaCryptoProvider.generateKey(), address)
         network.addVerifiedPeer(peer)
         network.removePeer(peer)
@@ -100,7 +100,7 @@ class NetworkTest {
         val noAddresses = network.getWalkableAddresses(null)
         Assert.assertEquals(0, noAddresses.size)
 
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(JavaCryptoProvider.generateKey(), address)
         network.discoverAddress(peer, address, "abc")
 
@@ -132,7 +132,7 @@ class NetworkTest {
     fun getRandomPeer_notNull() {
         val network = Network()
 
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(JavaCryptoProvider.generateKey(), address)
         network.addVerifiedPeer(peer)
 
@@ -144,7 +144,7 @@ class NetworkTest {
     fun getRandomPeers_notEmpty() {
         val network = Network()
 
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(JavaCryptoProvider.generateKey(), address)
         network.addVerifiedPeer(peer)
 
@@ -157,9 +157,9 @@ class NetworkTest {
     fun addPeer_retainAddresses() {
         val network = Network()
         val key = JavaCryptoProvider.generateKey()
-        val address = Address("1.2.3.4", 1234)
-        val lanAddress = Address("2.3.4.5", 234)
-        val wanAddress = Address("3.4.5.6", 3456)
+        val address = IPv4Address("1.2.3.4", 1234)
+        val lanAddress = IPv4Address("2.3.4.5", 234)
+        val wanAddress = IPv4Address("3.4.5.6", 3456)
         val peer = Peer(key, address, lanAddress, wanAddress)
         network.addVerifiedPeer(peer)
 
@@ -177,12 +177,12 @@ class NetworkTest {
     fun addPeer_overrideAddresses() {
         val network = Network()
         val key = JavaCryptoProvider.generateKey()
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(key, address)
         network.addVerifiedPeer(peer)
 
-        val lanAddress = Address("2.3.4.5", 234)
-        val wanAddress = Address("3.4.5.6", 3456)
+        val lanAddress = IPv4Address("2.3.4.5", 234)
+        val wanAddress = IPv4Address("3.4.5.6", 3456)
         val newPeer = Peer(key, address, lanAddress, wanAddress)
         network.addVerifiedPeer(newPeer)
 

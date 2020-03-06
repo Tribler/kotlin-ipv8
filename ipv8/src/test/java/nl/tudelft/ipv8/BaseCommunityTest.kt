@@ -3,6 +3,7 @@ package nl.tudelft.ipv8
 import com.goterl.lazycode.lazysodium.LazySodiumJava
 import com.goterl.lazycode.lazysodium.SodiumJava
 import io.mockk.mockk
+import io.mockk.spyk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestCoroutineDispatcher
@@ -10,7 +11,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import nl.tudelft.ipv8.keyvault.LibNaClSK
 import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
+import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.util.hexToBytes
 import org.junit.After
 import org.junit.Before
@@ -42,7 +43,7 @@ abstract class BaseCommunityTest {
         return Peer(getPrivateKey())
     }
 
-    protected fun getEndpoint(): UdpEndpoint {
-        return mockk(relaxed = true)
+    protected fun getEndpoint(): EndpointAggregator {
+        return spyk(EndpointAggregator(mockk(relaxed = true), null))
     }
 }

@@ -1,9 +1,8 @@
 package nl.tudelft.ipv8.messaging.udp
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.NonCancellable.isActive
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.Packet
 import java.io.IOException
@@ -14,7 +13,7 @@ private val logger = KotlinLogging.logger {}
 open class UdpEndpoint(
     private val port: Int,
     private val ip: InetAddress
-) : Endpoint() {
+) : Endpoint<IPv4Address>() {
     private var socket: DatagramSocket? = null
 
     private val job = SupervisorJob()
@@ -27,7 +26,7 @@ open class UdpEndpoint(
         return socket?.isBound == true
     }
 
-    override fun send(address: Address, data: ByteArray) {
+    override fun send(address: IPv4Address, data: ByteArray) {
         if (!isOpen()) throw IllegalStateException("UDP socket is closed")
 
         scope.launch {
@@ -65,7 +64,8 @@ open class UdpEndpoint(
                 // Try another port
             }
         }
-        throw IllegalStateException("No unused socket found")
+        // Use any available port
+        return DatagramSocket()
     }
 
     override fun close() {
@@ -95,7 +95,7 @@ open class UdpEndpoint(
             for (intfAddr in intf.interfaceAddresses) {
                 if (intfAddr.address is Inet4Address && !intfAddr.address.isLoopbackAddress) {
                     val estimatedAddress =
-                        Address(intfAddr.address.hostAddress, getSocketPort())
+                        IPv4Address(intfAddr.address.hostAddress, getSocketPort())
                     setEstimatedLan(estimatedAddress)
                 }
             }
@@ -120,7 +120,7 @@ open class UdpEndpoint(
                     socket.receive(receivePacket)
                 }
                 val sourceAddress =
-                    Address(receivePacket.address.hostAddress, receivePacket.port)
+                    IPv4Address(receivePacket.address.hostAddress, receivePacket.port)
                 val packet =
                     Packet(sourceAddress, receivePacket.data.copyOf(receivePacket.length))
                 logger.debug(

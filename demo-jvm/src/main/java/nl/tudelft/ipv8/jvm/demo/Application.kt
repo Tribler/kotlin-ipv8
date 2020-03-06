@@ -14,6 +14,7 @@ import nl.tudelft.ipv8.attestation.trustchain.TrustChainSettings
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainSQLiteStore
 import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
 import nl.tudelft.ipv8.messaging.Endpoint
+import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
 import nl.tudelft.ipv8.peerdiscovery.DiscoveryCommunity
 import nl.tudelft.ipv8.peerdiscovery.Network
@@ -66,7 +67,9 @@ class Application {
 
     private fun startIpv8() {
         val myKey = JavaCryptoProvider.generateKey()
-        val endpoint = UdpEndpoint(8090, InetAddress.getByName("0.0.0.0"))
+        val myPeer = Peer(myKey)
+        val udpEndpoint = UdpEndpoint(8090, InetAddress.getByName("0.0.0.0"))
+        val endpoint = EndpointAggregator(udpEndpoint, null)
 
         val config = IPv8Configuration(overlays = listOf(
             createDiscoveryCommunity(),
@@ -74,7 +77,7 @@ class Application {
             createDemoCommunity()
         ), walkerInterval = 1.0)
 
-        val ipv8 = IPv8(endpoint, config, myKey, JavaCryptoProvider)
+        val ipv8 = IPv8(endpoint, config, myPeer, JavaCryptoProvider)
         ipv8.start()
 
         scope.launch {

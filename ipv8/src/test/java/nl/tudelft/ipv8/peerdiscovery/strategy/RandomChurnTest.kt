@@ -4,7 +4,7 @@ import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.peerdiscovery.DiscoveryCommunity
@@ -18,7 +18,7 @@ class RandomChurnTest {
     fun takeStep_active() {
         val overlay = mockk<DiscoveryCommunity>(relaxed = true)
         val network = mockk<Network>()
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(mockk(), address)
         every { overlay.network } returns network
         every { network.getRandomPeers(any()) } returns listOf(peer)
@@ -35,7 +35,7 @@ class RandomChurnTest {
     fun takeStep_inactive() {
         val overlay = mockk<DiscoveryCommunity>(relaxed = true)
         val network = mockk<Network>()
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(defaultCryptoProvider.generateKey(), address)
         peer.lastResponse = Date.from(Instant.now().minusSeconds(30))
         every { overlay.network } returns network
@@ -53,7 +53,7 @@ class RandomChurnTest {
     fun takeStep_drop() {
         val overlay = mockk<DiscoveryCommunity>(relaxed = true)
         val network = mockk<Network>(relaxed = true)
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val peer = Peer(defaultCryptoProvider.generateKey(), address)
         peer.lastResponse = Date.from(Instant.now().minusSeconds(60))
         every { overlay.network } returns network

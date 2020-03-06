@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.util
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -9,7 +9,7 @@ import java.net.InetAddress
 class NetworkUtilsTest {
     @Test
     fun addressIsLan_simple() {
-        assertFalse(addressIsLan(Address("1.2.3.4", 0)))
+        assertFalse(addressIsLan(IPv4Address("1.2.3.4", 0)))
     }
 
     @Test

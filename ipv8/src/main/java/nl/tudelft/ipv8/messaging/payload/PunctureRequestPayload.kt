@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.messaging.payload
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.messaging.*
 
 /**
@@ -11,13 +11,13 @@ data class PunctureRequestPayload(
      * The lan address of the node that the sender wants us to contact. This contact attempt should
      * punch a hole in our NAT to allow the node to connect to us.
      */
-    val lanWalkerAddress: Address,
+    val lanWalkerAddress: IPv4Address,
 
     /**
      * The wan address of the node that the sender wants us to contact. This contact attempt should
      * punch a hole in our NAT to allow the node to connect to us.
      */
-    val wanWalkerAddress: Address,
+    val wanWalkerAddress: IPv4Address,
 
     /**
      * A number that was given in the associated introduction-request. This number allows to
@@ -34,10 +34,10 @@ data class PunctureRequestPayload(
     companion object Deserializer : Deserializable<PunctureRequestPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<PunctureRequestPayload, Int> {
             var localOffset = 0
-            val (lanWalkerAddress, _) = Address.deserialize(buffer, offset + localOffset)
-            localOffset += Address.SERIALIZED_SIZE
-            val (wanWalkerAddress, _) = Address.deserialize(buffer, offset + localOffset)
-            localOffset += Address.SERIALIZED_SIZE
+            val (lanWalkerAddress, _) = IPv4Address.deserialize(buffer, offset + localOffset)
+            localOffset += IPv4Address.SERIALIZED_SIZE
+            val (wanWalkerAddress, _) = IPv4Address.deserialize(buffer, offset + localOffset)
+            localOffset += IPv4Address.SERIALIZED_SIZE
             val identifier = deserializeUShort(buffer, offset + localOffset)
             localOffset += SERIALIZED_USHORT_SIZE
             val payload = PunctureRequestPayload(lanWalkerAddress, wanWalkerAddress, identifier)

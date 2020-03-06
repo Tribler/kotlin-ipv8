@@ -5,7 +5,7 @@ import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
 class IPv8Configuration(
     val address: String = "0.0.0.0",
     val port: Int = 8090,
-    val walkerInterval: Double = 0.5,
+    val walkerInterval: Double = 5.0,
     val overlays: List<OverlayConfiguration<*>>
 )
 

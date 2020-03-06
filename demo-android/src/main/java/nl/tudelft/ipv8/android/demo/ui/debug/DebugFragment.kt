@@ -7,6 +7,7 @@ import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.text.bold
 import androidx.core.text.buildSpannedString
 import androidx.core.text.inSpans
 import androidx.lifecycle.lifecycleScope
@@ -61,6 +62,17 @@ class DebugFragment : BaseFragment(R.layout.fragment_debug) {
                     append(peersCountStr)
                 }
                 append(")")
+            }
+
+            appendln()
+            bold {
+                append("Total: ")
+            }
+            val totalPeersCount = ipv8.network.verifiedPeers.size
+            val textColorResId = if (totalPeersCount > 0) R.color.green else R.color.red
+            val textColor = resources.getColor(textColorResId, null)
+            inSpans(ForegroundColorSpan(textColor)) {
+                append(resources.getQuantityString(R.plurals.x_peers, totalPeersCount, totalPeersCount))
             }
         }
 

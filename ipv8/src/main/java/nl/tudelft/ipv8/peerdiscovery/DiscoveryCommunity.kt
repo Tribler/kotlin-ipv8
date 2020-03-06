@@ -1,10 +1,10 @@
 package nl.tudelft.ipv8.peerdiscovery
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.*
 import nl.tudelft.ipv8.peerdiscovery.payload.PingPayload
@@ -44,11 +44,11 @@ class DiscoveryCommunity : Community(), PingOverlay {
         return serializePacket(MessageId.SIMILARITY_REQUEST, payload, peer = peer)
     }
 
-    fun sendSimilarityRequest(address: Address) {
+    fun sendSimilarityRequest(peer: Peer) {
         val myPeerSet = network.serviceOverlays.values.map { it.myPeer }.toSet()
         for (myPeer in myPeerSet) {
             val packet = createSimilarityRequest(myPeer)
-            send(address, packet)
+            send(peer, packet)
         }
     }
 
@@ -72,7 +72,7 @@ class DiscoveryCommunity : Community(), PingOverlay {
         pingRequestCache[identifier] = pingRequest
         // TODO: implement cache timeout
 
-        send(peer.address, packet)
+        send(peer, packet)
     }
 
     internal fun createPong(identifier: Int): ByteArray {
@@ -116,7 +116,7 @@ class DiscoveryCommunity : Community(), PingOverlay {
         payload: IntroductionResponsePayload
     ) {
         super.onIntroductionResponse(peer, payload)
-        sendSimilarityRequest(peer.address)
+        sendSimilarityRequest(peer)
     }
 
     internal fun onSimilarityRequest(
@@ -125,12 +125,13 @@ class DiscoveryCommunity : Community(), PingOverlay {
     ) {
         logger.debug("<- $payload")
 
+        network.addVerifiedPeer(peer)
         network.discoverServices(peer, payload.preferenceList)
 
         val myPeerSet = network.serviceOverlays.values.map { it.myPeer }.toSet()
         for (myPeer in myPeerSet) {
             val packet = createSimilarityResponse(payload.identifier, myPeer)
-            send(peer.address, packet)
+            send(peer, packet)
         }
     }
 

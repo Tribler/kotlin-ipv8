@@ -1,7 +1,7 @@
 package nl.tudelft.ipv8.peerdiscovery.strategy
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
 import java.util.*
 
@@ -22,7 +22,7 @@ class RandomWalk(
     private val walkLock = Object()
 
     private var lastStep: Date? = null
-    private val introTimeouts = mutableMapOf<Address, Date>()
+    private val introTimeouts = mutableMapOf<IPv4Address, Date>()
 
     /**
      * Walk to random walkable peer.
@@ -34,7 +34,7 @@ class RandomWalk(
             if (peers >= 0 && overlay.getPeers().size >= peers) return
 
             // Sanitize unreachable nodes
-            val toRemove = mutableListOf<Address>()
+            val toRemove = mutableListOf<IPv4Address>()
             for ((address, introTime) in introTimeouts) {
                 if (introTime.time + timeout * 1000 < Date().time) {
                     toRemove += address

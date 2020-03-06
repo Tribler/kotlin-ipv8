@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8.android
 
 import android.app.Application
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -8,11 +9,17 @@ import android.os.Build
 import androidx.core.content.getSystemService
 import nl.tudelft.ipv8.IPv8
 import nl.tudelft.ipv8.IPv8Configuration
+import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.android.keyvault.AndroidCryptoProvider
+import nl.tudelft.ipv8.android.messaging.bluetooth.BluetoothLeEndpoint
+import nl.tudelft.ipv8.android.messaging.bluetooth.GattServerManager
+import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeAdvertiser
 import nl.tudelft.ipv8.android.messaging.udp.AndroidUdpEndpoint
 import nl.tudelft.ipv8.android.service.IPv8Service
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
+import nl.tudelft.ipv8.messaging.EndpointAggregator
+import nl.tudelft.ipv8.peerdiscovery.Network
 import java.net.InetAddress
 
 object IPv8Android {
@@ -70,10 +77,27 @@ object IPv8Android {
             val connectivityManager = application.getSystemService<ConnectivityManager>()
                 ?: throw IllegalStateException("ConnectivityManager not found")
 
-            val endpoint = AndroidUdpEndpoint(8090, InetAddress.getByName("0.0.0.0"),
+            val udpEndpoint = AndroidUdpEndpoint(8090, InetAddress.getByName("0.0.0.0"),
                 connectivityManager)
 
-            return IPv8(endpoint, configuration, privateKey, AndroidCryptoProvider)
+            val bluetoothManager = application.getSystemService<BluetoothManager>()
+                ?: throw IllegalStateException("BluetoothManager not found")
+
+            val myPeer = Peer(privateKey)
+            val network = Network()
+
+            val gattServer = GattServerManager(application, myPeer)
+            val bleAdvertiser = IPv8BluetoothLeAdvertiser(bluetoothManager)
+            val bluetoothEndpoint = if (bluetoothManager.adapter != null)
+                BluetoothLeEndpoint(application, bluetoothManager, gattServer, bleAdvertiser,
+                    network) else null
+
+            val endpointAggregator = EndpointAggregator(
+                udpEndpoint,
+                bluetoothEndpoint
+            )
+
+            return IPv8(endpointAggregator, configuration, myPeer, AndroidCryptoProvider, network)
         }
 
         private fun startAndroidService(context: Context) {

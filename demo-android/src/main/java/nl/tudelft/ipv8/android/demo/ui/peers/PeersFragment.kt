@@ -56,6 +56,9 @@ class PeersFragment : BaseFragment(R.layout.fragment_peers) {
                 val discoveredAddresses = demoCommunity.network
                     .getWalkableAddresses(demoCommunity.serviceId)
 
+                val discoveredBluetoothAddresses = demoCommunity.network
+                    .getConnectableBluetoothAddresses()
+
                 val peerItems = peers.map { PeerItem(it) }
 
                 val addressItems = discoveredAddresses.map { address ->
@@ -63,7 +66,11 @@ class PeersFragment : BaseFragment(R.layout.fragment_peers) {
                     AddressItem(address, null, contacted)
                 }
 
-                val items = peerItems + addressItems
+                val bluetoothAddressItems = discoveredBluetoothAddresses.map { address ->
+                    AddressItem(address, null, null)
+                }
+
+                val items = peerItems + bluetoothAddressItems + addressItems
 
                 adapter.updateItems(items)
                 binding.txtCommunityName.text = demoCommunity.javaClass.simpleName

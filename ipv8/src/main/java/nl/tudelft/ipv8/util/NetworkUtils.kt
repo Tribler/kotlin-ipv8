@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.util
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -9,7 +9,7 @@ import java.nio.ByteBuffer
 /**
  * Returns true if the address is located within a subnet of one of our network interfaces.
  */
-fun addressIsLan(address: Address): Boolean {
+fun addressIsLan(address: IPv4Address): Boolean {
     val interfaces = NetworkInterface.getNetworkInterfaces()
     for (intf in interfaces) {
         for (intfAddr in intf.interfaceAddresses) {

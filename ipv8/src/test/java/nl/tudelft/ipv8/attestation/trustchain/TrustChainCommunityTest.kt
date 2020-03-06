@@ -4,7 +4,7 @@ import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.BaseCommunityTest
 import nl.tudelft.ipv8.attestation.trustchain.payload.HalfBlockPayload
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainStore
@@ -175,7 +175,7 @@ class TrustChainCommunityTest : BaseCommunityTest() {
         val blockSigner = mockk<BlockSigner>()
         community.registerBlockSigner("test", blockSigner)
 
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val senderKey = JavaCryptoProvider.generateKey()
         val myKey = getPrivateKey()
         val payload = HalfBlockPayload(
@@ -202,7 +202,7 @@ class TrustChainCommunityTest : BaseCommunityTest() {
         val blockSigner = mockk<BlockSigner>()
         community.registerBlockSigner("test", blockSigner)
 
-        val address = Address("1.2.3.4", 1234)
+        val address = IPv4Address("1.2.3.4", 1234)
         val senderKey = JavaCryptoProvider.generateKey()
         val payload = HalfBlockPayload(
             senderKey.pub().keyToBin(),

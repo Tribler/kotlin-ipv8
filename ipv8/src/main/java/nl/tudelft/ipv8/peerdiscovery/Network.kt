@@ -1,15 +1,22 @@
 package nl.tudelft.ipv8.peerdiscovery
 
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.messaging.Address
+import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import kotlin.math.min
 
 class Network {
     /**
      * All known addresses, mapped to (introduction peer MID, service ID)
      */
-    val allAddresses: MutableMap<Address, Pair<String, String?>> = mutableMapOf()
+    val allAddresses: MutableMap<IPv4Address, Pair<String, String?>> = mutableMapOf()
+
+    /**
+     * All discovered Bluetooth addresses.
+     */
+    val bluetoothAddresses: MutableSet<BluetoothAddress> = mutableSetOf()
 
     /**
      * All verified peer objects (peer.address must be in [allAddresses])
@@ -19,7 +26,7 @@ class Network {
     /**
      * Peers we should not add to the network (e.g. bootstrap peers)
      */
-    val blacklist = mutableSetOf<Address>()
+    val blacklist = mutableSetOf<IPv4Address>()
 
     /**
      * Excluded mids
@@ -45,7 +52,7 @@ class Network {
      * @param address The introduced address.
      * @param serviceId The service through which we discovered the peer.
      */
-    fun discoverAddress(peer: Peer, address: Address, serviceId: String? = null) {
+    fun discoverAddress(peer: Peer, address: IPv4Address, serviceId: String? = null) {
         if (address in blacklist) {
             // TODO: Do we need to add the verified peer as it is already added in Community?
             addVerifiedPeer(peer)
@@ -58,6 +65,12 @@ class Network {
                 allAddresses[address] = Pair(peer.mid, serviceId)
             }
             addVerifiedPeer(peer)
+        }
+    }
+
+    fun discoverBluetoothAddress(address: BluetoothAddress) {
+        synchronized(graphLock) {
+            bluetoothAddresses.add(address)
         }
     }
 
@@ -87,12 +100,17 @@ class Network {
             // This may just be an address update
             for (known in verifiedPeers) {
                 if (known.mid == peer.mid) {
-                    known.address = peer.address
+                    if (!peer.address.isEmpty()) {
+                        known.address = peer.address
+                    }
                     if (!peer.lanAddress.isEmpty()) {
                         known.lanAddress = peer.lanAddress
                     }
                     if (!peer.wanAddress.isEmpty()) {
                         known.wanAddress = peer.wanAddress
+                    }
+                    if (peer.bluetoothAddress != null) {
+                        known.bluetoothAddress = peer.bluetoothAddress
                     }
                     return
                 }
@@ -161,14 +179,14 @@ class Network {
      *
      * @param serviceId The service ID to filter on.
      */
-    fun getWalkableAddresses(serviceId: String? = null): List<Address> {
+    fun getWalkableAddresses(serviceId: String? = null): List<IPv4Address> {
         synchronized(graphLock) {
             val known = if (serviceId != null) getPeersForService(serviceId) else verifiedPeers
             val knownAddresses = known.map { it.address }
             var out = (allAddresses.keys.toSet() - knownAddresses).toList()
 
             if (serviceId != null) {
-                val newOut = mutableListOf<Address>()
+                val newOut = mutableListOf<IPv4Address>()
 
                 for (address in out) {
                     val (introPeer, service) = allAddresses[address] ?: return listOf()
@@ -191,6 +209,15 @@ class Network {
         }
     }
 
+    fun getConnectableBluetoothAddresses(): Set<BluetoothAddress> {
+        synchronized(graphLock) {
+            val connectedAddresses = verifiedPeers
+                .mapNotNull { it.bluetoothAddress }
+                .toSet()
+            return bluetoothAddresses - connectedAddresses
+        }
+    }
+
     /**
      * Get a verified peer by its IP address. If multiple peers use the same IP address,
      * this method returns only one of those peers.
@@ -200,7 +227,11 @@ class Network {
      */
     fun getVerifiedByAddress(address: Address): Peer? {
         synchronized(graphLock) {
-            return verifiedPeers.find { it.address == address }
+            return when (address) {
+                is IPv4Address -> verifiedPeers.find { it.address == address }
+                is BluetoothAddress -> verifiedPeers.find { it.bluetoothAddress == address }
+                else -> null
+            }
         }
     }
 
@@ -222,7 +253,7 @@ class Network {
      * @param peer The peer to get the introductions for.
      * @return A list of the introduced addresses.
      */
-    fun getIntroductionFrom(peer: Peer): List<Address> {
+    fun getIntroductionFrom(peer: Peer): List<IPv4Address> {
         synchronized(graphLock) {
             return allAddresses
                 .filter { it.value.first == peer.mid }
@@ -235,10 +266,41 @@ class Network {
      *
      * @param address The address to remove.
      */
-    fun removeByAddress(address: Address) {
+    fun removeByAddress(address: IPv4Address) {
         synchronized(graphLock) {
             allAddresses.remove(address)
-            verifiedPeers.removeAll { it.address == address }
+
+            // Remove peers that have only IPv4Address
+            val peer = verifiedPeers.find { it.address == address }
+            if (peer != null) {
+                peer.address = IPv4Address.EMPTY
+                if (!peer.isConnected()) {
+                    verifiedPeers.remove(peer)
+                }
+            }
+
+            // TODO: what about servicesPerPeer?
+        }
+    }
+
+    /**
+     * Remove addresses and verified peers using a certain Bluetooth address.
+     *
+     * @param address The address to remove.
+     */
+    fun removeByAddress(address: BluetoothAddress) {
+        synchronized(graphLock) {
+            bluetoothAddresses.remove(address)
+
+            // Remove peers that have only BluetoothAddress
+            val peer = getVerifiedByAddress(address)
+            if (peer != null) {
+                peer.bluetoothAddress = null
+                if (!peer.isConnected()) {
+                    verifiedPeers.remove(peer)
+                }
+            }
+
             // TODO: what about servicesPerPeer?
         }
     }

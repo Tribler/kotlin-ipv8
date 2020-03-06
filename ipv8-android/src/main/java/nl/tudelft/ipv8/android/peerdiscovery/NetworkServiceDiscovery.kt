@@ -3,10 +3,9 @@ package nl.tudelft.ipv8.android.peerdiscovery
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.messaging.Packet
-import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
 import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
 import kotlin.random.Random
 
@@ -109,7 +108,7 @@ class NetworkServiceDiscovery(
                 logger.info("Service resolved: $serviceInfo")
 
                 val peer = overlay.myPeer
-                val address = Address(serviceInfo.host.hostAddress, serviceInfo.port)
+                val address = IPv4Address(serviceInfo.host.hostAddress, serviceInfo.port)
 
                 if (overlay.myEstimatedLan != address) {
                     logger.debug { "Discovered address: $address" }
@@ -149,16 +148,15 @@ class NetworkServiceDiscovery(
     override fun load() {
         logger.debug { "NetworkServiceDiscovery load" }
 
-        val endpoint = overlay.endpoint
-        if (endpoint is UdpEndpoint) {
+        val endpoint = overlay.endpoint.udpEndpoint
+        if (endpoint != null) {
             val socketPort = endpoint.getSocketPort()
             val serviceName = overlay.serviceId + "_" + Random.nextInt(10000)
             logger.debug { "Registering service $serviceName on port $socketPort" }
             registerService(socketPort, serviceName)
-        } else {
-            logger.error { "Overlay endpoint is not UdpEndpoint" }
+
+            discoverServices()
         }
-        discoverServices()
     }
 
     override fun takeStep() {

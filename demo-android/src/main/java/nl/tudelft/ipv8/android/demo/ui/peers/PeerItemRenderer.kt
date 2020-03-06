@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.android.demo.ui.peers
 
 import android.annotation.SuppressLint
 import android.view.View
+import androidx.core.view.isVisible
 import com.mattskala.itemadapter.ItemLayoutRenderer
 import kotlinx.android.synthetic.main.item_peer.view.*
 import nl.tudelft.ipv8.android.demo.R
@@ -14,7 +15,10 @@ class PeerItemRenderer(
     @SuppressLint("SetTextI18n")
     override fun bindView(item: PeerItem, view: View) = with(view) {
         txtPeerId.text = item.peer.mid
-        txtAddress.text = item.peer.address.ip + ":" + item.peer.address.port
+        txtAddress.text = item.peer.address.toString()
+        txtAddress.isVisible = !item.peer.address.isEmpty()
+        txtBluetoothAddress.text = item.peer.bluetoothAddress?.toString()
+        txtBluetoothAddress.isVisible = item.peer.bluetoothAddress != null
         val avgPing = item.peer.getAveragePing()
         val lastRequest = item.peer.lastRequest
         val lastResponse = item.peer.lastResponse

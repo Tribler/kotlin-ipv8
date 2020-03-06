@@ -1,13 +1,13 @@
 package nl.tudelft.ipv8.messaging
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 
 private val logger = KotlinLogging.logger {}
 
-abstract class Endpoint {
+abstract class Endpoint<A> {
     private val listeners = mutableListOf<EndpointListener>()
-    private var estimatedLan: Address? = null
+    private var estimatedLan: IPv4Address? = null
 
     fun addListener(listener: EndpointListener) {
         listeners.add(listener)
@@ -32,7 +32,7 @@ abstract class Endpoint {
         }
     }
 
-    protected fun setEstimatedLan(address: Address) {
+    protected fun setEstimatedLan(address: IPv4Address) {
         logger.info("Estimated LAN address: $address")
 
         estimatedLan = address
@@ -43,7 +43,7 @@ abstract class Endpoint {
     }
 
     abstract fun isOpen(): Boolean
-    abstract fun send(address: Address, data: ByteArray)
+    abstract fun send(address: A, data: ByteArray)
     abstract fun open()
     abstract fun close()
 }

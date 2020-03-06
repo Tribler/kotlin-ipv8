@@ -3,23 +3,20 @@ package nl.tudelft.ipv8
 import kotlinx.coroutines.*
 import nl.tudelft.ipv8.keyvault.CryptoProvider
 import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
-import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.messaging.Endpoint
+import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
 import java.lang.IllegalStateException
 import kotlin.math.roundToLong
 
 class IPv8(
-    private val endpoint: Endpoint,
+    private val endpoint: EndpointAggregator,
     private val configuration: IPv8Configuration,
-    privateKey: PrivateKey,
-    private val cryptoProvider: CryptoProvider = JavaCryptoProvider
+    val myPeer: Peer,
+    private val cryptoProvider: CryptoProvider = JavaCryptoProvider,
+    val network: Network = Network()
 ) {
     private val overlayLock = Object()
-
-    val myPeer = Peer(privateKey)
-    val network = Network()
 
     val overlays = mutableMapOf<Class<out Overlay>, Overlay>()
     private val strategies = mutableListOf<DiscoveryStrategy>()

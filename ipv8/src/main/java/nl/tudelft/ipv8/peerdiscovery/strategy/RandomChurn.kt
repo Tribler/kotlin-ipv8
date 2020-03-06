@@ -1,7 +1,7 @@
 package nl.tudelft.ipv8.peerdiscovery.strategy
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Address
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.peerdiscovery.PingOverlay
 import java.util.*
@@ -23,7 +23,7 @@ class RandomChurn(
 ) : DiscoveryStrategy {
     private val walkLock = Object()
 
-    private val pinged = mutableMapOf<Address, Date>()
+    private val pinged = mutableMapOf<IPv4Address, Date>()
 
     /**
      * Have we passed the time before we consider this peer to be unreachable.

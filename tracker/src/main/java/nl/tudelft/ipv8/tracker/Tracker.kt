@@ -3,6 +3,7 @@ package nl.tudelft.ipv8.tracker
 import mu.KotlinLogging
 import nl.tudelft.ipv8.*
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
+import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.IntroductionRequestPayload
 import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
@@ -74,7 +75,10 @@ class TrackerCommunity : Community() {
 
 class TrackerService {
     fun startTracker(port: Int) {
-        val endpoint = UdpEndpoint(port, InetAddress.getByName("0.0.0.0"))
+        val endpoint = EndpointAggregator(
+            UdpEndpoint(port, InetAddress.getByName("0.0.0.0")),
+            null
+        )
 
         val config = IPv8Configuration(
             overlays = listOf(
@@ -87,7 +91,8 @@ class TrackerService {
 
         val key = defaultCryptoProvider.generateKey()
 
-        val ipv8 = IPv8(endpoint, config, key)
+        val myPeer = Peer(key)
+        val ipv8 = IPv8(endpoint, config, myPeer)
         ipv8.start()
 
         logger.info { "Started tracker" }
