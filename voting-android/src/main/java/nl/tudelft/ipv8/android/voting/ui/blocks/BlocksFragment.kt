@@ -23,6 +23,8 @@ import nl.tudelft.ipv8.attestation.trustchain.ANY_COUNTERPARTY_PK
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
 import nl.tudelft.ipv8.attestation.trustchain.UNKNOWN_SEQ
 import nl.tudelft.ipv8.util.hexToBytes
+import org.json.JSONException
+import org.json.JSONObject
 
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
@@ -78,7 +80,16 @@ open class BlocksFragment : BaseFragment() {
             android.app.AlertDialog.Builder(requireContext())
         builder.setTitle("Cast vote")
 
-        val voteSubject = block.transaction["VOTE_SUBJECT"].toString()
+        // Get the vote subject from the proposal.
+        val voteSubject: String = try {
+            // Parse the JSON object in the transaction's 'message' field.
+            val voteJSON = JSONObject(block.transaction["message"].toString())
+            // Retrieve the vote subject.
+            voteJSON.get("VOTE_SUBJECT").toString()
+        } catch (e: JSONException) {
+            "Wrongly formatted vote request."
+        }
+
         builder.setMessage(voteSubject)
 
         builder.setPositiveButton("YES") { _, _ ->
