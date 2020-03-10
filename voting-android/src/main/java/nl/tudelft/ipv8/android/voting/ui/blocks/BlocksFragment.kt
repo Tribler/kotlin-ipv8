@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.android.voting.ui.blocks
 
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.*
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -53,8 +54,14 @@ open class BlocksFragment : BaseFragment() {
 
         adapter.registerRenderer(BlockItemRenderer(
             onExpandClick = {
-                if (it.block.type.equals("voting_block") && !it.block.isAgreement) {
-                    showNewCastVoteDialog(it.block)
+                if (it.block.type.equals("voting_block")) {
+                    if (!it.block.isAgreement) {
+                        showNewCastVoteDialog(it.block)
+                    } else {
+                        val voteName = "";
+                        val tally = getVotingCommunity().countVotes(voteName, it.block.publicKey)
+                        Log.e("voting_debug", "Yes votes: " + tally.first + ", No votes: " + tally.second)
+                    }
                 }
                 val blockId = it.block.blockId
                 if (expandedBlocks.contains(blockId)) {
@@ -93,8 +100,7 @@ open class BlocksFragment : BaseFragment() {
         builder.setMessage(voteSubject)
 
         builder.setPositiveButton("YES") { _, _ ->
-            getVotingCommunity().respondToVote(voteSubject,true, block)
-            getVotingCommunity().countVotes("0.14", block.publicKey)
+            getVotingCommunity().respondToVote(voteSubject, true, block)
         }
 
         builder.setNegativeButton("NO") { dialog, _ ->

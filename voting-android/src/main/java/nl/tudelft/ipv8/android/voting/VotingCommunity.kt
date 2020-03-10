@@ -70,38 +70,43 @@ class VotingCommunity : Community() {
         trustchain.createAgreementBlock(proposalBlock, transaction)
     }
 
-    fun countVotes(voteName: String, proposerKey: ByteArray): Int {
-        // TODO: Implement this function properly.
+    /**
+     * Return the talley on a vote proposal in a pair(yes, no).
+     */
+    fun countVotes(voteName: String, proposerKey: ByteArray): Pair<Int, Int> {
+        Log.e("vote_debug", "started counting")
 
-        // Crawl through chain of proposer and find all votes with voteName.
-        Log.e("vote_debug", "Counting votes...")
+        var yesCount = 0
+        var noCount = 0
 
-//        var yesCount = 0
-//        var noCount = 0
-//
-//        for (block in trustchain.getChainByUser(proposerKey)) {
-//            Log.e("vote_debug", block.transaction.toString())
-//            val items = block.transaction["message"].toString().removePrefix("{").removeSuffix("}").split(",")
-//            Log.e("vote_debug", items.toString())
-//            val reply = items[1].toString().split("=")[1]
-//            val subject = items[0].toString().split("=")[1]
-//            if (block.type === "voting_block" &&
-//                subject === voteName) {
-//                if (reply === "YES") {
-//                    yesCount++
-//                } else if (reply === "NO") {
-//                    noCount++
-//                } else {
-//                    Log.e("vote_debug", reply.toString())
-//                }
-//            }
-//        }
-//
-//        Log.e("vote_debug", "Yes: $yesCount")
-//        Log.e("vote_debug", "No: $noCount")
-//
-//        return if (yesCount > noCount) yesCount else noCount
-        return 5
+        trustchain.getChainByUser(proposerKey).forEach {
+            val payload =
+                it.transaction["message"].toString().removePrefix("{").removeSuffix("}").split(",")
+            Log.e("vote_debug", "payload: $payload")
+
+            if (payload.size > 1) {
+                val subject = payload[0].split(":")[1]
+                val reply = payload[1].split(":")[1]
+                if (it.type === "voting_block" &&
+                    subject === voteName
+                ) {
+                    when {
+                        reply === "YES" -> {
+                            yesCount++
+                        }
+                        reply === "NO" -> {
+                            noCount++
+                        }
+                        else -> {
+                            Log.e("vote_debug", reply)
+                        }
+                    }
+                }
+            }
+        }
+        Log.e("vote_debug", yesCount.toString() + ", " + noCount.toString())
+
+        return Pair(yesCount, noCount)
     }
 
     class Factory : Overlay.Factory<VotingCommunity>(VotingCommunity::class.java)
