@@ -87,18 +87,17 @@ class VotingCommunity : Community() {
             if (payload.size > 1) {
                 val subject = payload[0].split(":")[1]
                 val reply = payload[1].split(":")[1]
-                if (it.type === "voting_block" &&
-                    subject === voteName
-                ) {
-                    when {
-                        reply === "YES" -> yesCount++
-                        reply === "NO" -> noCount++
-                        else -> Log.e("vote_debug", reply)
+
+                if (it.type == "voting_block" && subject == voteName) {
+                    when (reply) {
+                        "\"YES\"" -> yesCount++
+                        "\"NO\"" -> noCount++
+                        else -> Log.e("vote_debug", "Different option encountered: $reply")
                     }
                 }
             }
         }
-
+        Log.e("vote_debug", "$yesCount,$noCount")
         return Pair(yesCount, noCount)
     }
 
