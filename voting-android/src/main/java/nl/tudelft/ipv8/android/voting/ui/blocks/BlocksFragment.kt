@@ -58,16 +58,23 @@ open class BlocksFragment : BaseFragment() {
                     if (!it.block.isAgreement) {
                         showNewCastVoteDialog(it.block)
                     } else {
+                        // Retrieve name of proposal TODO change to id to make it foolproof
                         val voteName =
                             it.block.transaction["message"].toString().removePrefix("{").removeSuffix(
                                 "}"
                             ).split(",")[0].split(":")[1]
 
+                        // Count votes
                         val tally = getVotingCommunity().countVotes(voteName, it.block.publicKey)
                         Log.e(
                             "voting_debug",
                             "Yes votes: " + tally.first + ", No votes: " + tally.second
                         )
+                        Toast.makeText(
+                            this.context,
+                            "Yes votes: " + tally.first + ", No votes: " + tally.second,
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
                 val blockId = it.block.blockId
@@ -98,6 +105,7 @@ open class BlocksFragment : BaseFragment() {
         val voteSubject: String = try {
             // Parse the JSON object in the transaction's 'message' field.
             val voteJSON = JSONObject(block.transaction["message"].toString())
+
             // Retrieve the vote subject.
             voteJSON.get("VOTE_SUBJECT").toString()
         } catch (e: JSONException) {
