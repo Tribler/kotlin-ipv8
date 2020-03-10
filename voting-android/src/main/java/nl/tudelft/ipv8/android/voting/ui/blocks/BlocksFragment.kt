@@ -58,9 +58,16 @@ open class BlocksFragment : BaseFragment() {
                     if (!it.block.isAgreement) {
                         showNewCastVoteDialog(it.block)
                     } else {
-                        val voteName = "";
+                        val voteName =
+                            it.block.transaction["message"].toString().removePrefix("{").removeSuffix(
+                                "}"
+                            ).split(",")[0].split(":")[1]
+
                         val tally = getVotingCommunity().countVotes(voteName, it.block.publicKey)
-                        Log.e("voting_debug", "Yes votes: " + tally.first + ", No votes: " + tally.second)
+                        Log.e(
+                            "voting_debug",
+                            "Yes votes: " + tally.first + ", No votes: " + tally.second
+                        )
                     }
                 }
                 val blockId = it.block.blockId
