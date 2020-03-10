@@ -56,8 +56,9 @@ open class BlocksFragment : BaseFragment() {
             onExpandClick = {
                 if (it.block.type.equals("voting_block")) {
                     if (!it.block.isAgreement) {
+                        // TODO only cast vote if not done so before
                         showNewCastVoteDialog(it.block)
-                    } else {
+
                         // Retrieve name of proposal TODO change to id to make it foolproof
                         val voteName =
                             it.block.transaction["message"].toString().removePrefix("{").removeSuffix(
@@ -79,6 +80,7 @@ open class BlocksFragment : BaseFragment() {
                         ).show()
                     }
                 }
+
                 val blockId = it.block.blockId
                 if (expandedBlocks.contains(blockId)) {
                     expandedBlocks.remove(blockId)
