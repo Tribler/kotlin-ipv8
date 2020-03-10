@@ -71,14 +71,14 @@ class VotingCommunity : Community() {
     }
 
     /**
-     * Return the talley on a vote proposal in a pair(yes, no).
+     * Return the tally on a vote proposal in a pair(yes, no).
      */
     fun countVotes(voteName: String, proposerKey: ByteArray): Pair<Int, Int> {
-        Log.e("vote_debug", "started counting")
 
         var yesCount = 0
         var noCount = 0
 
+        // Count votes
         trustchain.getChainByUser(proposerKey).forEach {
             val payload =
                 it.transaction["message"].toString().removePrefix("{").removeSuffix("}").split(",")
@@ -91,20 +91,13 @@ class VotingCommunity : Community() {
                     subject === voteName
                 ) {
                     when {
-                        reply === "YES" -> {
-                            yesCount++
-                        }
-                        reply === "NO" -> {
-                            noCount++
-                        }
-                        else -> {
-                            Log.e("vote_debug", reply)
-                        }
+                        reply === "YES" -> yesCount++
+                        reply === "NO" -> noCount++
+                        else -> Log.e("vote_debug", reply)
                     }
                 }
             }
         }
-        Log.e("vote_debug", yesCount.toString() + ", " + noCount.toString())
 
         return Pair(yesCount, noCount)
     }

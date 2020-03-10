@@ -70,6 +70,8 @@ open class BlocksFragment : BaseFragment() {
                             "voting_debug",
                             "Yes votes: " + tally.first + ", No votes: " + tally.second
                         )
+
+                        // Display vote tally preview
                         Toast.makeText(
                             this.context,
                             "Yes votes: " + tally.first + ", No votes: " + tally.second,
