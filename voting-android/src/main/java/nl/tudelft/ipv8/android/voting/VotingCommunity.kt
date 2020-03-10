@@ -4,6 +4,7 @@ import android.util.Log
 import nl.tudelft.ipv8.Address
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.IPv8
+import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.android.IPv8Android
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainCommunity
@@ -25,11 +26,13 @@ class VotingCommunity : Community() {
     }
 
     protected fun getTrustChainCommunity(): TrustChainCommunity {
-        return getIpv8().getOverlay() ?: throw IllegalStateException("TrustChainCommunity is not configured")
+        return getIpv8().getOverlay()
+            ?: throw IllegalStateException("TrustChainCommunity is not configured")
     }
 
     protected fun getVotingCommunity(): VotingCommunity {
-        return getIpv8().getOverlay() ?: throw IllegalStateException("VotingCommunity is not configured")
+        return getIpv8().getOverlay()
+            ?: throw IllegalStateException("VotingCommunity is not configured")
     }
 
     protected fun getIpv8(): IPv8 {
@@ -44,7 +47,11 @@ class VotingCommunity : Community() {
 
         // Loop through all peers in the voting community and send a proposal.
         for (peer in getVotingCommunity().getPeers()) {
-            trustchain.createVoteProposalBlock(peer.publicKey.keyToBin(), transaction, "voting_block")
+            trustchain.createVoteProposalBlock(
+                peer.publicKey.keyToBin(),
+                transaction,
+                "voting_block"
+            )
         }
     }
 
@@ -96,4 +103,7 @@ class VotingCommunity : Community() {
 //        return if (yesCount > noCount) yesCount else noCount
         return 5
     }
+
+    class Factory : Overlay.Factory<VotingCommunity>(VotingCommunity::class.java)
+
 }
