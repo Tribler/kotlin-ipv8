@@ -8,6 +8,7 @@ import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.android.IPv8Android
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainCommunity
+import org.json.JSONException
 import org.json.JSONObject
 import java.util.*
 
@@ -40,6 +41,8 @@ class VotingCommunity : Community() {
     }
 
     fun startVote(voteSubject: String) {
+        // TODO: Add vote ID to increase probability of uniqueness.
+
         // Create a JSON object containing the vote subject
         val voteJSON = JSONObject().put("VOTE_SUBJECT", voteSubject)
         // Put the JSON string in the transaction's 'message' field.
@@ -78,6 +81,58 @@ class VotingCommunity : Community() {
         var yesCount = 0
         var noCount = 0
 
+        // Crawl the chain of the proposer.
+        for (it in trustchain.getChainByUser(proposerKey)) {
+
+            // Skip all blocks which are not voting blocks
+            // and don't have a 'message' field in their transaction.
+            if (it.type != "voting_block" || !it.transaction.containsKey("message")) {
+                continue
+            }
+
+            // Parse the 'message' field as JSON.
+            val voteJSON = try {
+                JSONObject(it.transaction["message"].toString())
+            } catch (e: JSONException) {
+                // Assume a malicious vote if it claims to be a vote but does not contain
+                // proper JSON.
+                handleInvalidVote("Block was a voting block but did not contain " +
+                    "proper JSON in its message field: ${it.transaction["message"].toString()}."
+                )
+                continue
+            }
+
+            // Assume a malicious vote if it does not have a VOTE_SUBJECT.
+            if (!voteJSON.has("VOTE_SUBJECT")) {
+                handleInvalidVote("Block type was a voting block but did not have a VOTE_SUBJECT.")
+                continue
+            }
+
+            // A block with another VOTE_SUBJECT belongs to another vote.
+            if (voteJSON.get("VOTE_SUBJECT") != voteName) {
+                // Block belongs to another vote.
+                continue
+            }
+
+            // A block with the same subject but no reply is the original vote proposal.
+            if (!voteJSON.has("VOTE_REPLY")) {
+                // Block is the initial vote proposal because it does not have a VOTE_REPLY field.
+                continue
+            }
+
+            // Add the votes, or assume a malicious vote if it is not YES or NO.
+            when (voteJSON.get("VOTE_REPLY")) {
+                "YES" -> yesCount++
+                "NO" -> noCount++
+                else -> handleInvalidVote("Vote was not 'YES' or 'NO' but: '${voteJSON.get("VOTE_REPLY")}'.")
+            }
+        }
+
+        return Pair(yesCount, noCount)
+
+        /*var yesCount = 0
+        var noCount = 0
+
         // Count votes
         trustchain.getChainByUser(proposerKey).forEach {
             val payload =
@@ -98,7 +153,11 @@ class VotingCommunity : Community() {
             }
         }
         Log.e("vote_debug", "$yesCount,$noCount")
-        return Pair(yesCount, noCount)
+        return Pair(yesCount, noCount)*/
+    }
+
+    fun handleInvalidVote(errorType: String) {
+        Log.e("vote_debug", errorType)
     }
 
     class Factory : Overlay.Factory<VotingCommunity>(VotingCommunity::class.java)

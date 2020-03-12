@@ -54,30 +54,22 @@ open class BlocksFragment : BaseFragment() {
 
         adapter.registerRenderer(BlockItemRenderer(
             onExpandClick = {
-                if (it.block.type.equals("voting_block")) {
-                    if (!it.block.isAgreement) {
-                        // TODO only cast vote if not done so before
-                        showNewCastVoteDialog(it.block)
+                if (it.block.type == "voting_block" && !it.block.isAgreement) {
+                    // TODO: Only cast vote if not done so before.
+                    showNewCastVoteDialog(it.block)
 
-                        // Retrieve name of proposal TODO change to id to make it foolproof
-                        val voteName =
-                            it.block.transaction["message"].toString().removePrefix("{").removeSuffix(
-                                "}"
-                            ).split(",")[0].split(":")[1]
-
-                        // Count votes
+                    try {
+                        val voteJSON = JSONObject(it.block.transaction["message"].toString())
+                        val voteName = voteJSON.get("VOTE_SUBJECT").toString()
                         val tally = getVotingCommunity().countVotes(voteName, it.block.publicKey)
-                        Log.e(
-                            "voting_debug",
-                            "Yes votes: " + tally.first + ", No votes: " + tally.second
-                        )
 
-                        // Display vote tally preview
-                        Toast.makeText(
-                            this.context,
-                            "Yes votes: " + tally.first + ", No votes: " + tally.second,
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        val text = "Yes votes: ${tally.first}. No votes: ${tally.second}."
+
+                        // Display vote tally preview.
+                        Toast.makeText(this.context, text, Toast.LENGTH_SHORT).show()
+                        Log.e("vote_debug", text)
+                    } catch (e: JSONException) {
+                        // TODO: Catch when not 'message'
                     }
                 }
 
