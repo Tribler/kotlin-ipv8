@@ -8,6 +8,7 @@ import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.android.IPv8Android
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainCommunity
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.*
@@ -43,19 +44,36 @@ class VotingCommunity : Community() {
     fun startVote(voteSubject: String) {
         // TODO: Add vote ID to increase probability of uniqueness.
 
+        // Get all peers in the community and create a JSON array of their public keys.
+        val peers = getVotingCommunity().getPeers()
+        val voteList = JSONArray(peers.map { it.publicKey.toString() })
+
         // Create a JSON object containing the vote subject
-        val voteJSON = JSONObject().put("VOTE_SUBJECT", voteSubject)
+        val voteJSON = JSONObject()
+            .put("VOTE_SUBJECT", voteSubject)
+            .put("VOTE_LIST", voteList)
+
         // Put the JSON string in the transaction's 'message' field.
         val transaction = mapOf("message" to voteJSON.toString())
 
         // Loop through all peers in the voting community and send a proposal.
-        for (peer in getVotingCommunity().getPeers()) {
+        for (peer in peers) {
             trustchain.createVoteProposalBlock(
                 peer.publicKey.keyToBin(),
                 transaction,
                 "voting_block"
             )
         }
+
+        // Update the JSON to include a VOTE_END message.
+        voteJSON.put("VOTE_END", "True")
+        val endTransaction = mapOf("message" to voteJSON.toString())
+
+        // Add the VOTE_END transaction to the proposer's chain and self-sign it.
+        trustchain.createVoteProposalBlock(
+            myPeer.publicKey.keyToBin(),
+            endTransaction, "voting_block"
+        )
     }
 
     fun respondToVote(voteName: String, vote: Boolean, proposalBlock: TrustChainBlock) {
