@@ -113,4 +113,15 @@ class TransactionEncodingTest {
         val (_, decoded) = TransactionEncoding.decode(encoded)
         Assert.assertEquals(decoded, value)
     }
+
+    @Test
+    fun emoji() {
+        val value = mapOf(
+            "message" to "🦄"
+        )
+        val encoded = TransactionEncoding.encode(value)
+        val (_, decoded) = TransactionEncoding.decode(encoded)
+        val decodedValue = decoded as Map<*, *>
+        Assert.assertEquals(value["message"], decodedValue["message"])
+    }
 }

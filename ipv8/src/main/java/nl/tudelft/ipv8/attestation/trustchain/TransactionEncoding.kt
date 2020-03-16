@@ -130,7 +130,7 @@ object TransactionEncoding {
     }
 
     private fun encodeString(value: String): String {
-        return "" + value.length + TYPE_STRING + value
+        return "" + value.toByteArray(Charsets.UTF_8).size + TYPE_STRING + value
     }
 
     private fun decodeString(buffer: ByteArray, offset: Int, count: Int): Pair<Int, String> {
