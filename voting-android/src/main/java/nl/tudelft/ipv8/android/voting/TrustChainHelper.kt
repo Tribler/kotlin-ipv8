@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.android.voting
 
 import android.util.Log
 import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.attestation.trustchain.EMPTY_SIG
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainCommunity
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainTransaction
@@ -57,9 +58,18 @@ class TrustChainHelper(
      * Creates an agreement block to a specified proposal block, using a custom transaction.
      */
     fun createAgreementBlock(link: TrustChainBlock, transaction: TrustChainTransaction) {
-        Log.e("vote_debug", "agreeing block")
         trustChainCommunity.createAgreementBlock(link, transaction)
     }
+
+//    /**
+//     * Creates an agreement block to a specified voting porposal block, using a custom transaction.
+//     */
+//    fun createVoteAgreementBlock(link: TrustChainBlock, transaction: TrustChainTransaction) {
+//        Log.e("vote_debug", link.)
+//        Log.e("vote_debug", EMPTY_SIG.toString(Charsets.UTF_8))
+//        trustChainCommunity.createAgreementBlock(link, transaction)
+//    }
+
 
     /**
      * Returns a list of blocks in which the specified user is participating as a sender or

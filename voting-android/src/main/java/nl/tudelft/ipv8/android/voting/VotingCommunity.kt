@@ -96,11 +96,16 @@ class VotingCommunity : Community() {
      */
     fun countVotes(voteName: String, proposerKey: ByteArray): Pair<Int, Int> {
 
+        var voters: MutableList<String> = ArrayList()
         var yesCount = 0
         var noCount = 0
 
         // Crawl the chain of the proposer.
         for (it in trustchain.getChainByUser(proposerKey)) {
+
+            if (it.linkPublicKey.toString() in voters){
+                continue
+            }
 
             // Skip all blocks which are not voting blocks
             // and don't have a 'message' field in their transaction.
@@ -140,8 +145,14 @@ class VotingCommunity : Community() {
 
             // Add the votes, or assume a malicious vote if it is not YES or NO.
             when (voteJSON.get("VOTE_REPLY")) {
-                "YES" -> yesCount++
-                "NO" -> noCount++
+                "YES" -> {
+                    yesCount++
+                    voters.add(it.linkPublicKey.toString())
+                }
+                "NO" -> {
+                    noCount++
+                    voters.add(it.linkPublicKey.toString())
+                }
                 else -> handleInvalidVote("Vote was not 'YES' or 'NO' but: '${voteJSON.get("VOTE_REPLY")}'.")
             }
         }
