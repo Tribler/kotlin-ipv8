@@ -149,7 +149,7 @@ class VotingCommunity : Community() {
                 "YES" -> {
                     yesCount++
                     voters.add(it.linkPublicKey.toString())
-                    Log.e("vote_debug", it.linkPublicKey.toString())
+                    Log.e("vote_debug", it.linkPublicKey.contentToString())
                 }
                 "NO" -> {
                     noCount++
