@@ -97,13 +97,14 @@ class VotingCommunity : Community() {
     fun countVotes(voteName: String, proposerKey: ByteArray): Pair<Int, Int> {
 
         var voters: MutableList<String> = ArrayList()
+
         var yesCount = 0
         var noCount = 0
 
         // Crawl the chain of the proposer.
         for (it in trustchain.getChainByUser(proposerKey)) {
 
-            if (it.linkPublicKey.toString() in voters){
+            if (voters.contains(it.linkPublicKey.toString())){
                 continue
             }
 
@@ -148,6 +149,7 @@ class VotingCommunity : Community() {
                 "YES" -> {
                     yesCount++
                     voters.add(it.linkPublicKey.toString())
+                    Log.e("vote_debug", it.linkPublicKey.toString())
                 }
                 "NO" -> {
                     noCount++
