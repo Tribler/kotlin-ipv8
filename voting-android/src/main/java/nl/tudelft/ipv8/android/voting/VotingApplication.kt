@@ -94,7 +94,7 @@ class VotingApplication : Application() {
     private fun createVotingCommunity(): OverlayConfiguration<VotingCommunity> {
         val randomWalk = RandomWalk.Factory()
         return OverlayConfiguration(
-            Overlay.Factory(VotingCommunity::class.java),
+            VotingCommunity.Factory(),
             listOf(randomWalk)
         )
     }

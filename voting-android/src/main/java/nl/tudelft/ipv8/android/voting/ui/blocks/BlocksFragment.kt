@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.android.voting.ui.blocks
 
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.*
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -53,9 +54,25 @@ open class BlocksFragment : BaseFragment() {
 
         adapter.registerRenderer(BlockItemRenderer(
             onExpandClick = {
-                if (it.block.type.equals("voting_block") && !it.block.isAgreement) {
+                if (it.block.type == "voting_block" && !it.block.isAgreement) {
+                    // TODO: Only cast vote if not done so before.
                     showNewCastVoteDialog(it.block)
+
+                    try {
+                        val voteJSON = JSONObject(it.block.transaction["message"].toString())
+                        val voteName = voteJSON.get("VOTE_SUBJECT").toString()
+                        val tally = getVotingCommunity().countVotes(voteName, it.block.publicKey)
+
+                        val text = "Yes votes: ${tally.first}. No votes: ${tally.second}."
+
+                        // Display vote tally preview.
+                        Toast.makeText(this.context, text, Toast.LENGTH_SHORT).show()
+                        Log.e("vote_debug", text)
+                    } catch (e: JSONException) {
+                        // TODO: Catch when not 'message'
+                    }
                 }
+
                 val blockId = it.block.blockId
                 if (expandedBlocks.contains(blockId)) {
                     expandedBlocks.remove(blockId)
@@ -84,6 +101,7 @@ open class BlocksFragment : BaseFragment() {
         val voteSubject: String = try {
             // Parse the JSON object in the transaction's 'message' field.
             val voteJSON = JSONObject(block.transaction["message"].toString())
+
             // Retrieve the vote subject.
             voteJSON.get("VOTE_SUBJECT").toString()
         } catch (e: JSONException) {
@@ -93,8 +111,7 @@ open class BlocksFragment : BaseFragment() {
         builder.setMessage(voteSubject)
 
         builder.setPositiveButton("YES") { _, _ ->
-            getVotingCommunity().respondToVote(voteSubject,true, block)
-            getVotingCommunity().countVotes("0.14", block.publicKey)
+            getVotingCommunity().respondToVote(voteSubject, true, block)
         }
 
         builder.setNegativeButton("NO") { dialog, _ ->
