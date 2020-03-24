@@ -103,11 +103,8 @@ class VotingCommunity : Community() {
 
         // Crawl the chain of the proposer.
         for (it in trustchain.getChainByUser(proposerKey)) {
-
-
-
+            
             if (voters.contains(it.publicKey.contentToString())){
-                Log.e("vote_debug", it.publicKey.contentToString())
                 continue
             }
 
@@ -152,12 +149,10 @@ class VotingCommunity : Community() {
                 "YES" -> {
                     yesCount++
                     voters.add(it.publicKey.contentToString())
-                    Log.e("vote_debug", it.publicKey.contentToString())
                 }
                 "NO" -> {
                     noCount++
                     voters.add(it.publicKey.contentToString())
-                    Log.e("vote_debug", it.publicKey.contentToString())
                 }
                 else -> handleInvalidVote("Vote was not 'YES' or 'NO' but: '${voteJSON.get("VOTE_REPLY")}'.")
             }
