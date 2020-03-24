@@ -16,7 +16,7 @@ import kotlin.random.Random
 private val logger = KotlinLogging.logger {}
 
 abstract class Community : Overlay {
-    private val prefix: ByteArray
+    protected val prefix: ByteArray
         get() = ByteArray(0) + 0.toByte() + VERSION + serviceId.hexToBytes()
 
     override var myEstimatedWan: IPv4Address = IPv4Address.EMPTY
