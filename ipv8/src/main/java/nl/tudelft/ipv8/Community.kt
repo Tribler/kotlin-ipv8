@@ -16,7 +16,7 @@ import kotlin.random.Random
 private val logger = KotlinLogging.logger {}
 
 abstract class Community : Overlay {
-    protected val prefix: ByteArray
+    private val prefix: ByteArray
         get() = ByteArray(0) + 0.toByte() + VERSION + serviceId.hexToBytes()
 
     override var myEstimatedWan: IPv4Address = IPv4Address.EMPTY
@@ -46,6 +46,10 @@ abstract class Community : Overlay {
         super.load()
 
         logger.info { "Loading " + javaClass.simpleName + " for peer " + myPeer.mid }
+
+        require(serviceId.length == 2 * Packet.SERVICE_ID_SIZE) {
+            "Service ID must be 20 bytes, was $serviceId"
+        }
 
         network.registerServiceProvider(serviceId, this)
         network.blacklistMids.add(myPeer.mid)
