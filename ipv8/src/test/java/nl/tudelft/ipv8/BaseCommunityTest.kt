@@ -18,7 +18,7 @@ import org.junit.Before
 
 private val lazySodium = LazySodiumJava(SodiumJava())
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 abstract class BaseCommunityTest {
     private val testDispatcher = TestCoroutineDispatcher()
 
