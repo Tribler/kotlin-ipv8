@@ -89,6 +89,10 @@ class Application {
                 delay(5000)
             }
         }
+
+        while (ipv8.isStarted()) {
+            Thread.sleep(1000)
+        }
     }
 
     private fun printPeersInfo(overlay: Overlay) {

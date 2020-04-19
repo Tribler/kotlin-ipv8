@@ -96,6 +96,10 @@ class TrackerService {
         ipv8.start()
 
         logger.info { "Started tracker" }
+
+        while (ipv8.isStarted()) {
+            Thread.sleep(1000)
+        }
     }
 }
 
