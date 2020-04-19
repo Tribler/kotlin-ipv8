@@ -17,7 +17,7 @@ private val logger = KotlinLogging.logger {}
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
 class TrackerCommunity : Community() {
-    override val serviceId: String = sha1(cryptoProvider.generateKey().keyToBin()).toHex()
+    override val serviceId: String = sha1(defaultCryptoProvider.generateKey().keyToBin()).toHex()
 
     override fun onPacket(packet: Packet) {
         val sourceAddress = packet.source
@@ -96,6 +96,10 @@ class TrackerService {
         ipv8.start()
 
         logger.info { "Started tracker" }
+
+        while (ipv8.isStarted()) {
+            Thread.sleep(1000)
+        }
     }
 }
 

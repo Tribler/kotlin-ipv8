@@ -97,7 +97,7 @@ object IPv8Android {
                 bluetoothEndpoint
             )
 
-            return IPv8(endpointAggregator, configuration, myPeer, AndroidCryptoProvider, network)
+            return IPv8(endpointAggregator, configuration, myPeer, network)
         }
 
         private fun startAndroidService(context: Context) {

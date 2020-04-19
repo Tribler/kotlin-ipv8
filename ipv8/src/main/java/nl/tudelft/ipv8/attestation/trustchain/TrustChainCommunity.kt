@@ -12,6 +12,7 @@ import nl.tudelft.ipv8.util.random
 import nl.tudelft.ipv8.attestation.trustchain.payload.*
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainStore
 import nl.tudelft.ipv8.attestation.trustchain.validation.ValidationErrors
+import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.util.toHex
 import kotlin.coroutines.Continuation
@@ -351,7 +352,7 @@ open class TrustChainCommunity(
     internal fun onHalfBlock(sourceAddress: Address, payload: HalfBlockPayload) {
         logger.debug("<- $payload")
 
-        val publicKey = cryptoProvider.keyFromPublicBin(payload.publicKey)
+        val publicKey = defaultCryptoProvider.keyFromPublicBin(payload.publicKey)
         val peer = Peer.createFromAddress(publicKey, sourceAddress)
 
         scope.launch {

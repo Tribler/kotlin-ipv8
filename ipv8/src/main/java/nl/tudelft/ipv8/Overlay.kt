@@ -1,6 +1,5 @@
 package nl.tudelft.ipv8
 
-import nl.tudelft.ipv8.keyvault.CryptoProvider
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.peerdiscovery.Network
@@ -15,7 +14,6 @@ interface Overlay : EndpointListener {
     var endpoint: EndpointAggregator
     var network: Network
     var maxPeers: Int
-    var cryptoProvider: CryptoProvider
 
     var myEstimatedWan: IPv4Address
     var myEstimatedLan: IPv4Address
