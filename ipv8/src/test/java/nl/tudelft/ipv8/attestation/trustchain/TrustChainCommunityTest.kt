@@ -25,7 +25,6 @@ class TrustChainCommunityTest : BaseCommunityTest() {
         community.endpoint = getEndpoint()
         community.network = Network()
         community.maxPeers = 20
-        community.cryptoProvider = JavaCryptoProvider
         community.load()
         return community
     }

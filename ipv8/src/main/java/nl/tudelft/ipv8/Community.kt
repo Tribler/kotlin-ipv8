@@ -2,8 +2,6 @@ package nl.tudelft.ipv8
 
 import kotlinx.coroutines.*
 import mu.KotlinLogging
-import nl.tudelft.ipv8.keyvault.CryptoProvider
-import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.messaging.payload.*
@@ -30,7 +28,6 @@ abstract class Community : Overlay {
     override lateinit var endpoint: EndpointAggregator
     override lateinit var network: Network
     override var maxPeers: Int = 20
-    override var cryptoProvider: CryptoProvider = JavaCryptoProvider
 
     private lateinit var job: Job
     protected lateinit var scope: CoroutineScope

@@ -1,8 +1,6 @@
 package nl.tudelft.ipv8
 
 import kotlinx.coroutines.*
-import nl.tudelft.ipv8.keyvault.CryptoProvider
-import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
@@ -13,7 +11,6 @@ class IPv8(
     private val endpoint: EndpointAggregator,
     private val configuration: IPv8Configuration,
     val myPeer: Peer,
-    private val cryptoProvider: CryptoProvider = JavaCryptoProvider,
     val network: Network = Network()
 ) {
     private val overlayLock = Object()
@@ -54,7 +51,6 @@ class IPv8(
             overlay.endpoint = endpoint
             overlay.network = network
             overlay.maxPeers = overlayConfiguration.maxPeers
-            overlay.cryptoProvider = cryptoProvider
             overlay.load()
 
             overlays[overlayClass] = overlay

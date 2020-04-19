@@ -77,7 +77,7 @@ class Application {
             createDemoCommunity()
         ), walkerInterval = 1.0)
 
-        val ipv8 = IPv8(endpoint, config, myPeer, JavaCryptoProvider)
+        val ipv8 = IPv8(endpoint, config, myPeer)
         ipv8.start()
 
         scope.launch {
