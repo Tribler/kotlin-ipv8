@@ -1,11 +1,12 @@
 package nl.tudelft.ipv8.android.messaging.bluetooth
 
 import android.bluetooth.*
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
 import android.content.Context
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
@@ -14,9 +15,9 @@ import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
 private val logger = KotlinLogging.logger {}
 
 class BluetoothLeDiscovery(
-    private val context: Context,
     private val overlay: Overlay,
-    private val bluetoothManager: BluetoothManager,
+    bluetoothManager: BluetoothManager,
+    private val scanner: IPv8BluetoothLeScanner,
 
     /**
      * The maximum number of peers we should connect to over Bluetooth.
@@ -24,37 +25,8 @@ class BluetoothLeDiscovery(
     private val peers: Int = 7
 ) : DiscoveryStrategy {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
     private val adapter = bluetoothManager.adapter
-    private val leScanner by lazy {
-        adapter.bluetoothLeScanner
-    }
-
-    private val scanCallback = object : ScanCallback() {
-        override fun onBatchScanResults(results: MutableList<ScanResult>) {
-            logger.debug { "onBatchScanResults: ${results.size} results" }
-        }
-
-        override fun onScanFailed(errorCode: Int) {
-            logger.error { "onScanFailed: $errorCode" }
-            isScanning = false
-        }
-
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val device = result.device
-            val uuids = result.scanRecord?.serviceUuids?.map {
-                it.uuid
-            } ?: listOf()
-
-            if (uuids.contains(GattServerManager.SERVICE_UUID)) {
-                logger.debug { "Discovered Bluetooth device: ${device.address}" }
-                overlay.network.discoverBluetoothAddress(BluetoothAddress(device.address))
-            }
-        }
-    }
-
-    private var isScanning = false
-
-    private var scanJob: Job? = null
 
     override fun load() {
         if (adapter == null) {
@@ -69,10 +41,19 @@ class BluetoothLeDiscovery(
         }
 
         if (adapter.isEnabled) {
-            startScan()
+            // startScan()
+            scanner.startScan()
         } else {
             logger.debug { "Bluetooth not enabled" }
             // TODO: start scan once Bluetooth is enabled
+        }
+
+        scope.launch {
+            scanner.scanResult.collect { result ->
+                val device = result.device
+                val bluetoothAddress = BluetoothAddress(device.address)
+                overlay.network.discoverBluetoothAddress(bluetoothAddress)
+            }
         }
     }
 
@@ -91,43 +72,7 @@ class BluetoothLeDiscovery(
     }
 
     override fun unload() {
-        stopScan()
-        scanJob?.cancel()
-    }
-
-    private fun startScan() {
-        logger.debug { "startScan" }
-
-        isScanning = true
-
-        val settingsBuilder = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
-
-        /*
-        val serviceScanFilter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(SERVICE_UUID))
-            .build()
-         */
-
-        leScanner.startScan(null, settingsBuilder.build(), scanCallback)
-
-        // TODO: Stop scanning after scan period
-        /*
-        scanJob = scope.launch {
-            if (isActive) {
-                delay(SCAN_PERIOD_MILLIS)
-                stopScan()
-            }
-        }
-        */
-    }
-
-    private fun stopScan() {
-        logger.debug { "stopScan" }
-
-        isScanning = false
-        leScanner.stopScan(scanCallback)
-        scanJob?.cancel()
+        scanner.stopScan()
     }
 
     companion object {
@@ -139,7 +84,8 @@ class BluetoothLeDiscovery(
         private val bluetoothManager: BluetoothManager
     ) : DiscoveryStrategy.Factory<BluetoothLeDiscovery>() {
         override fun create(): BluetoothLeDiscovery {
-            return BluetoothLeDiscovery(context, getOverlay(), bluetoothManager)
+            val leScanner = IPv8BluetoothLeScanner(bluetoothManager)
+            return BluetoothLeDiscovery(getOverlay(), bluetoothManager, leScanner)
         }
     }
 }
