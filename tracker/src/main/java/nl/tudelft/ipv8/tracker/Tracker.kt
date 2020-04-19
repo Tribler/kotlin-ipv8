@@ -15,7 +15,7 @@ import java.util.*
 
 private val logger = KotlinLogging.logger {}
 
-@UseExperimental(ExperimentalUnsignedTypes::class)
+@OptIn(ExperimentalUnsignedTypes::class)
 class TrackerCommunity : Community() {
     override val serviceId: String = sha1(defaultCryptoProvider.generateKey().keyToBin()).toHex()
 

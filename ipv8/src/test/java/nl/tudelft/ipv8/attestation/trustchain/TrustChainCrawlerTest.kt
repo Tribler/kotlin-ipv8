@@ -16,7 +16,7 @@ import org.junit.Assert
 import org.junit.Test
 import java.util.*
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class TrustChainCrawlerTest : BaseCommunityTest() {
     private fun createTrustChainStore(): TrustChainSQLiteStore {
         val driver: SqlDriver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
