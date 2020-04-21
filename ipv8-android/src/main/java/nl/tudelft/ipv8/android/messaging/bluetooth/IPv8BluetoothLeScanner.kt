@@ -13,24 +13,23 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.asFlow
 import mu.KotlinLogging
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
+import nl.tudelft.ipv8.peerdiscovery.Network
 
 private val logger = KotlinLogging.logger {}
 
-@UseExperimental(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class IPv8BluetoothLeScanner(
-    private val bluetoothManager: BluetoothManager
+    private val bluetoothManager: BluetoothManager,
+    private val network: Network
 ) {
     private var isScanning = false
-    // private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     //private var scanJob: Job? = null
 
     private val leScanner: BluetoothLeScanner by lazy {
         // BluetoothLeScanner is only available when Bluetooth is turned on
         bluetoothManager.adapter.bluetoothLeScanner
     }
-
-    private val _scanResult = BroadcastChannel<BluetoothLeScanResult>(Channel.BUFFERED)
-    val scanResult = _scanResult.asFlow()
 
     private val scanCallback = object : ScanCallback() {
         override fun onBatchScanResults(results: MutableList<ScanResult>) {
@@ -55,18 +54,13 @@ class IPv8BluetoothLeScanner(
 
             if (uuids.contains(GattServerManager.SERVICE_UUID)) {
                 logger.debug { "Discovered Bluetooth device: ${device.address}" }
-                // overlay.network.discoverBluetoothAddress(BluetoothAddress(device.address))
-                _scanResult.offer(BluetoothLeScanResult(
-                    device,
-                    identity,
-                    txPowerLevel,
-                    rssi
-                ))
+                val bluetoothAddress = BluetoothAddress(device.address)
+                network.discoverBluetoothAddress(bluetoothAddress)
             }
         }
     }
 
-    fun startScan() {
+    fun start() {
         logger.debug { "startScan" }
 
         isScanning = true
@@ -96,7 +90,7 @@ class IPv8BluetoothLeScanner(
         */
     }
 
-    fun stopScan() {
+    fun stop() {
         logger.debug { "stopScan" }
 
         isScanning = false
@@ -104,10 +98,22 @@ class IPv8BluetoothLeScanner(
         //scanJob?.cancel()
     }
 
-    data class BluetoothLeScanResult(
-        val device: BluetoothDevice,
-        val identity: ByteArray?,
-        val txPowerLevel: Int?,
-        val rssi: Int
-    )
+    /**
+     * Starts a periodic scan where each scan window takes [duration] ms and there is [pause] ms
+     * long pause between scans.
+     */
+    fun startPeriodicScan(duration: Long, pause: Long) {
+        scope.launch {
+            while (isActive) {
+                if (bluetoothManager.adapter.isEnabled) {
+                    start()
+                    delay(duration)
+                    stop()
+                    delay(pause)
+                } else {
+                    logger.warn { "Bluetooth is not enabled" }
+                }
+            }
+        }
+    }
 }

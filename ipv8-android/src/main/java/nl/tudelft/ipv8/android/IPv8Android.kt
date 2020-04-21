@@ -91,7 +91,7 @@ object IPv8Android {
             val bluetoothEndpoint = if (bluetoothManager.adapter != null &&
                 Build.VERSION.SDK_INT >= 24)
                 BluetoothLeEndpoint(application, bluetoothManager, gattServer, bleAdvertiser,
-                    network) else null
+                    network, myPeer) else null
 
             val endpointAggregator = EndpointAggregator(
                 udpEndpoint,
