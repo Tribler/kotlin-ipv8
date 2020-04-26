@@ -15,7 +15,7 @@ private val logger = KotlinLogging.logger {}
 
 abstract class Community : Overlay {
     protected val prefix: ByteArray
-        get() = ByteArray(0) + 0.toByte() + VERSION + serviceId.hexToBytes()
+        get() = ByteArray(0) + PREFIX_IPV8 + VERSION + serviceId.hexToBytes()
 
     override var myEstimatedWan: IPv4Address = IPv4Address.EMPTY
     override var myEstimatedLan: IPv4Address = IPv4Address.EMPTY
@@ -442,7 +442,7 @@ abstract class Community : Overlay {
     }
 
     companion object {
-        val DEFAULT_ADDRESSES = listOf(
+        val DEFAULT_ADDRESSES: List<IPv4Address> = listOf(
             // Dispersy
             // Address("130.161.119.206", 6421),
             // Address("130.161.119.206", 6422),
@@ -459,7 +459,7 @@ abstract class Community : Overlay {
             // Address("81.171.27.194", 6527),
             // Address("81.171.27.194", 6528)
             // py-ipv8 + LibNaCL
-            IPv4Address("131.180.27.161", 6427),
+            // IPv4Address("131.180.27.161", 6427),
             // kotlin-ipv8
             IPv4Address("131.180.27.188", 1337)
         )
@@ -468,7 +468,8 @@ abstract class Community : Overlay {
         private const val BOOTSTRAP_TIMEOUT_MS = 5_000
         const val DEFAULT_MAX_PEERS = 30
 
-        private const val VERSION: Byte = 2
+        const val PREFIX_IPV8: Byte = 0
+        const val VERSION: Byte = 2
     }
 
     object MessageId {

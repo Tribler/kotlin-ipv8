@@ -1,6 +1,8 @@
 package nl.tudelft.ipv8
 
 import nl.tudelft.ipv8.messaging.*
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 
