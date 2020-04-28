@@ -12,11 +12,14 @@ import java.net.InetAddress
 
 private val logger = KotlinLogging.logger {}
 
+// TODO: Refactor to extend TFTP class and use proxy socket to remove the need for send listener
+//  and an input buffer.
 class TFTPServer(
     private val send: (TFTPPacket) -> Unit
 ) {
     companion object {
         private const val MAX_TIMEOUT_RETRIES = 3
+        private const val SO_TIMEOUT = 1000L
     }
 
     private var shutdownTransfer = false
@@ -30,7 +33,6 @@ class TFTPServer(
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
-
 
     fun onPacket(packet: TFTPPacket) {
         if (packet is TFTPWriteRequestPacket) {
@@ -86,7 +88,7 @@ class TFTPServer(
                     )
                 }
                 dataPacket = try {
-                    withTimeout(1000) {
+                    withTimeout(SO_TIMEOUT) {
                         buffer.receive()
                     }
                 } catch (e: TimeoutCancellationException) {

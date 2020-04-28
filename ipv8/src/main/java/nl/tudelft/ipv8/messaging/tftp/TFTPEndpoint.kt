@@ -13,12 +13,29 @@ import java.net.*
 
 private val logger = KotlinLogging.logger {}
 
-class TFTPEndpoint : Endpoint<IPv4Address>() {
-    private val tftpClient = MyTFTPClient()
-    private val tftpSocket = TFTPSocket()
-    private val tftpServer = TFTPServer { packet ->
+/**
+ * An endpoint that allows to send binary data blobs that are larger than UDP packet size over UDP.
+ * It uses a TFTP-like protocol with adjusted client and server to share a single socket instead
+ * of control + transfer sockets defined in the TFTP protocol.
+ *
+ * All packets are prefixed with a [PREFIX_TFTP] byte to allow it to be distinguished from regular
+ * IPv8 UDP packets in UDPEndpoint which are prefixed with [Community.PREFIX_IPV8].
+ */
+class TFTPEndpoint(
+    private val tftpClient: TFTPClient = TFTPClient()
+) : Endpoint<IPv4Address>() {
+    private val tftpSocket: TFTPSocket = TFTPSocket()
+    internal var tftpServer = TFTPServer { packet ->
         scope.launch(Dispatchers.IO) {
-            socket?.send(packet.newDatagram())
+            val datagram = packet.newDatagram()
+            val wrappedData = byteArrayOf() + PREFIX_TFTP + datagram.data
+            datagram.setData(wrappedData, 0, datagram.length)
+            val socket = socket
+            if (socket != null) {
+                socket.send(datagram)
+            } else {
+                logger.error { "TFTP socket is missing" }
+            }
         }
     }
 
@@ -62,10 +79,17 @@ class TFTPEndpoint : Endpoint<IPv4Address>() {
         }
     }
 
+    /**
+     * Should be invoked by UDPEndpoint when a new packet is coming from
+     */
     fun onPacket(packet: DatagramPacket) {
+        // Unwrap prefix
+        val unwrappedData = packet.data.copyOfRange(1, packet.length)
+        packet.setData(unwrappedData, 0, unwrappedData.size)
         val tftpPacket = TFTPPacket.newTFTPPacket(packet)
 
-        logger.debug { "Received TFTP packet of type ${tftpPacket.type} (${packet.length} B) from ${packet.address.hostAddress}:${packet.port}" }
+        logger.debug { "Received TFTP packet of type ${tftpPacket.type} (${packet.length} B) " +
+            "from ${packet.address.hostAddress}:${packet.port}" }
 
         if (tftpPacket is TFTPWriteRequestPacket || tftpPacket is TFTPDataPacket) {
             // This is a packet for the server
@@ -111,19 +135,15 @@ class TFTPEndpoint : Endpoint<IPv4Address>() {
 
         override fun send(packet: DatagramPacket) {
             val tftpPacket = TFTPPacket.newTFTPPacket(packet)
-            logger.debug { "Send TFTP packet of type ${tftpPacket.type} to ${packet.address.hostName}:${packet.port} (${packet.length} B)" }
+            logger.debug { "Send TFTP packet of type ${tftpPacket.type} to " +
+                "${packet.address.hostName}:${packet.port} (${packet.length} B)" }
             val data = packet.data.copyOfRange(packet.offset, packet.offset + packet.length)
             val wrappedData = byteArrayOf(PREFIX_TFTP) + data
-            val wrappedPacket = DatagramPacket(
-                wrappedData,
-                wrappedData.size,
-                packet.address,
-                packet.port
-            )
+            packet.setData(wrappedData, 0, wrappedData.size)
 
             val socket = socket
             if (socket != null) {
-                socket.send(wrappedPacket)
+                socket.send(packet)
             } else {
                 logger.error { "TFTP socket is missing" }
             }
@@ -132,13 +152,14 @@ class TFTPEndpoint : Endpoint<IPv4Address>() {
         override fun receive(packet: DatagramPacket) {
             runBlocking {
                 try {
-                    withTimeout(1000) {
+                    withTimeout(soTimeout.toLong()) {
                         val received = buffer.receive()
                         packet.address = received.address
                         packet.port = received.port
                         packet.setData(received.data, received.offset, received.length)
                         val tftpPacket = TFTPPacket.newTFTPPacket(packet)
-                        logger.debug { "Client received TFTP packet of type ${tftpPacket.type} from ${received.address.hostName} (${packet.length} B)" }
+                        logger.debug { "Client received TFTP packet of type ${tftpPacket.type} " +
+                            "from ${received.address.hostName} (${packet.length} B)" }
                     }
                 } catch (e: TimeoutCancellationException) {
                     throw SocketTimeoutException()

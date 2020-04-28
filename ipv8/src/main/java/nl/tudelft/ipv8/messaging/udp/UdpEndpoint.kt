@@ -16,10 +16,10 @@ private val logger = KotlinLogging.logger {}
 
 open class UdpEndpoint(
     private val port: Int,
-    private val ip: InetAddress
+    private val ip: InetAddress,
+    private val tftpEndpoint: TFTPEndpoint = TFTPEndpoint()
 ) : Endpoint<IPv4Address>() {
     private var socket: DatagramSocket? = null
-    private val tftpEndpoint = TFTPEndpoint()
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
@@ -147,37 +147,38 @@ open class UdpEndpoint(
                 withContext(Dispatchers.IO) {
                     socket.receive(receivePacket)
                 }
-
-                logger.debug(
-                    "Received packet (${receivePacket.length} B) from ${receivePacket.address.hostAddress}:${receivePacket.port}"
-                )
-
-                // Check whether prefix is IPv8 or TFTP
-                when (receivePacket.data[0]) {
-                    Community.PREFIX_IPV8 -> {
-                        val sourceAddress =
-                            IPv4Address(receivePacket.address.hostAddress, receivePacket.port)
-                        val packet =
-                            Packet(sourceAddress, receivePacket.data.copyOf(receivePacket.length))
-                        logger.debug(
-                            "Received UDP packet (${receivePacket.length} B) from $sourceAddress"
-                        )
-
-                        notifyListeners(packet)
-                    }
-                    TFTPEndpoint.PREFIX_TFTP -> {
-                        // Unwrap prefix
-                        val unwrappedData = receivePacket.data.copyOfRange(1, receivePacket.length)
-                        receivePacket.setData(unwrappedData, 0, unwrappedData.size)
-                        tftpEndpoint.onPacket(receivePacket)
-                    }
-                    else -> {
-                        logger.warn { "Invalid packet prefix" }
-                    }
-                }
+                handleReceivedPacket(receivePacket)
             }
         } catch (e: IOException) {
             e.printStackTrace()
+        }
+    }
+
+    internal fun handleReceivedPacket(receivePacket: DatagramPacket) {
+        logger.debug(
+            "Received packet (${receivePacket.length} B) from " +
+                "${receivePacket.address.hostAddress}:${receivePacket.port}"
+        )
+
+        // Check whether prefix is IPv8 or TFTP
+        when (receivePacket.data[0]) {
+            Community.PREFIX_IPV8 -> {
+                val sourceAddress =
+                    IPv4Address(receivePacket.address.hostAddress, receivePacket.port)
+                val packet =
+                    Packet(sourceAddress, receivePacket.data.copyOf(receivePacket.length))
+                logger.debug(
+                    "Received UDP packet (${receivePacket.length} B) from $sourceAddress"
+                )
+
+                notifyListeners(packet)
+            }
+            TFTPEndpoint.PREFIX_TFTP -> {
+                tftpEndpoint.onPacket(receivePacket)
+            }
+            else -> {
+                logger.warn { "Invalid packet prefix" }
+            }
         }
     }
 

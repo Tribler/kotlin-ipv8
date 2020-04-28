@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.messaging.tftp
 
 import mu.KotlinLogging
 import org.apache.commons.net.tftp.*
+import org.apache.commons.net.tftp.TFTPClient.DEFAULT_MAX_TIMEOUTS
 import java.io.IOException
 import java.io.InputStream
 import java.io.InterruptedIOException
@@ -10,7 +11,7 @@ import java.net.SocketException
 
 private val logger = KotlinLogging.logger {}
 
-class MyTFTPClient : TFTPClient() {
+class TFTPClient : TFTP() {
     companion object {
         /***
          * The size to use for TFTP packet buffers. It's 4 + TFTPPacket.SEGMENT_SIZE, i.e. 516.
@@ -21,7 +22,7 @@ class MyTFTPClient : TFTPClient() {
     private var _totalBytesSent = 0L
     private val _sendBuffer: ByteArray = ByteArray(PACKET_SIZE)
 
-    override fun sendFile(
+    fun sendFile(
         filename: String,
         mode: Int,
         input: InputStream,
@@ -29,8 +30,6 @@ class MyTFTPClient : TFTPClient() {
         port: Int
     ) = synchronized(this) {
         var block = 0
-        var hostPort = 0
-        var justStarted = true
         var lastAckWait = false
 
         _totalBytesSent = 0L
@@ -54,36 +53,20 @@ class MyTFTPClient : TFTPClient() {
 
                     val recdAddress = received.address
                     val recdPort = received.port
-                    // The first time we receive we get the port number and
-                    // answering host address (for hosts with multiple IPs)
-                    if (justStarted) {
-                        justStarted = false
-                        hostPort = recdPort
-                        data.port = hostPort
-                        /*
-                        if (host != recdAddress) {
-                            host = recdAddress
-                            data.address = host
-                            sent.address = host
-                        }
-                         */
-                    }
+
                     // Comply with RFC 783 indication that an error acknowledgment
                     // should be sent to originator if unexpected TID or host.
-                    System.out.println("Received packet type ${received.type}")
-                    if (host == recdAddress && recdPort == hostPort) {
+                    if (host == recdAddress && port == recdPort) {
                         when (received.type) {
                             TFTPPacket.ERROR -> {
                                 val error = received as TFTPErrorPacket
                                 throw IOException(
-                                    "Error code " + error.error +
-                                        " received: " + error.message
+                                    "Error code " + error.error + " received: " + error.message
                                 )
                             }
                             TFTPPacket.ACKNOWLEDGEMENT -> {
-                                val lastBlock =
-                                    (received as TFTPAckPacket).blockNumber
-                                logger.debug { "ACK block: $lastBlock, expected: $block" }
+                                val lastBlock = (received as TFTPAckPacket).blockNumber
+                                logger.warn { "ACK block: $lastBlock, expected: $block" }
                                 if (lastBlock == block) {
                                     ++block
                                     if (block > 65535) {
@@ -98,23 +81,23 @@ class MyTFTPClient : TFTPClient() {
                             }
                             else -> throw IOException("Received unexpected packet type.")
                         }
-                    } else { // wrong host or TID; send error
-                        System.out.println("Wrong host or tid}")
+                    } else {
+                        // wrong host or TID; send error
                         val error = TFTPErrorPacket(
                             recdAddress,
                             recdPort,
                             TFTPErrorPacket.UNKNOWN_TID,
-                            "Unexpected host or port."
+                            "Unexpected host or port"
                         )
                         send(error)
                     }
                 } catch (e: SocketException) {
                     if (++timeouts >= DEFAULT_MAX_TIMEOUTS) {
-                        throw IOException("Connection timed out.")
+                        throw IOException("Connection timed out")
                     }
                 } catch (e: InterruptedIOException) {
                     if (++timeouts >= DEFAULT_MAX_TIMEOUTS) {
-                        throw IOException("Connection timed out.")
+                        throw IOException("Connection timed out")
                     }
                 } catch (e: TFTPPacketException) {
                     throw IOException("Bad packet: " + e.message)

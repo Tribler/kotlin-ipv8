@@ -14,12 +14,12 @@ import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.SocketTimeoutException
 
-class MyTFTPClientTest {
+class TFTPClientTest {
     @Test
     fun sendFile_mockServer() {
         val socket = MockDatagramSocket()
 
-        val client = MyTFTPClient()
+        val client = TFTPClient()
 
         val payload = "Lorem Ipsum ".repeat(50).toByteArray(Charsets.US_ASCII)
         val input = ByteArrayInputStream(payload)
@@ -93,7 +93,7 @@ class MyTFTPClientTest {
 
         val socket = MockDatagramSocket()
 
-        val client = MyTFTPClient()
+        val client = TFTPClient()
         val server = TFTPServer { packet ->
             val datagram = packet.newDatagram()
             datagram.address = serverHost
