@@ -16,7 +16,11 @@ private val logger = KotlinLogging.logger {}
 class TFTPEndpoint : Endpoint<IPv4Address>() {
     private val tftpClient = MyTFTPClient()
     private val tftpSocket = TFTPSocket()
-    private val tftpServer = TFTPServer(tftpClient)
+    private val tftpServer = TFTPServer { packet ->
+        scope.launch(Dispatchers.IO) {
+            socket?.send(packet.newDatagram())
+        }
+    }
 
     var socket: DatagramSocket? = null
 
@@ -40,27 +44,25 @@ class TFTPEndpoint : Endpoint<IPv4Address>() {
     }
 
     override fun send(address: IPv4Address, data: ByteArray) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             val inputStream = ByteArrayInputStream(data)
             val inetAddress = Inet4Address.getByName(address.ip)
 
-            withContext(Dispatchers.IO) {
-                try {
-                    tftpClient.sendFile(
-                        TFTP_FILENAME,
-                        TFTP.BINARY_MODE,
-                        inputStream,
-                        inetAddress,
-                        address.port
-                    )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+            try {
+                tftpClient.sendFile(
+                    TFTP_FILENAME,
+                    TFTP.BINARY_MODE,
+                    inputStream,
+                    inetAddress,
+                    address.port
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
 
-    suspend fun onPacket(packet: DatagramPacket) {
+    fun onPacket(packet: DatagramPacket) {
         val tftpPacket = TFTPPacket.newTFTPPacket(packet)
 
         logger.debug { "Received TFTP packet of type ${tftpPacket.type} (${packet.length} B) from ${packet.address.hostAddress}:${packet.port}" }

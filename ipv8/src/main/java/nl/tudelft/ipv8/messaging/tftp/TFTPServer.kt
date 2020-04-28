@@ -9,11 +9,12 @@ import org.apache.commons.net.tftp.*
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.InetAddress
-import java.net.SocketTimeoutException
 
 private val logger = KotlinLogging.logger {}
 
-class TFTPServer(private val tftp: TFTP) {
+class TFTPServer(
+    private val send: (TFTPPacket) -> Unit
+) {
     companion object {
         private const val MAX_TIMEOUT_RETRIES = 3
     }
@@ -61,7 +62,7 @@ class TFTPServer(private val tftp: TFTP) {
 
         var lastBlock = 0
         var lastSentAck = TFTPAckPacket(twrp.address, twrp.port, 0)
-        sendData(lastSentAck)
+        send(lastSentAck)
         while (true) {
             // get the response - ensure it is from the right place.
             var dataPacket: TFTPPacket? = null
@@ -76,7 +77,7 @@ class TFTPServer(private val tftp: TFTP) {
                     // expected source, fire back an error, and continue
                     // listening.
                     logger.debug("TFTP Server ignoring message from unexpected source.")
-                    sendData(
+                    send(
                         TFTPErrorPacket(
                             dataPacket.address,
                             dataPacket.port, TFTPErrorPacket.UNKNOWN_TID,
@@ -93,7 +94,7 @@ class TFTPServer(private val tftp: TFTP) {
                         throw e
                     }
                     // It didn't get our ack. Resend it.
-                    sendData(lastSentAck)
+                    send(lastSentAck)
                     timeoutCount++
                     continue
                 }
@@ -101,7 +102,7 @@ class TFTPServer(private val tftp: TFTP) {
             if (dataPacket != null && dataPacket is TFTPWriteRequestPacket) {
                 // it must have missed our initial ack. Send another.
                 lastSentAck = TFTPAckPacket(twrp.address, twrp.port, 0)
-                sendData(lastSentAck)
+                send(lastSentAck)
             } else if (dataPacket == null || dataPacket !is TFTPDataPacket) {
                 if (!shutdownTransfer) {
                     logger.debug("Unexpected response from tftp client during transfer ("
@@ -122,7 +123,7 @@ class TFTPServer(private val tftp: TFTP) {
                     lastBlock = block
                 }
                 lastSentAck = TFTPAckPacket(twrp.address, twrp.port, block)
-                sendData(lastSentAck)
+                send(lastSentAck)
                 if (dataLength < TFTPDataPacket.MAX_DATA_LENGTH) {
                     // end of stream signal - The tranfer is complete.
                     onFileReceived?.invoke(bos.toByteArray(), twrp.address, twrp.port)
@@ -141,14 +142,14 @@ class TFTPServer(private val tftp: TFTP) {
                         }
                         if (dataPacket.address != twrp.address || dataPacket.port != twrp.port) {
                             // make sure it was from the right client...
-                            sendData(TFTPErrorPacket(dataPacket.address, dataPacket.port,
+                            send(TFTPErrorPacket(dataPacket.address, dataPacket.port,
                                 TFTPErrorPacket.UNKNOWN_TID, "Unexpected Host or Port")
                             )
                         } else {
                             // This means they sent us the last
                             // data packet again, must have missed our
                             // ack. resend it.
-                            sendData(lastSentAck)
+                            send(lastSentAck)
                         }
                     }
 
@@ -158,9 +159,5 @@ class TFTPServer(private val tftp: TFTP) {
             }
         }
         logger.debug { "handleWrite finished" }
-    }
-
-    private suspend fun sendData(packet: TFTPPacket) = withContext(Dispatchers.IO) {
-        tftp.send(packet)
     }
 }
