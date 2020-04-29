@@ -29,9 +29,11 @@ class TFTPEndpoint(
         scope.launch(Dispatchers.IO) {
             val datagram = packet.newDatagram()
             val wrappedData = byteArrayOf() + PREFIX_TFTP + datagram.data
-            datagram.setData(wrappedData, 0, datagram.length)
+            datagram.setData(wrappedData, 0, datagram.length + 1)
             val socket = socket
             if (socket != null) {
+                logger.debug { "Send TFTP packet of type ${packet.type} to client " +
+                    "${packet.address.hostName}:${packet.port} (${datagram.length} B)" }
                 socket.send(datagram)
             } else {
                 logger.error { "TFTP socket is missing" }
@@ -83,23 +85,29 @@ class TFTPEndpoint(
      * Should be invoked by UDPEndpoint when a new packet is coming from
      */
     fun onPacket(packet: DatagramPacket) {
-        // Unwrap prefix
-        val unwrappedData = packet.data.copyOfRange(1, packet.length)
-        packet.setData(unwrappedData, 0, unwrappedData.size)
-        val tftpPacket = TFTPPacket.newTFTPPacket(packet)
+        try {
+            // Unwrap prefix
+            val unwrappedData = packet.data.copyOfRange(1, packet.length)
+            packet.setData(unwrappedData, 0, unwrappedData.size)
+            val tftpPacket = TFTPPacket.newTFTPPacket(packet)
 
-        logger.debug { "Received TFTP packet of type ${tftpPacket.type} (${packet.length} B) " +
-            "from ${packet.address.hostAddress}:${packet.port}" }
+            logger.debug {
+                "Received TFTP packet of type ${tftpPacket.type} (${packet.length} B) " +
+                    "from ${packet.address.hostAddress}:${packet.port}"
+            }
 
-        if (tftpPacket is TFTPWriteRequestPacket || tftpPacket is TFTPDataPacket) {
-            // This is a packet for the server
-            tftpServer.onPacket(tftpPacket)
-        } else if (tftpPacket is TFTPAckPacket || tftpPacket is TFTPErrorPacket) {
-            // This is a packet for the client
-            tftpSocket.buffer.offer(packet)
-        } else {
-            // This is an unsupported packet (ReadRequest)
-            logger.debug { "Unsupported TFTP packet type" }
+            if (tftpPacket is TFTPWriteRequestPacket || tftpPacket is TFTPDataPacket) {
+                // This is a packet for the server
+                tftpServer.onPacket(tftpPacket)
+            } else if (tftpPacket is TFTPAckPacket || tftpPacket is TFTPErrorPacket) {
+                // This is a packet for the client
+                tftpSocket.buffer.offer(packet)
+            } else {
+                // This is an unsupported packet (ReadRequest)
+                logger.debug { "Unsupported TFTP packet type" }
+            }
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to handle TFTP packet" }
         }
     }
 
