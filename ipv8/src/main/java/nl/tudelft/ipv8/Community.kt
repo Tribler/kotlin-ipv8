@@ -459,7 +459,7 @@ abstract class Community : Overlay {
             // Address("81.171.27.194", 6527),
             // Address("81.171.27.194", 6528)
             // py-ipv8 + LibNaCL
-            // IPv4Address("131.180.27.161", 6427),
+            IPv4Address("131.180.27.161", 6427),
             // kotlin-ipv8
             IPv4Address("131.180.27.188", 1337)
         )
