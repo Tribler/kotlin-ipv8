@@ -5,6 +5,7 @@ import mu.KotlinLogging
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.messaging.payload.*
+import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.addressIsLan
 import nl.tudelft.ipv8.util.hexToBytes
@@ -15,7 +16,7 @@ private val logger = KotlinLogging.logger {}
 
 abstract class Community : Overlay {
     protected val prefix: ByteArray
-        get() = ByteArray(0) + 0.toByte() + VERSION + serviceId.hexToBytes()
+        get() = ByteArray(0) + PREFIX_IPV8 + VERSION + serviceId.hexToBytes()
 
     override var myEstimatedWan: IPv4Address = IPv4Address.EMPTY
     override var myEstimatedLan: IPv4Address = IPv4Address.EMPTY
@@ -430,7 +431,8 @@ abstract class Community : Overlay {
     }
 
     protected fun send(peer: Peer, data: ByteArray) {
-        endpoint.send(peer, data)
+        val verifiedPeer = network.getVerifiedByPublicKeyBin(peer.publicKey.keyToBin())
+        endpoint.send(verifiedPeer ?: peer, data)
     }
 
     protected fun send(address: Address, data: ByteArray) {
@@ -442,7 +444,7 @@ abstract class Community : Overlay {
     }
 
     companion object {
-        val DEFAULT_ADDRESSES = listOf(
+        val DEFAULT_ADDRESSES: List<IPv4Address> = listOf(
             // Dispersy
             // Address("130.161.119.206", 6421),
             // Address("130.161.119.206", 6422),
@@ -468,7 +470,8 @@ abstract class Community : Overlay {
         private const val BOOTSTRAP_TIMEOUT_MS = 5_000
         const val DEFAULT_MAX_PEERS = 30
 
-        private const val VERSION: Byte = 2
+        const val PREFIX_IPV8: Byte = 0
+        const val VERSION: Byte = 2
     }
 
     object MessageId {

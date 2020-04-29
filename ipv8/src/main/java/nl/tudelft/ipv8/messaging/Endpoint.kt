@@ -43,7 +43,7 @@ abstract class Endpoint<A> {
     }
 
     abstract fun isOpen(): Boolean
-    abstract fun send(address: A, data: ByteArray)
+    abstract fun send(peer: A, data: ByteArray)
     abstract fun open()
     abstract fun close()
 }

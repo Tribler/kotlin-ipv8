@@ -36,7 +36,12 @@ data class Peer(
     /**
      * Is this peer suggested to us (otherwise it contacted us).
      */
-    val intro: Boolean = true
+    val intro: Boolean = true,
+
+    /**
+     * True if this peer signals support for TFTP.
+     */
+    var supportsTFTP: Boolean = false
 ) {
     private var _lamportTimestamp = 0uL
     val lamportTimestamp: ULong
