@@ -5,6 +5,7 @@ import kotlinx.coroutines.channels.Channel
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.IPv4Address
+import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.messaging.Packet
@@ -18,7 +19,7 @@ open class UdpEndpoint(
     private val port: Int,
     private val ip: InetAddress,
     private val tftpEndpoint: TFTPEndpoint = TFTPEndpoint()
-) : Endpoint<IPv4Address>() {
+) : Endpoint<Peer>() {
     private var socket: DatagramSocket? = null
 
     private val job = SupervisorJob()
@@ -45,24 +46,33 @@ open class UdpEndpoint(
         return socket?.isBound == true
     }
 
-    override fun send(address: IPv4Address, data: ByteArray) {
+    override fun send(peer: Peer, data: ByteArray) {
         if (!isOpen()) throw IllegalStateException("UDP socket is closed")
 
+        val address = peer.address
+
         scope.launch {
-            logger.debug("Send packet (${data.size} B) to $address")
+            logger.debug("Send packet (${data.size} B) to $address ($peer)")
             try {
                 if (data.size > UDP_PAYLOAD_LIMIT) {
-                    tftpEndpoint.send(address, data)
-                } else {
-                    val datagramPacket = DatagramPacket(data, data.size, address.toSocketAddress())
-                    withContext(Dispatchers.IO) {
-                        socket?.send(datagramPacket)
+                    if (peer.supportsTFTP) {
+                        tftpEndpoint.send(address, data)
+                    } else {
+                        logger.warn { "The packet is larger then UDP_PAYLOAD_LIMIT and the peer " +
+                            "does not support TFTP" }
                     }
+                } else {
+                    send(address, data)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+    }
+
+    fun send(address: IPv4Address, data: ByteArray) = scope.launch(Dispatchers.IO) {
+        val datagramPacket = DatagramPacket(data, data.size, address.toSocketAddress())
+        socket?.send(datagramPacket)
     }
 
     override fun open() {

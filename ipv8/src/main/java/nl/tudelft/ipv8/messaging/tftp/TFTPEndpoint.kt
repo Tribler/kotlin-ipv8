@@ -62,10 +62,10 @@ class TFTPEndpoint(
         return socket?.isBound == true
     }
 
-    override fun send(address: IPv4Address, data: ByteArray) {
+    override fun send(peer: IPv4Address, data: ByteArray) {
         scope.launch(Dispatchers.IO) {
             val inputStream = ByteArrayInputStream(data)
-            val inetAddress = Inet4Address.getByName(address.ip)
+            val inetAddress = Inet4Address.getByName(peer.ip)
 
             try {
                 tftpClient.sendFile(
@@ -73,7 +73,7 @@ class TFTPEndpoint(
                     TFTP.BINARY_MODE,
                     inputStream,
                     inetAddress,
-                    address.port
+                    peer.port
                 )
             } catch (e: Exception) {
                 e.printStackTrace()

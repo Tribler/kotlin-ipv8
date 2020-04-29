@@ -5,6 +5,7 @@ import mu.KotlinLogging
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.messaging.payload.*
+import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.addressIsLan
 import nl.tudelft.ipv8.util.hexToBytes
@@ -430,7 +431,8 @@ abstract class Community : Overlay {
     }
 
     protected fun send(peer: Peer, data: ByteArray) {
-        endpoint.send(peer, data)
+        val verifiedPeer = network.getVerifiedByPublicKeyBin(peer.publicKey.keyToBin())
+        endpoint.send(verifiedPeer ?: peer, data)
     }
 
     protected fun send(address: Address, data: ByteArray) {

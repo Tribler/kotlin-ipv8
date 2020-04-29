@@ -20,12 +20,11 @@ class EndpointAggregator(
      * Sends a message to the peer. Currently it sends over all available endpoints. In the future,
      * the method should send only over the most suitable transport.
      */
-    override fun send(address: Peer, data: ByteArray) {
-        val peer = address
+    override fun send(peer: Peer, data: ByteArray) {
         peer.lastRequest = Date()
 
         if (!peer.address.isEmpty() && udpEndpoint != null) {
-            udpEndpoint.send(peer.address, data)
+            udpEndpoint.send(peer, data)
         }
 
         val bluetoothAddress = peer.bluetoothAddress

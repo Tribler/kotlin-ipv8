@@ -5,6 +5,7 @@ import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
+import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
 import kotlin.math.min
 
 class Network {
@@ -85,6 +86,8 @@ class Network {
             val peerServices = servicesPerPeer[peer.mid] ?: mutableSetOf()
             peerServices.addAll(serviceIds)
             servicesPerPeer[peer.mid] = peerServices
+            getVerifiedByPublicKeyBin(peer.publicKey.keyToBin())?.supportsTFTP =
+                peerServices.contains(TFTPCommunity.SERVICE_ID)
         }
     }
 
