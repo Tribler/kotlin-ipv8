@@ -15,7 +15,7 @@ interface Overlay : EndpointListener {
     var network: Network
     var maxPeers: Int
 
-    var myEstimatedWan: IPv4Address
+    val myEstimatedWan: IPv4Address
     var myEstimatedLan: IPv4Address
 
     private val globalTime: ULong

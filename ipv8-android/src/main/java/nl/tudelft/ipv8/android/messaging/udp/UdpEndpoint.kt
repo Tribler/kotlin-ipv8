@@ -3,8 +3,10 @@ package nl.tudelft.ipv8.android.messaging.udp
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.Network
+import android.os.Build
 import mu.KotlinLogging
 import nl.tudelft.ipv8.IPv4Address
+import nl.tudelft.ipv8.android.BuildConfig
 import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
 import java.net.*
 
@@ -30,10 +32,18 @@ class AndroidUdpEndpoint(
     }
 
     override fun startLanEstimation() {
-        connectivityManager.registerDefaultNetworkCallback(defaultNetworkCallback)
+        if (Build.VERSION.SDK_INT >= 24) {
+            connectivityManager.registerDefaultNetworkCallback(defaultNetworkCallback)
+        } else {
+            super.startLanEstimation()
+        }
     }
 
     override fun stopLanEstimation() {
-        connectivityManager.unregisterNetworkCallback(defaultNetworkCallback)
+        if (Build.VERSION.SDK_INT >= 24) {
+            connectivityManager.unregisterNetworkCallback(defaultNetworkCallback)
+        } else {
+            super.stopLanEstimation()
+        }
     }
 }

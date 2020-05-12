@@ -18,7 +18,12 @@ abstract class Community : Overlay {
     protected val prefix: ByteArray
         get() = ByteArray(0) + PREFIX_IPV8 + VERSION + serviceId.hexToBytes()
 
-    override var myEstimatedWan: IPv4Address = IPv4Address.EMPTY
+    override val myEstimatedWan: IPv4Address
+        get() {
+            // Use the latest estimated WAN
+            return network.myEstimatedWans.lastOrNull()?.third ?: IPv4Address.EMPTY
+        }
+
     override var myEstimatedLan: IPv4Address = IPv4Address.EMPTY
 
     private var lastBootstrap: Date? = null
@@ -206,7 +211,7 @@ abstract class Community : Overlay {
         return serializePacket(MessageId.INTRODUCTION_RESPONSE, payload, prefix = prefix)
     }
 
-    internal fun createPuncture(lanWalker: IPv4Address, wanWalker: IPv4Address, identifier: Int): ByteArray {
+    fun createPuncture(lanWalker: IPv4Address, wanWalker: IPv4Address, identifier: Int): ByteArray {
         val payload = PuncturePayload(lanWalker, wanWalker, identifier)
 
         logger.debug("-> $payload")
@@ -322,6 +327,8 @@ abstract class Community : Overlay {
     ) {
         logger.debug("<- $payload")
 
+        addEstimatedWan(peer, payload.destinationAddress)
+
         if (maxPeers >= 0 && getPeers().size >= maxPeers) {
             logger.info("Dropping introduction request from $peer, too many peers!")
             return
@@ -348,11 +355,7 @@ abstract class Community : Overlay {
     ) {
         logger.debug("<- $payload")
 
-        // Change our estimated WAN address if the sender is not on the same LAN, otherwise it
-        // would just send us our LAN address
-        if (!addressIsLan(peer.address)) {
-            myEstimatedWan = payload.destinationAddress
-        }
+        addEstimatedWan(peer, payload.destinationAddress)
 
         // Add the sender as a verified peer
         val newPeer = peer.copy(
@@ -390,6 +393,21 @@ abstract class Community : Overlay {
             // and port same as for WAN (works only if NAT does not change port)
             discoverAddress(peer, IPv4Address(myEstimatedLan.ip, payload.wanIntroductionAddress.port),
                 serviceId)
+        }
+    }
+
+    private fun addEstimatedWan(peer: Peer, wan: IPv4Address) {
+        // Change our estimated WAN address if the sender is not on the same LAN, otherwise it
+        // would just send us our LAN address
+        if (!addressIsLan(peer.address)) {
+            // If this is a new peer, add our estimated WAN to the WAN estimation log which can be
+            // used to determine symmetric NAT behavior
+            val estimation = network.myEstimatedWans.findLast {
+                it.second == peer.address
+            }
+            if (estimation?.third != wan) {
+                network.myEstimatedWans.add(Triple(Date(), peer.address, wan))
+            }
         }
     }
 
