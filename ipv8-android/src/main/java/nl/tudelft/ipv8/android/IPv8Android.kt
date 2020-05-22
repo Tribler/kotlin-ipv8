@@ -88,7 +88,8 @@ object IPv8Android {
 
             val gattServer = GattServerManager(application, myPeer)
             val bleAdvertiser = IPv8BluetoothLeAdvertiser(bluetoothManager)
-            val bluetoothEndpoint = if (bluetoothManager.adapter != null)
+            val bluetoothEndpoint = if (bluetoothManager.adapter != null &&
+                Build.VERSION.SDK_INT >= 24)
                 BluetoothLeEndpoint(application, bluetoothManager, gattServer, bleAdvertiser,
                     network) else null
 

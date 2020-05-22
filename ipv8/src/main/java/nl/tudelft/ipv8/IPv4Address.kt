@@ -30,6 +30,10 @@ data class IPv4Address(
         return this == EMPTY
     }
 
+    fun isLoopback(): Boolean {
+        return ip == "127.0.0.1"
+    }
+
     override fun toString(): String {
         return "$ip:$port"
     }

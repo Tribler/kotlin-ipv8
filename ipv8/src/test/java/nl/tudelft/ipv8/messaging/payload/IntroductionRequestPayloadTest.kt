@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.messaging.payload
 
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.util.toHex
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -25,13 +26,15 @@ class IntroductionRequestPayloadTest {
         val destinationAddress = IPv4Address("1.2.3.4", 1234)
         val sourceLanAddress = IPv4Address("2.2.3.4", 2234)
         val sourceWanAddress = IPv4Address("3.2.3.4", 3234)
+        val extraBytes = "hello".toByteArray(Charsets.US_ASCII)
         val payload = IntroductionRequestPayload(
             destinationAddress,
             sourceLanAddress,
             sourceWanAddress,
             true,
             ConnectionType.UNKNOWN,
-            1
+            1,
+            extraBytes
         )
         val serialized = payload.serialize()
         val (deserialized, size) = IntroductionRequestPayload.deserialize(serialized)
@@ -41,6 +44,7 @@ class IntroductionRequestPayloadTest {
         assertEquals(true, deserialized.advice)
         assertEquals(ConnectionType.UNKNOWN, deserialized.connectionType)
         assertEquals(1, deserialized.identifier)
+        assertArrayEquals(extraBytes, deserialized.extraBytes)
         assertEquals(size, serialized.size)
     }
 }

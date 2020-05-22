@@ -71,8 +71,12 @@ open class UdpEndpoint(
     }
 
     fun send(address: IPv4Address, data: ByteArray) = scope.launch(Dispatchers.IO) {
-        val datagramPacket = DatagramPacket(data, data.size, address.toSocketAddress())
-        socket?.send(datagramPacket)
+        try {
+            val datagramPacket = DatagramPacket(data, data.size, address.toSocketAddress())
+            socket?.send(datagramPacket)
+        } catch (e: Exception) {
+            logger.error("Sending DatagramPacket failed", e)
+        }
     }
 
     override fun open() {

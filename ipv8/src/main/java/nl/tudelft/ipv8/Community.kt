@@ -7,6 +7,7 @@ import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.messaging.payload.*
 import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
 import nl.tudelft.ipv8.peerdiscovery.Network
+import nl.tudelft.ipv8.peerdiscovery.WanEstimationLog
 import nl.tudelft.ipv8.util.addressIsLan
 import nl.tudelft.ipv8.util.hexToBytes
 import java.util.*
@@ -18,7 +19,11 @@ abstract class Community : Overlay {
     protected val prefix: ByteArray
         get() = ByteArray(0) + PREFIX_IPV8 + VERSION + serviceId.hexToBytes()
 
-    override var myEstimatedWan: IPv4Address = IPv4Address.EMPTY
+    override val myEstimatedWan: IPv4Address
+        get() {
+            return network.wanLog.estimateWan() ?: IPv4Address.EMPTY
+        }
+
     override var myEstimatedLan: IPv4Address = IPv4Address.EMPTY
 
     private var lastBootstrap: Date? = null
@@ -150,22 +155,29 @@ abstract class Community : Overlay {
     }
 
     override fun onEstimatedLanChanged(address: IPv4Address) {
-        myEstimatedLan = address
+        if (myEstimatedLan != address) {
+            myEstimatedLan = address
+            network.wanLog.clear()
+        }
     }
 
     /*
      * Introduction and puncturing requests creation
      */
 
-    internal fun createIntroductionRequest(socketAddress: IPv4Address): ByteArray {
+    internal fun createIntroductionRequest(
+        socketAddress: IPv4Address,
+        extraBytes: ByteArray = byteArrayOf()
+    ): ByteArray {
         val globalTime = claimGlobalTime()
         val payload = IntroductionRequestPayload(
             socketAddress,
             myEstimatedLan,
             myEstimatedWan,
             true,
-            ConnectionType.UNKNOWN,
-            (globalTime % UShort.MAX_VALUE).toInt()
+            network.wanLog.estimateConnectionType(),
+            (globalTime % UShort.MAX_VALUE).toInt(),
+            extraBytes
         )
 
         logger.debug("-> $payload")
@@ -177,7 +189,8 @@ abstract class Community : Overlay {
         requester: Peer,
         identifier: Int,
         introduction: Peer? = null,
-        prefix: ByteArray = this.prefix
+        prefix: ByteArray = this.prefix,
+        extraBytes: ByteArray = byteArrayOf()
     ): ByteArray {
         val intro = introduction ?: getPeerForIntroduction(exclude = requester)
         val introductionLan = intro?.lanAddress ?: IPv4Address.EMPTY
@@ -189,9 +202,10 @@ abstract class Community : Overlay {
             myEstimatedWan,
             introductionLan,
             introductionWan,
-            ConnectionType.UNKNOWN,
+            network.wanLog.estimateConnectionType(),
             false,
-            identifier
+            identifier,
+            extraBytes
         )
 
         if (intro != null) {
@@ -206,7 +220,7 @@ abstract class Community : Overlay {
         return serializePacket(MessageId.INTRODUCTION_RESPONSE, payload, prefix = prefix)
     }
 
-    internal fun createPuncture(lanWalker: IPv4Address, wanWalker: IPv4Address, identifier: Int): ByteArray {
+    fun createPuncture(lanWalker: IPv4Address, wanWalker: IPv4Address, identifier: Int): ByteArray {
         val payload = PuncturePayload(lanWalker, wanWalker, identifier)
 
         logger.debug("-> $payload")
@@ -348,11 +362,7 @@ abstract class Community : Overlay {
     ) {
         logger.debug("<- $payload")
 
-        // Change our estimated WAN address if the sender is not on the same LAN, otherwise it
-        // would just send us our LAN address
-        if (!addressIsLan(peer.address)) {
-            myEstimatedWan = payload.destinationAddress
-        }
+        addEstimatedWan(peer, payload.destinationAddress)
 
         // Add the sender as a verified peer
         val newPeer = peer.copy(
@@ -390,6 +400,18 @@ abstract class Community : Overlay {
             // and port same as for WAN (works only if NAT does not change port)
             discoverAddress(peer, IPv4Address(myEstimatedLan.ip, payload.wanIntroductionAddress.port),
                 serviceId)
+        }
+    }
+
+    private fun addEstimatedWan(peer: Peer, wan: IPv4Address) {
+        // Change our estimated WAN address if the sender is not on the same LAN, otherwise it
+        // would just send us our LAN address
+        if (!addressIsLan(peer.address) && !peer.address.isLoopback()) {
+            // If this is a new peer, add our estimated WAN to the WAN estimation log which can be
+            // used to determine symmetric NAT behavior
+            network.wanLog.addItem(WanEstimationLog.WanLogItem(
+                Date(), peer.address, myEstimatedLan, wan)
+            )
         }
     }
 

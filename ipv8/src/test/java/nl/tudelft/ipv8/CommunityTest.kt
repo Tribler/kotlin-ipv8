@@ -51,10 +51,10 @@ class CommunityTest : BaseCommunityTest() {
         val myPrivateKey = getPrivateKey()
         val myPeer = Peer(myPrivateKey)
 
-        val community = getCommunity()
+        val community = spyk(getCommunity())
 
         community.myEstimatedLan = IPv4Address("2.2.3.4", 2234)
-        community.myEstimatedWan = IPv4Address("3.2.3.4", 3234)
+        every { community.myEstimatedWan } returns IPv4Address("3.2.3.4", 3234)
         val packet = community.createIntroductionRequest(
             IPv4Address("1.2.3.4", 1234)
         )
@@ -66,7 +66,7 @@ class CommunityTest : BaseCommunityTest() {
         val community = spyk(getCommunity())
 
         community.myEstimatedLan = IPv4Address("2.2.3.4", 2234)
-        community.myEstimatedWan = IPv4Address("3.2.3.4", 3234)
+        every { community.myEstimatedWan } returns IPv4Address("3.2.3.4", 3234)
         community.createIntroductionRequest(
             IPv4Address("1.2.3.4", 1234)
         )
@@ -77,7 +77,7 @@ class CommunityTest : BaseCommunityTest() {
         val community = spyk(getCommunity())
 
         community.myEstimatedLan = IPv4Address("2.2.3.4", 2234)
-        community.myEstimatedWan = IPv4Address("3.2.3.4", 3234)
+        every { community.myEstimatedWan } returns IPv4Address("3.2.3.4", 3234)
         every { community.getPeers() } returns listOf(Peer(JavaCryptoProvider.generateKey(), IPv4Address("5.2.3.4", 5234)))
         val peer = Peer(
             defaultCryptoProvider.generateKey().pub(),
@@ -98,7 +98,7 @@ class CommunityTest : BaseCommunityTest() {
         val community = spyk(getCommunity())
 
         community.myEstimatedLan = IPv4Address("2.2.3.4", 2234)
-        community.myEstimatedWan = IPv4Address("3.2.3.4", 3234)
+        every { community.myEstimatedWan } returns IPv4Address("3.2.3.4", 3234)
         every { community.getPeers() } returns listOf(Peer(JavaCryptoProvider.generateKey(), IPv4Address("5.2.3.4", 5234)))
         val peer = Peer(
             defaultCryptoProvider.generateKey().pub(),
