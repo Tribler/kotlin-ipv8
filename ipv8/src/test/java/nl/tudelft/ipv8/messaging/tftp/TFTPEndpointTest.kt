@@ -37,7 +37,7 @@ class TFTPEndpointTest {
     }
 
     @Test
-    fun onPacket_forServer() {
+    fun onPacket_forServer() = runBlockingTest {
         val tftpClient = mockk<TFTPClient>(relaxed = true)
         val socket = mockk<DatagramSocket>(relaxed = true)
         val tftpEndpoint = TFTPEndpoint(tftpClient)
@@ -67,7 +67,7 @@ class TFTPEndpointTest {
     }
 
     @Test
-    fun onPacket_forClient() {
+    fun onPacket_forClient() = runBlockingTest {
         val tftpClient = TFTPClient()
         val socket = mockk<DatagramSocket>(relaxed = true)
         val tftpEndpoint = TFTPEndpoint(tftpClient)
