@@ -6,11 +6,13 @@ import android.bluetooth.le.AdvertiseData
 import android.bluetooth.le.AdvertiseSettings
 import android.os.ParcelUuid
 import mu.KotlinLogging
+import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.util.hexToBytes
 
 private val logger = KotlinLogging.logger {}
 
 class IPv8BluetoothLeAdvertiser(
-    private val bluetoothManager: BluetoothManager
+    bluetoothManager: BluetoothManager
 ) {
     private val bluetoothAdapter = bluetoothManager.adapter
 
@@ -25,14 +27,14 @@ class IPv8BluetoothLeAdvertiser(
         }
 
         override fun onStartFailure(errorCode: Int) {
-            logger.debug { "onStartFailure $errorCode" }
+            logger.error { "onStartFailure $errorCode" }
             isAdvertising = false
         }
     }
 
     private var isAdvertising = false
 
-    fun start() {
+    fun start(myPeer: Peer) {
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
             .setTimeout(0)
@@ -40,15 +42,30 @@ class IPv8BluetoothLeAdvertiser(
             .setConnectable(true)
             .build()
 
-        val advertiseData = AdvertiseData.Builder()
-            .setIncludeDeviceName(false)
-            .addServiceUuid(ParcelUuid(GattServerManager.SERVICE_UUID))
-            .build()
+        val advertiseData = getAdvertiseData()
+        val scanResponse = getScanResponse(myPeer)
 
-        leAdvertiser?.startAdvertising(settings, advertiseData, advertiseCallback)
+        leAdvertiser?.startAdvertising(settings, advertiseData, scanResponse, advertiseCallback)
     }
 
     fun stop() {
         leAdvertiser?.stopAdvertising(advertiseCallback)
+    }
+
+    private fun getAdvertiseData(): AdvertiseData {
+        return AdvertiseData.Builder()
+            .setIncludeDeviceName(false)
+            .addServiceUuid(ParcelUuid(GattServerManager.SERVICE_UUID))
+            .build()
+    }
+
+    private fun getScanResponse(myPeer: Peer): AdvertiseData {
+        return AdvertiseData.Builder()
+            .setIncludeDeviceName(false)
+            .addServiceData(
+                ParcelUuid(GattServerManager.ADVERTISE_IDENTITY_UUID),
+                myPeer.mid.hexToBytes()
+            )
+            .build()
     }
 }

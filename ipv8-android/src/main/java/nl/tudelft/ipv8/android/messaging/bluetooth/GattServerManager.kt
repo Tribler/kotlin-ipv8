@@ -40,9 +40,9 @@ class GattServerManager(
             UUID.fromString("62c94792-5e72-461b-bbf4-4be7360776b5")
         val WRITE_CHARACTERISTIC_UUID: UUID =
             UUID.fromString("00002a2b-0000-1000-8000-00805f9b34fb")
-        val READ_CHARACTERISTIC_UUID: UUID =
-            UUID.fromString("20002a2b-0000-1000-8000-00805f9b34fb")
         val IDENTITY_CHARACTERISTIC_UUID: UUID =
+            UUID.fromString("10002a2b-0000-1000-8000-00805f9b34fb")
+        val ADVERTISE_IDENTITY_UUID: UUID =
             UUID.fromString("10002a2b-0000-1000-8000-00805f9b34fb")
     }
 }

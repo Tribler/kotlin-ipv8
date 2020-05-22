@@ -406,7 +406,7 @@ abstract class Community : Overlay {
     private fun addEstimatedWan(peer: Peer, wan: IPv4Address) {
         // Change our estimated WAN address if the sender is not on the same LAN, otherwise it
         // would just send us our LAN address
-        if (!addressIsLan(peer.address) && !peer.address.isLoopback()) {
+        if (!addressIsLan(peer.address) && !peer.address.isLoopback() && !peer.address.isEmpty()) {
             // If this is a new peer, add our estimated WAN to the WAN estimation log which can be
             // used to determine symmetric NAT behavior
             network.wanLog.addItem(WanEstimationLog.WanLogItem(

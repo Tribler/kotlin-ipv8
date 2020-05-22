@@ -5,8 +5,8 @@ import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
+import nl.tudelft.ipv8.messaging.bluetooth.BluetoothPeerCandidate
 import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
-import java.util.*
 import kotlin.math.min
 
 class Network {
@@ -18,7 +18,7 @@ class Network {
     /**
      * All discovered Bluetooth addresses.
      */
-    val bluetoothAddresses: MutableSet<BluetoothAddress> = mutableSetOf()
+    val discoveredBluetoothPeers: MutableSet<BluetoothPeerCandidate> = mutableSetOf()
 
     /**
      * All verified peer objects (peer.address must be in [allAddresses])
@@ -75,9 +75,13 @@ class Network {
         }
     }
 
-    fun discoverBluetoothAddress(address: BluetoothAddress) {
+    fun discoverBluetoothPeer(peer: BluetoothPeerCandidate) {
         synchronized(graphLock) {
-            bluetoothAddresses.add(address)
+            val isDiscovered = discoveredBluetoothPeers
+                .find { it.address == peer.address} != null
+            if (!isDiscovered) {
+                discoveredBluetoothPeers.add(peer)
+            }
         }
     }
 
@@ -218,12 +222,20 @@ class Network {
         }
     }
 
-    fun getConnectableBluetoothAddresses(): Set<BluetoothAddress> {
+    private fun isConnectedTo(bluetoothAddress: BluetoothAddress): Boolean {
+        return verifiedPeers.find {
+            it.bluetoothAddress == bluetoothAddress
+        } != null
+    }
+
+    /**
+     * Returns a set of Bluetooth peer candidates we are not connected to yet.
+     */
+    fun getNewBluetoothPeerCandidates(): List<BluetoothPeerCandidate> {
         synchronized(graphLock) {
-            val connectedAddresses = verifiedPeers
-                .mapNotNull { it.bluetoothAddress }
-                .toSet()
-            return bluetoothAddresses - connectedAddresses
+            return discoveredBluetoothPeers.filterNot {
+                isConnectedTo(it.address)
+            }
         }
     }
 
@@ -299,7 +311,7 @@ class Network {
      */
     fun removeByAddress(address: BluetoothAddress) {
         synchronized(graphLock) {
-            bluetoothAddresses.remove(address)
+            discoveredBluetoothPeers.removeAll { it.address == address }
 
             // Remove peers that have only BluetoothAddress
             val peer = getVerifiedByAddress(address)

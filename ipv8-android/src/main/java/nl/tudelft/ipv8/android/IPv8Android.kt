@@ -14,6 +14,7 @@ import nl.tudelft.ipv8.android.keyvault.AndroidCryptoProvider
 import nl.tudelft.ipv8.android.messaging.bluetooth.BluetoothLeEndpoint
 import nl.tudelft.ipv8.android.messaging.bluetooth.GattServerManager
 import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeAdvertiser
+import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeScanner
 import nl.tudelft.ipv8.android.messaging.udp.AndroidUdpEndpoint
 import nl.tudelft.ipv8.android.service.IPv8Service
 import nl.tudelft.ipv8.keyvault.PrivateKey
@@ -88,10 +89,11 @@ object IPv8Android {
 
             val gattServer = GattServerManager(application, myPeer)
             val bleAdvertiser = IPv8BluetoothLeAdvertiser(bluetoothManager)
+            val bleScanner = IPv8BluetoothLeScanner(bluetoothManager, network)
             val bluetoothEndpoint = if (bluetoothManager.adapter != null &&
                 Build.VERSION.SDK_INT >= 24)
                 BluetoothLeEndpoint(application, bluetoothManager, gattServer, bleAdvertiser,
-                    network) else null
+                    bleScanner, network, myPeer) else null
 
             val endpointAggregator = EndpointAggregator(
                 udpEndpoint,

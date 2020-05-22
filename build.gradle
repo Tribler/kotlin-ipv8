@@ -45,3 +45,10 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions.freeCompilerArgs += [
+        "-Xuse-experimental=kotlin.Experimental,kotlin.ExperimentalUnsignedTypes",
+        "-Xopt-in=kotlin.RequiresOptIn"
+    ]
+}
