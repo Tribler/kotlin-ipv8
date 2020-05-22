@@ -7,6 +7,7 @@ import android.bluetooth.le.AdvertiseSettings
 import android.os.ParcelUuid
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.util.hexToBytes
 
 private val logger = KotlinLogging.logger {}
 
@@ -26,7 +27,7 @@ class IPv8BluetoothLeAdvertiser(
         }
 
         override fun onStartFailure(errorCode: Int) {
-            logger.debug { "onStartFailure $errorCode" }
+            logger.error { "onStartFailure $errorCode" }
             isAdvertising = false
         }
     }
@@ -41,20 +42,29 @@ class IPv8BluetoothLeAdvertiser(
             .setConnectable(true)
             .build()
 
-        leAdvertiser?.startAdvertising(settings, getAdvertiseData(myPeer), advertiseCallback)
+        val advertiseData = getAdvertiseData()
+        val scanResponse = getScanResponse(myPeer)
+
+        leAdvertiser?.startAdvertising(settings, advertiseData, scanResponse, advertiseCallback)
     }
 
     fun stop() {
         leAdvertiser?.stopAdvertising(advertiseCallback)
     }
 
-    private fun getAdvertiseData(myPeer: Peer): AdvertiseData {
+    private fun getAdvertiseData(): AdvertiseData {
         return AdvertiseData.Builder()
             .setIncludeDeviceName(false)
             .addServiceUuid(ParcelUuid(GattServerManager.SERVICE_UUID))
+            .build()
+    }
+
+    private fun getScanResponse(myPeer: Peer): AdvertiseData {
+        return AdvertiseData.Builder()
+            .setIncludeDeviceName(false)
             .addServiceData(
                 ParcelUuid(GattServerManager.ADVERTISE_IDENTITY_UUID),
-                myPeer.mid.toByteArray(Charsets.US_ASCII)
+                myPeer.mid.hexToBytes()
             )
             .build()
     }

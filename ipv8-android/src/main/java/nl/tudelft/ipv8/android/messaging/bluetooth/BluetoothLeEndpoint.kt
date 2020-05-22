@@ -4,9 +4,6 @@ import android.bluetooth.*
 import android.content.Context
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Packet
@@ -78,9 +75,9 @@ class BluetoothLeEndpoint(
         return isOpen
     }
 
-    override fun send(address: BluetoothAddress, data: ByteArray) {
-        logger.debug { "Send to $address: ${data.size} B" }
-        val client = clients[address]
+    override fun send(peer: BluetoothAddress, data: ByteArray) {
+        logger.debug { "Send to $peer: ${data.size} B" }
+        val client = clients[peer]
         client?.send(data)
     }
 
@@ -104,7 +101,7 @@ class BluetoothLeEndpoint(
 
     override fun close() {
         bleAdvertiser.stop()
-        bleScanner.stop()
+        bleScanner.stopPeriodicScan()
         gattServer.close()
         isOpen = false
 

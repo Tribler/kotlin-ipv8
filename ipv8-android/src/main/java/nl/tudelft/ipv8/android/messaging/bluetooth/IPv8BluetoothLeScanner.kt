@@ -1,18 +1,13 @@
 package nl.tudelft.ipv8.android.messaging.bluetooth
 
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
-import android.bluetooth.le.BluetoothLeScanner
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
+import android.bluetooth.le.*
 import android.os.ParcelUuid
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.asFlow
 import mu.KotlinLogging
+import nl.tudelft.ipv8.android.messaging.bluetooth.GattServerManager.Companion.SERVICE_UUID
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
+import nl.tudelft.ipv8.messaging.bluetooth.BluetoothPeerCandidate
 import nl.tudelft.ipv8.peerdiscovery.Network
 
 private val logger = KotlinLogging.logger {}
@@ -24,7 +19,7 @@ class IPv8BluetoothLeScanner(
 ) {
     private var isScanning = false
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-    //private var scanJob: Job? = null
+    private var scanJob: Job? = null
 
     private val leScanner: BluetoothLeScanner by lazy {
         // BluetoothLeScanner is only available when Bluetooth is turned on
@@ -52,10 +47,16 @@ class IPv8BluetoothLeScanner(
                 it.uuid
             } ?: listOf()
 
-            if (uuids.contains(GattServerManager.SERVICE_UUID)) {
+            if (uuids.contains(SERVICE_UUID)) {
                 logger.debug { "Discovered Bluetooth device: ${device.address}" }
                 val bluetoothAddress = BluetoothAddress(device.address)
-                network.discoverBluetoothAddress(bluetoothAddress)
+                val peer = BluetoothPeerCandidate(
+                    identity?.toString(Charsets.US_ASCII),
+                    bluetoothAddress,
+                    txPowerLevel,
+                    rssi
+                )
+                network.discoverBluetoothPeer(peer)
             }
         }
     }
@@ -67,27 +68,12 @@ class IPv8BluetoothLeScanner(
 
         val settingsBuilder = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
-            .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
-            .setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
-            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
 
-        /*
         val serviceScanFilter = ScanFilter.Builder()
             .setServiceUuid(ParcelUuid(SERVICE_UUID))
             .build()
-         */
 
-        leScanner.startScan(null, settingsBuilder.build(), scanCallback)
-
-        // TODO: Stop scanning after scan period
-        /*
-        scanJob = scope.launch {
-            if (isActive) {
-                delay(SCAN_PERIOD_MILLIS)
-                stopScan()
-            }
-        }
-        */
+        leScanner.startScan(listOf(serviceScanFilter), settingsBuilder.build(), scanCallback)
     }
 
     fun stop() {
@@ -95,7 +81,6 @@ class IPv8BluetoothLeScanner(
 
         isScanning = false
         leScanner.stopScan(scanCallback)
-        //scanJob?.cancel()
     }
 
     /**
@@ -103,7 +88,7 @@ class IPv8BluetoothLeScanner(
      * long pause between scans.
      */
     fun startPeriodicScan(duration: Long, pause: Long) {
-        scope.launch {
+        scanJob = scope.launch {
             while (isActive) {
                 if (bluetoothManager.adapter.isEnabled) {
                     start()
@@ -115,5 +100,13 @@ class IPv8BluetoothLeScanner(
                 }
             }
         }
+    }
+
+    /**
+     * Stops the periodic scan.
+     */
+    fun stopPeriodicScan() {
+        scanJob?.cancel()
+        scanJob = null
     }
 }
