@@ -98,3 +98,12 @@ fun deserializeVarLen(buffer: ByteArray, offset: Int = 0): Pair<ByteArray, Int> 
         offset + SERIALIZED_UINT_SIZE + len)
     return Pair(payload, SERIALIZED_UINT_SIZE + len)
 }
+
+/**
+ * Can only be used as the last element in a payload as it will consume the remainder of the
+ * input (avoid if possible).
+ */
+fun deserializeRaw(buffer: ByteArray, offset: Int = 0): Pair<ByteArray, Int> {
+    val len = buffer.size - offset
+    return Pair(buffer.copyOfRange(offset, buffer.size), len)
+}

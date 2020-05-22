@@ -46,10 +46,9 @@ class Network {
     val serviceOverlays = mutableMapOf<String, Overlay>()
 
     /**
-     * A log of received WAN estimations consisting of a list of
-     * (timestamp, sender address, our WAN address) triples
+     * A log of received WAN estimations.
      */
-    val myEstimatedWans = mutableListOf<Triple<Date, IPv4Address, IPv4Address>>()
+    val wanLog = WanEstimationLog()
 
     val graphLock = Object()
 

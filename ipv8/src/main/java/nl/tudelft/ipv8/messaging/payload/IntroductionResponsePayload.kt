@@ -42,7 +42,7 @@ data class IntroductionResponsePayload(
     val wanIntroductionAddress: IPv4Address,
 
     /**
-     * A unicode string indicating the connection type that the message creator has. Currently the
+     * A unicode string indicating the connection type that the introduced node has. Currently the
      * following values are supported: u"unknown", u"public", and u"symmetric-NAT".
      */
     val connectionType: ConnectionType,
@@ -57,7 +57,12 @@ data class IntroductionResponsePayload(
      * A number that was given in the associated introduction-request.  This number allows to
      * distinguish between multiple introduction-response messages.
      */
-    val identifier: Int
+    val identifier: Int,
+
+    /**
+     * Can be used to piggyback extra information.
+     */
+    val extraBytes: ByteArray = byteArrayOf()
 ) : Serializable {
     override fun serialize(): ByteArray {
         return destinationAddress.serialize() +
@@ -66,7 +71,40 @@ data class IntroductionResponsePayload(
                 lanIntroductionAddress.serialize() +
                 wanIntroductionAddress.serialize() +
                 createConnectionByte(connectionType) +
-                serializeUShort(identifier)
+                serializeUShort(identifier) +
+                extraBytes
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as IntroductionResponsePayload
+
+        if (destinationAddress != other.destinationAddress) return false
+        if (sourceLanAddress != other.sourceLanAddress) return false
+        if (sourceWanAddress != other.sourceWanAddress) return false
+        if (lanIntroductionAddress != other.lanIntroductionAddress) return false
+        if (wanIntroductionAddress != other.wanIntroductionAddress) return false
+        if (connectionType != other.connectionType) return false
+        if (tunnel != other.tunnel) return false
+        if (identifier != other.identifier) return false
+        if (!extraBytes.contentEquals(other.extraBytes)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = destinationAddress.hashCode()
+        result = 31 * result + sourceLanAddress.hashCode()
+        result = 31 * result + sourceWanAddress.hashCode()
+        result = 31 * result + lanIntroductionAddress.hashCode()
+        result = 31 * result + wanIntroductionAddress.hashCode()
+        result = 31 * result + connectionType.hashCode()
+        result = 31 * result + tunnel.hashCode()
+        result = 31 * result + identifier
+        result = 31 * result + extraBytes.contentHashCode()
+        return result
     }
 
     companion object Deserializer : Deserializable<IntroductionResponsePayload> {
@@ -86,6 +124,8 @@ data class IntroductionResponsePayload(
             localOffset++
             val identifier = deserializeUShort(buffer, offset + localOffset)
             localOffset += SERIALIZED_USHORT_SIZE
+            val (extraBytes, extraBytesLen) = deserializeRaw(buffer, offset + localOffset)
+            localOffset += extraBytesLen
             val payload = IntroductionResponsePayload(
                 destinationAddress,
                 sourceLanAddress,
@@ -94,7 +134,8 @@ data class IntroductionResponsePayload(
                 wanIntroductionAddress,
                 connectionType,
                 false,
-                identifier
+                identifier,
+                extraBytes
             )
             return Pair(payload, localOffset)
         }
