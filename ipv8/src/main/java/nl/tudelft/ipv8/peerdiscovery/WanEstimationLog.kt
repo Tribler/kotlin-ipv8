@@ -10,11 +10,12 @@ import java.util.*
  * Further behavioral NAT analysis is performed to detect symmetric NAT behavior.
  */
 class WanEstimationLog {
-    val log = mutableListOf<WanLogItem>()
+    private val log = mutableListOf<WanLogItem>()
 
     /**
      * Adds a new item to the log if this WAN is not reported by this sender yet.
      */
+    @Synchronized
     fun addItem(item: WanLogItem) {
         val existingItem = log.findLast {
             it.wan == item.wan && it.sender == item.sender
@@ -28,6 +29,7 @@ class WanEstimationLog {
      * Estimates our current WAN address using the majority from the last few log items.
      * @return Our current WAN or null if there are no items in the log.
      */
+    @Synchronized
     fun estimateWan(): IPv4Address? {
         val wans = log.takeLast(MAJORITY_INPUT_SIZE).map { it.wan }
         return majority(wans)
@@ -39,14 +41,17 @@ class WanEstimationLog {
      * - symmetric – our WAN address is changed frequently, symmetric NAT like behavior
      * - unknown – most of the WAN reports are matching, NAT performs endpoint independent mapping
      */
+    @Synchronized
     fun estimateConnectionType(): ConnectionType {
         val wans = log.map { it.wan }.distinct()
         val wan = estimateWan()
         val lan = log.lastOrNull()?.lan
 
+        val symmetricProbability = (wans.size - 1) / log.size.toFloat()
+
         return when {
             wan != null && wan == lan -> ConnectionType.PUBLIC
-            wans.size > 1 -> ConnectionType.SYMMETRIC_NAT
+            log.size > 1 && symmetricProbability > 0.1 -> ConnectionType.SYMMETRIC_NAT
             else -> ConnectionType.UNKNOWN
         }
     }
@@ -54,8 +59,14 @@ class WanEstimationLog {
     /**
      * Clears the log. It should be called when the LAN address is changed.
      */
+    @Synchronized
     fun clear() {
         log.clear()
+    }
+
+    @Synchronized
+    fun getLog(): List<WanLogItem> {
+        return log
     }
 
     /**

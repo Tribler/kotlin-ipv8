@@ -6,7 +6,6 @@ import android.net.Network
 import android.os.Build
 import mu.KotlinLogging
 import nl.tudelft.ipv8.IPv4Address
-import nl.tudelft.ipv8.android.BuildConfig
 import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
 import java.net.*
 
