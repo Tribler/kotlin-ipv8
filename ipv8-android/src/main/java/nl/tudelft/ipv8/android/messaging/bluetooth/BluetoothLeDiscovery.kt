@@ -102,9 +102,6 @@ class BluetoothLeDiscovery(
 
         val settingsBuilder = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
-            .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
-            .setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
-            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
 
         /*
         val serviceScanFilter = ScanFilter.Builder()
