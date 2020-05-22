@@ -1,6 +1,8 @@
 package nl.tudelft.ipv8.messaging.tftp
 
 import io.mockk.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runBlockingTest
 import nl.tudelft.ipv8.IPv4Address
 import org.apache.commons.net.tftp.TFTP
 import org.apache.commons.net.tftp.TFTPAckPacket
@@ -11,9 +13,10 @@ import java.io.InputStream
 import java.net.DatagramSocket
 import java.net.InetAddress
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class TFTPEndpointTest {
     @Test
-    fun send() {
+    fun send() = runBlockingTest {
         val tftpClient = spyk<TFTPClient>()
         val socket = mockk<DatagramSocket>(relaxed = true)
         val tftpEndpoint = TFTPEndpoint(tftpClient)
@@ -26,13 +29,10 @@ class TFTPEndpointTest {
         tftpEndpoint.send(address, data)
 
         verify {
-            // TODO: Find out why this tests fails occasionally
-            /*
             val inputMatcher = match<InputStream> {
                 it.readBytes().contentEquals(data)
             }
-             */
-            tftpClient.sendFile(any(), any(), any(), InetAddress.getByName(host), port)
+            tftpClient.sendFile(any(), any(), inputMatcher, InetAddress.getByName(host), port)
         }
     }
 
