@@ -24,6 +24,14 @@ class LibNaClPK(
         return keyToHash().toHex()
     }
 
+    override fun equals(other: Any?): Boolean {
+        return other is LibNaClPK && other.keyToHash().toHex() == this.keyToHash().toHex()
+    }
+
+    override fun hashCode(): Int {
+        return publicKey.contentHashCode()
+    }
+
     companion object {
         private const val BIN_PREFIX = "LibNaCLPK:"
 

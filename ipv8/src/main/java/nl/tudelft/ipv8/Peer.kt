@@ -106,14 +106,6 @@ data class Peer(
         return !address.isEmpty() || bluetoothAddress != null
     }
 
-    override fun equals(other: Any?): Boolean {
-        return other is Peer && other.mid == mid
-    }
-
-    override fun hashCode(): Int {
-        return mid.hashCode()
-    }
-
     companion object {
         const val MAX_PINGS = 5
 

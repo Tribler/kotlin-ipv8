@@ -9,6 +9,7 @@ import nl.tudelft.ipv8.android.messaging.bluetooth.GattServerManager.Companion.S
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothPeerCandidate
 import nl.tudelft.ipv8.peerdiscovery.Network
+import java.lang.Exception
 
 private val logger = KotlinLogging.logger {}
 
@@ -80,7 +81,14 @@ class IPv8BluetoothLeScanner(
         logger.debug { "stopScan" }
 
         isScanning = false
-        leScanner.stopScan(scanCallback)
+
+        try {
+            if (bluetoothManager.adapter?.isEnabled == true) {
+                leScanner.stopScan(scanCallback)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     /**
