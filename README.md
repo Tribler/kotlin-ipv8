@@ -30,6 +30,7 @@ The project is a composed of several modules:
 
 - `ipv8` (JVM library) – The core of IPv8 implementation, pure Kotlin library module.
 - `ipv8-android` (Android library) – Android-specific dependencies and helper classes (`IPv8Android`, `IPv8Android.Factory`) for running IPv8 on Android Runtime.
+- `demo-android` (Android app) – Android app demonstrating the initialization of `ipv8-android` library.
 - `ipv8-jvm` (JVM library) – JVM-specific dependencies for running IPv8 on JVM.
 - `demo-jvm` (JVM app) – The CLI app demonstrating the usage of `ipv8-jvm` library.
 - `tracker` (JVM app) – The bootstrap server implementation.
