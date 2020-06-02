@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.messaging
 
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.exception.PacketDecodingException
+import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.payload.BinMemberAuthenticationPayload
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
@@ -33,6 +34,16 @@ class Packet(
         val (peer, remainder) = getAuthPayload()
         val (_, distSize) = GlobalTimeDistributionPayload.deserialize(remainder)
         val (payload, _) = deserializer.deserialize(remainder, distSize)
+        return Pair(peer, payload)
+    }
+
+    @Throws(PacketDecodingException::class)
+    fun <T> getDecryptedAuthPayload(deserializer: Deserializable<T>, privateKey: PrivateKey): Pair<Peer, T> {
+        val (peer, remainder) = getAuthPayload()
+        val (_, distSize) = GlobalTimeDistributionPayload.deserialize(remainder)
+        val encrypted = remainder.copyOfRange(distSize, remainder.size)
+        val decrypted = privateKey.decrypt(encrypted)
+        val (payload, _) = deserializer.deserialize(decrypted, 0)
         return Pair(peer, payload)
     }
 
@@ -74,6 +85,7 @@ class Packet(
         val peer = Peer.createFromAddress(publicKey, source)
         val remainder = data.copyOfRange(authOffset + authSize,
             data.size - publicKey.getSignatureLength())
+
         return Pair(peer, remainder)
     }
 

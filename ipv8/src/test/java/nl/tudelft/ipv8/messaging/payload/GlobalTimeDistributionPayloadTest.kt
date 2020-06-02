@@ -4,7 +4,7 @@ import nl.tudelft.ipv8.util.toHex
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class GlobalTimeDistributionmPayloadTest {
+class GlobalTimeDistributionPayloadTest {
     @Test
     fun serialize() {
         val payload = GlobalTimeDistributionPayload(1uL)

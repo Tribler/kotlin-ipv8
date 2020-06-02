@@ -70,4 +70,16 @@ class LibNaClPKTest {
         val hex = "1c69624e61434c504b3af7e62cb0152b1422ad844597a3fd3cafb4a13ae3f1943e9adb45be8bfd2bde69a771a81302db83d5f0ec524cc5f60093702b0dad242824ee1af1a2661425759c"
         LibNaClPK.fromBin(hex.hexToBytes(), lazySodium)
     }
+
+    @Test
+    fun encrypt_decrypt() {
+        val origMessage = "Hello World!"
+        val msg = origMessage.toByteArray(Charsets.UTF_8)
+        val sk = LibNaClSK.generate(lazySodium)
+        val pk = sk.pub()
+        val cipher = pk.encrypt(msg)
+        val plaintext = sk.decrypt(cipher)
+        val decryptedMessage = plaintext.toString(Charsets.UTF_8)
+        Assert.assertEquals(origMessage, decryptedMessage)
+    }
 }

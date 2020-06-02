@@ -102,10 +102,10 @@ class IPv8BluetoothLeScanner(
                     start()
                     delay(duration)
                     stop()
-                    delay(pause)
                 } else {
                     logger.warn { "Bluetooth is not enabled" }
                 }
+                delay(pause)
             }
         }
     }
