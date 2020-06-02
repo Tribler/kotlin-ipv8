@@ -35,6 +35,11 @@ interface PrivateKey : Key {
      * @return The signature for the message.
      */
     fun sign(msg: ByteArray): ByteArray
+
+    /**
+     * Decrypts a ciphertext that was encrypted using the corresponding public key.
+     */
+    fun decrypt(msg: ByteArray): ByteArray
 }
 
 /**
@@ -56,4 +61,10 @@ interface PublicKey : Key {
      * Returns the length, in bytes, of each signature made using EC.
      */
     fun getSignatureLength(): Int
+
+    /**
+     * Encrypts a message using this public key so it can be decrypted only with the
+     * corresponding private key.
+     */
+    fun encrypt(msg: ByteArray): ByteArray
 }

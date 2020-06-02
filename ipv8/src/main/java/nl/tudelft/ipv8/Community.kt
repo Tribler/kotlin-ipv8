@@ -246,12 +246,14 @@ abstract class Community : Overlay {
      * @param sign True if the packet should be signed
      * @param peer The peer that should sign the packet. The community's [myPeer] is used by default.
      */
-    protected fun serializePacket(
+    fun serializePacket(
         messageId: Int,
         payload: Serializable,
         sign: Boolean = true,
         peer: Peer = myPeer,
-        prefix: ByteArray = this.prefix
+        prefix: ByteArray = this.prefix,
+        encrypt: Boolean = false,
+        recipient: Peer? = null
     ): ByteArray {
         val payloads = mutableListOf<Serializable>()
         if (sign) {
@@ -264,7 +266,9 @@ abstract class Community : Overlay {
             payloads,
             sign,
             peer,
-            prefix
+            prefix,
+            encrypt,
+            recipient
         )
     }
 
@@ -281,13 +285,26 @@ abstract class Community : Overlay {
         payload: List<Serializable>,
         sign: Boolean = true,
         peer: Peer = myPeer,
-        prefix: ByteArray = this.prefix
+        prefix: ByteArray = this.prefix,
+        encrypt: Boolean = false,
+        recipient: Peer? = null
     ): ByteArray {
         var packet = prefix
         packet += messageId.toChar().toByte()
 
-        for (item in payload) {
-            packet += item.serialize()
+        if (encrypt && recipient == null) {
+            throw IllegalArgumentException("Recipient must be provided for encryption")
+        }
+
+        for ((index, item) in payload.withIndex()) {
+            val serialized = item.serialize()
+            // Encrypt the main payload if we can
+            packet += if (index == payload.size - 1 && encrypt && recipient != null) {
+                val encrypted = recipient.publicKey.encrypt(serialized)
+                encrypted
+            } else {
+                serialized
+            }
         }
 
         val myPeerKey = peer.key

@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8.keyvault
 
 import com.goterl.lazycode.lazysodium.LazySodium
+import com.goterl.lazycode.lazysodium.interfaces.Box
 import nl.tudelft.ipv8.util.toHex
 
 class LibNaClPK(
@@ -14,6 +15,12 @@ class LibNaClPK(
 
     override fun getSignatureLength(): Int {
         return LibNaClSK.SIGNATURE_SIZE
+    }
+
+    override fun encrypt(msg: ByteArray): ByteArray {
+        val cipher = ByteArray(Box.SEALBYTES + msg.size)
+        lazySodium.cryptoBoxSeal(cipher, msg, msg.size.toLong(), publicKey)
+        return cipher
     }
 
     override fun keyToBin(): ByteArray {

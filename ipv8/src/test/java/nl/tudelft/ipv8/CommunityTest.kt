@@ -9,6 +9,9 @@ import io.mockk.verify
 import nl.tudelft.ipv8.keyvault.*
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.Packet
+import nl.tudelft.ipv8.messaging.payload.BinMemberAuthenticationPayload
+import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
+import nl.tudelft.ipv8.messaging.payload.PunctureRequestPayload
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.hexToBytes
 import nl.tudelft.ipv8.util.toHex
@@ -223,5 +226,34 @@ class CommunityTest : BaseCommunityTest() {
         community.getNewIntroduction()
 
         verify { community.endpoint.send(any<Address>(), any()) }
+    }
+
+    @Test
+    fun serializePacket_encrypt() {
+        val community = getCommunity()
+        val address = IPv4Address("1.2.3.4", 1234)
+        val myPeer = Peer(defaultCryptoProvider.generateKey(), address)
+        val recipientAddress = IPv4Address("1.2.3.5", 1235)
+        val recipient = Peer(defaultCryptoProvider.generateKey(), recipientAddress)
+
+        val sourceLanAddress = IPv4Address("1.2.3.4", 1234)
+        val sourceWanAddress = IPv4Address("2.2.3.4", 2234)
+        val identifier = 1
+        val payload = PunctureRequestPayload(
+            sourceLanAddress,
+            sourceWanAddress,
+            identifier
+        )
+
+        val data = community.serializePacket(1, payload, peer = myPeer, encrypt = true, recipient = recipient)
+
+        val packet = Packet(sourceWanAddress, data)
+
+        val decrypted = packet.getDecryptedAuthPayload(PunctureRequestPayload.Deserializer, recipient.key as PrivateKey)
+
+        Assert.assertEquals(payload.lanWalkerAddress, decrypted.second.lanWalkerAddress)
+        Assert.assertEquals(payload.wanWalkerAddress, decrypted.second.wanWalkerAddress)
+        Assert.assertEquals(payload.identifier, decrypted.second.identifier)
+        Assert.assertEquals(myPeer.publicKey, decrypted.first.key.pub())
     }
 }

@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8.keyvault
 
 import com.goterl.lazycode.lazysodium.LazySodium
+import com.goterl.lazycode.lazysodium.interfaces.Box
 import nl.tudelft.ipv8.util.toHex
 import kotlin.random.Random
 
@@ -32,6 +33,12 @@ class LibNaClSK(
             signKey
         )
         return signature
+    }
+
+    override fun decrypt(msg: ByteArray): ByteArray {
+        val plaintext = ByteArray(msg.size - Box.SEALBYTES)
+        lazySodium.cryptoBoxSealOpen(plaintext, msg, msg.size.toLong(), publicKey, privateKey)
+        return plaintext
     }
 
     override fun pub(): PublicKey {
