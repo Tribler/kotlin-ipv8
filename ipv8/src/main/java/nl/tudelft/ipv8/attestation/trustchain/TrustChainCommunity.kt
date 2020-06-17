@@ -241,7 +241,7 @@ open class TrustChainCommunity(
         return block
     }
 
-    private fun onBlockCreated(block: TrustChainBlock) {
+    fun onBlockCreated(block: TrustChainBlock) {
         // Validate and persist
         val validation = validateAndPersistBlock(block)
 
