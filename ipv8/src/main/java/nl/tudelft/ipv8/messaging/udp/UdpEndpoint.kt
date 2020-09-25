@@ -1,7 +1,6 @@
 package nl.tudelft.ipv8.messaging.udp
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.IPv4Address
@@ -10,6 +9,7 @@ import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.tftp.TFTPEndpoint
+import nl.tudelft.ipv8.messaging.utp.UTPEndpoint
 import java.io.IOException
 import java.net.*
 
@@ -18,7 +18,8 @@ private val logger = KotlinLogging.logger {}
 open class UdpEndpoint(
     private val port: Int,
     private val ip: InetAddress,
-    private val tftpEndpoint: TFTPEndpoint = TFTPEndpoint()
+    private val tftpEndpoint: TFTPEndpoint = TFTPEndpoint(),
+    private val utpEndpoint: UTPEndpoint = UTPEndpoint()
 ) : Endpoint<Peer>() {
     private var socket: DatagramSocket? = null
 
@@ -54,7 +55,8 @@ open class UdpEndpoint(
         scope.launch {
             logger.debug("Send packet (${data.size} B) to $address ($peer)")
             try {
-                if (data.size > UDP_PAYLOAD_LIMIT) {
+                utpEndpoint.send(address, data)
+                /*if (data.size > UDP_PAYLOAD_LIMIT) {
                     if (peer.supportsTFTP) {
                         tftpEndpoint.send(address, data)
                     } else {
@@ -63,7 +65,7 @@ open class UdpEndpoint(
                     }
                 } else {
                     send(address, data)
-                }
+                }*/
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -85,6 +87,9 @@ open class UdpEndpoint(
 
         tftpEndpoint.socket = socket
         tftpEndpoint.open()
+
+        utpEndpoint.socket = socket
+        utpEndpoint.open()
 
         logger.info { "Opened UDP socket on port ${socket.localPort}" }
 
@@ -117,6 +122,7 @@ open class UdpEndpoint(
         bindJob = null
 
         tftpEndpoint.close()
+        utpEndpoint.close()
 
         socket?.close()
         socket = null
@@ -174,7 +180,7 @@ open class UdpEndpoint(
                 "${receivePacket.address.hostAddress}:${receivePacket.port}"
         )
 
-        // Check whether prefix is IPv8 or TFTP
+        // Check whether prefix is IPv8, TFTP, or UTP
         when (receivePacket.data[0]) {
             Community.PREFIX_IPV8 -> {
                 val sourceAddress =
@@ -189,6 +195,9 @@ open class UdpEndpoint(
             }
             TFTPEndpoint.PREFIX_TFTP -> {
                 tftpEndpoint.onPacket(receivePacket)
+            }
+            UTPEndpoint.PREFIX_UTP -> {
+                utpEndpoint.onPacket(receivePacket)
             }
             else -> {
                 logger.warn { "Invalid packet prefix" }

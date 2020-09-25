@@ -5,7 +5,6 @@ import mu.KotlinLogging
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.messaging.payload.*
-import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.WanEstimationLog
 import nl.tudelft.ipv8.util.addressIsLan
