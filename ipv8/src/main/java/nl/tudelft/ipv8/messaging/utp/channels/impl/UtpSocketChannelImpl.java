@@ -14,9 +14,6 @@
  */
 package nl.tudelft.ipv8.messaging.utp.channels.impl;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -69,12 +66,10 @@ import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.longToU
  */
 public class UtpSocketChannelImpl extends UtpSocketChannel {
 
+    private final Object sendLock = new Object();
     private volatile BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<>();
-
     private UtpWritingRunnable writer;
     private UtpReadingRunnable reader;
-    private final Object sendLock = new Object();
-
     private ScheduledExecutorService retryConnectionTimeScheduler;
     private int connectionAttempts = 0;
 

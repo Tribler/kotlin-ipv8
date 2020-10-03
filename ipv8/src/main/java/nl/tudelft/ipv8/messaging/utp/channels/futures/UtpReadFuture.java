@@ -15,7 +15,6 @@
 package nl.tudelft.ipv8.messaging.utp.channels.futures;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.ByteBuffer;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -24,9 +23,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author Ivan Iljkic (i.iljkic@gmail.com)
  */
 public class UtpReadFuture extends UtpBlockableFuture {
+    protected final ReentrantLock listenerLock = new ReentrantLock();
     protected volatile ByteArrayOutputStream bos;
     protected volatile UtpReadListener listener;
-    protected final ReentrantLock listenerLock = new ReentrantLock();
 
     public UtpReadFuture() throws InterruptedException {
         super();

@@ -14,9 +14,6 @@
  */
 package nl.tudelft.ipv8.messaging.utp.channels.impl.read;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Queue;
@@ -37,8 +34,8 @@ import nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil;
  * @author Ivan Iljkic (i.iljkic@gmail.com)
  */
 public class UtpReadingRunnable extends Thread implements Runnable {
-    private final ByteArrayOutputStream bos = new ByteArrayOutputStream();
     private static final int PACKET_DIFF_WARP = 50000;
+    private final ByteArrayOutputStream bos = new ByteArrayOutputStream();
     private UtpSocketChannelImpl channel;
     private SkippedPacketBuffer skippedBuffer = new SkippedPacketBuffer();
     private boolean exceptionOccured = false;

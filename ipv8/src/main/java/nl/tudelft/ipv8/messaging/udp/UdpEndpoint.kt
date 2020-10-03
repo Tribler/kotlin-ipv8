@@ -64,8 +64,8 @@ open class UdpEndpoint(
             try {
                 if (data.size > UDP_PAYLOAD_LIMIT) {
                     when {
-                        peer.supportsTFTP -> tftpEndpoint.send(address, data)
                         peer.supportsUTP -> utpEndpoint.send(address, data)
+                        peer.supportsTFTP -> tftpEndpoint.send(address, data)
                         else -> logger.warn { "The packet is larger then UDP_PAYLOAD_LIMIT and the peer does not support TFTP" }
                     }
                 } else {

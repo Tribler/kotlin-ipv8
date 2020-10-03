@@ -14,9 +14,6 @@
  */
 package nl.tudelft.ipv8.messaging.utp.channels;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -49,44 +46,34 @@ import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.longToU
  */
 public abstract class UtpSocketChannel implements UtpPacketRecievable {
 
-    /* ID for outgoing packets */
-    private long connectionIdSending;
-
+    /* Sequencing begin */
+    protected static int DEF_SEQ_START = 1;
+    /* lock for the socket state* */
+    protected final ReentrantLock stateLock = new ReentrantLock();
     /* timestamping utility */
     protected MicroSecondsTimeStamp timeStamper = new MicroSecondsTimeStamp();
-
-    /* current sequenceNumber */
-    private int sequenceNumber;
-
-    /* ID for incoming packets */
-    private int connectionIdReceiving;
-
     /*
      * address of the remote sockets which this socket is connected to
      */
     protected SocketAddress remoteAddress;
-
     /* current ack Number */
     protected int ackNumber;
-
     /* reference to the underlying UDP Socket */
     protected DatagramSocket dgSocket;
-
     /*
      * Connection Future Object - need to hold a reference here i case
      * connection the initial connection attempt fails. So it will be updates
      * once the reattempts success.
      */
     protected UtpConnectFutureImpl connectFuture = null;
-
-    /* lock for the socket state* */
-    protected final ReentrantLock stateLock = new ReentrantLock();
-
     /* Current state of the socket */
     protected volatile UtpSocketState state = null;
-
-    /* Sequencing begin */
-    protected static int DEF_SEQ_START = 1;
+    /* ID for outgoing packets */
+    private long connectionIdSending;
+    /* current sequenceNumber */
+    private int sequenceNumber;
+    /* ID for incoming packets */
+    private int connectionIdReceiving;
 
     /**
      * Opens a new Socket and binds it to any available port
@@ -189,8 +176,16 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
         return connectionIdReceiving;
     }
 
+    protected void setConnectionIdReceiving(int connectionIdReceiving) {
+        this.connectionIdReceiving = connectionIdReceiving;
+    }
+
     public UtpSocketState getState() {
         return state;
+    }
+
+    protected void setState(UtpSocketState state) {
+        this.state = state;
     }
 
     public SocketAddress getRemoteAdress() {
@@ -201,13 +196,21 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
         return ackNumber;
     }
 
+    protected abstract void setAckNumber(int ackNumber);
+
     public int getSequenceNumber() {
         return sequenceNumber;
+    }
+
+    protected void setSequenceNumber(int sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
     }
 
     public DatagramSocket getDgSocket() {
         return dgSocket;
     }
+
+    protected abstract void setDgSocket(DatagramSocket dgSocket);
 
     /* signal the implementation to start the reConnect Timer */
     protected abstract void startConnectionTimeOutCounter(UtpPacket synPacket);
@@ -254,7 +257,6 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
         setConnectionIdSending(rndInt + 1);
     }
 
-
     /* set connection ID for outgoing packets */
     protected void setConnectionIdSending(long connectionIdSending) {
         this.connectionIdSending = connectionIdSending;
@@ -285,21 +287,5 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
      */
     protected abstract UtpPacket createDataPacket();
 
-    protected void setConnectionIdReceiving(int connectionIdReceiving) {
-        this.connectionIdReceiving = connectionIdReceiving;
-    }
-
-    protected void setState(UtpSocketState state) {
-        this.state = state;
-    }
-
-    protected void setSequenceNumber(int sequenceNumber) {
-        this.sequenceNumber = sequenceNumber;
-    }
-
     protected abstract void setRemoteAddress(SocketAddress remoteAdress);
-
-    protected abstract void setAckNumber(int ackNumber);
-
-    protected abstract void setDgSocket(DatagramSocket dgSocket);
 }

@@ -4,12 +4,8 @@ package nl.tudelft.ipv8.messaging.utp.old;
 Created by Peter Lipay. University of Washington. June 2010.
 */
 
-import java.net.*;
-import java.io.*;
-import java.util.BitSet;
-import java.util.Random;
-import java.nio.IntBuffer;
-import java.nio.ByteBuffer;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
 
 /*
 This is the UTPPacket class, it allows us to easily convert
@@ -19,9 +15,9 @@ with all of the annoying byte arithmetic
 public class UTPPacket {
 
     //This byte array stores the data portion of the packet
-    private byte [] payload;
+    private byte[] payload;
     //This byte array stores the header portion of the packet
-    private byte [] header;
+    private byte[] header;
     //This is the packet type
     private int type;
     /*Whether the packet supports extensions or not. If set to 1, then
@@ -70,7 +66,7 @@ public class UTPPacket {
     //This constructor takes a received UDP packet and pulls out the necessary header
     //information from it to create this UTP packet
     public UTPPacket(DatagramPacket p) {
-        byte [] data = p.getData();
+        byte[] data = p.getData();
         byte[] temp = new byte[2];
         //If the extension bit is on, there are extensions
         if (data[1] == 1 && p.getLength() >= 21) {
@@ -82,8 +78,8 @@ public class UTPPacket {
                 //If the extension type is 1, it means this is a selective ack extension (which we recognize),
                 //so pull out the selective ack number and advance the cur pointer forward
                 if (data[cur] == 1) {
-                    temp[0] = data[cur+2];
-                    temp[1] = data[cur+3];
+                    temp[0] = data[cur + 2];
+                    temp[1] = data[cur + 3];
                     selectiveacknumber = bytesToInt(temp);
                     hasSelectiveAck = true;
                     cur += 4;
@@ -98,19 +94,19 @@ public class UTPPacket {
                 }
             }
             cur++;
-            cur = Math.min(cur,p.getLength());
+            cur = Math.min(cur, p.getLength());
             header = new byte[cur];
-            payload = new byte[p.getLength()-cur];
+            payload = new byte[p.getLength() - cur];
         } else {
             header = new byte[20];
-            payload = new byte[p.getLength()-20];
+            payload = new byte[p.getLength() - 20];
         }
         //copying to our payload and header arrays
-        for (int i = 0;i < p.getLength();i++) {
+        for (int i = 0; i < p.getLength(); i++) {
             if (i < header.length) {
                 header[i] = data[i];
             } else {
-                payload[i-header.length] = data[i];
+                payload[i - header.length] = data[i];
             }
         }
         //Initializing all of our fields
@@ -144,6 +140,24 @@ public class UTPPacket {
         temp[0] = header[18];
         temp[1] = header[19];
         acknumber = bytesToInt(temp);
+        acks = 0;
+    }
+
+    //Creates a UTPPacket from the given parameters
+    public UTPPacket(int type, byte[] currentconnectionID, int timestampdifference, int currentwindow, int seq, int ack, byte[] data, InetAddress address, int port, int extension, int selectiveacknumber) {
+        this.type = type;
+        this.extension = extension;
+        this.selectiveacknumber = selectiveacknumber;
+        connectionID = currentconnectionID;
+        windowsize = currentwindow;
+        sequencenumber = seq;
+        acknumber = ack;
+        this.timestampdifference = timestampdifference;
+        sendtime = System.nanoTime();
+        timestamp = (int) ((sendtime - ((sendtime / 1000000000 / 1000) * 1000000000 * 1000)) / 1000);
+        payload = data;
+        this.address = address;
+        this.port = port;
         acks = 0;
     }
 
@@ -203,7 +217,7 @@ public class UTPPacket {
     }
 
     //Returns the data payload array
-    public byte [] getPayload() {
+    public byte[] getPayload() {
         return payload;
     }
 
@@ -243,21 +257,21 @@ public class UTPPacket {
     }
 
     //Converts an int to byte array
-    private byte [] intToBytes (int input) {
+    private byte[] intToBytes(int input) {
         byte[] result = new byte[4];
-        result[0] = (byte)(input >>> 24);
-        result[1] = (byte)(input >>> 16);
-        result[2] = (byte)(input >>> 8);
+        result[0] = (byte) (input >>> 24);
+        result[1] = (byte) (input >>> 16);
+        result[2] = (byte) (input >>> 8);
         result[3] = (byte) input;
         return result;
     }
 
     //Converts an array of bytes to an int
-    private int bytesToInt(byte [] input) {
+    private int bytesToInt(byte[] input) {
         if (input == null || input.length <= 0) {
             return 0;
         } else if (input.length == 1) {
-            return  (input[0] & 0xFF);
+            return (input[0] & 0xFF);
         } else if (input.length == 2) {
             return (input[0] & 0xFF) << 8 | (input[1] & 0xFF);
         } else if (input.length == 3) {
@@ -265,24 +279,6 @@ public class UTPPacket {
         } else {
             return (input[0] & 0xFF) << 24 | (input[1] & 0xFF) << 16 | (input[2] & 0xFF) << 8 | (input[3] & 0xFF);
         }
-    }
-
-    //Creates a UTPPacket from the given parameters
-    public UTPPacket(int type, byte[] currentconnectionID, int timestampdifference, int currentwindow, int seq, int ack, byte [] data, InetAddress address, int port,int extension,int selectiveacknumber) {
-        this.type = type;
-        this.extension = extension;
-        this.selectiveacknumber = selectiveacknumber;
-        connectionID = currentconnectionID;
-        windowsize = currentwindow;
-        sequencenumber = seq;
-        acknumber = ack;
-        this.timestampdifference = timestampdifference;
-        sendtime = System.nanoTime();
-        timestamp = (int)((sendtime-((sendtime/1000000000/1000)*1000000000*1000))/1000);
-        payload = data;
-        this.address = address;
-        this.port = port;
-        acks = 0;
     }
 
     //Converts this UTP packet to a UDP packet so it can be sent through our Datagram Sockets
@@ -318,26 +314,26 @@ public class UTPPacket {
             temp = intToBytes(selectiveacknumber);
             header[20] = 1;
             header[21] = 3;
-            header[22]= temp[2];
+            header[22] = temp[2];
             header[23] = temp[3];
             header[24] = 0;
         }
         sendtime = System.nanoTime();
-        timestamp = (int)((sendtime-((sendtime/1000000000/1000)*1000000000*1000))/1000);
+        timestamp = (int) ((sendtime - ((sendtime / 1000000000 / 1000) * 1000000000 * 1000)) / 1000);
         temp = intToBytes(timestamp);
         header[4] = temp[0];
         header[5] = temp[1];
         header[6] = temp[2];
         header[7] = temp[3];
-        byte [] data = new byte[header.length+payload.length];
-        for (int i = 0;i < data.length;i++) {
+        byte[] data = new byte[header.length + payload.length];
+        for (int i = 0; i < data.length; i++) {
             if (i < header.length) {
                 data[i] = header[i];
             } else {
-                data[i] = payload[i-header.length];
+                data[i] = payload[i - header.length];
             }
         }
-        return new DatagramPacket(data, data.length,address, port);
+        return new DatagramPacket(data, data.length, address, port);
     }
 
 }

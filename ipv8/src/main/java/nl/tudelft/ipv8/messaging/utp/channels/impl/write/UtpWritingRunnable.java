@@ -14,12 +14,8 @@
  */
 package nl.tudelft.ipv8.messaging.utp.channels.impl.write;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Queue;
@@ -55,7 +51,6 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         this.future = future;
         algorithm = new UtpAlgorithm(timeStamper, channel.getRemoteAdress());
     }
-
 
     @Override
     public void run() {

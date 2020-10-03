@@ -18,97 +18,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class UTPSocket {
-    //To keep the connection stable when there are micro-spikes in latency, we buffer the last several
-    //delay values and pick the smallest one from the buffer. The below constant adjusts the buffer size.
-    //I've set it at 10 as that seemed to work best in my tests, but if you are getting weird behavior
-    //(like utp not backing off properly or overshooting the connection),
-    //you can try modifying this value downward to as low as 3.
-    private int CUR_DELAY_BUFFER_SIZE = 10;
-    //This is the physical buffer structure
-    private ArrayList<mindelaytuple> curdelaylist = new ArrayList<mindelaytuple>();
-
-    //This is the main socket which is used to send and receive all our packets
-    DatagramSocket socket;
-    //The 2 byte long connection ID for the incoming connection
-    private byte[] currentconnectionIDReceiveBytes;
-    //The 2 byte long connection ID for the outgoing connection
-    private byte[] currentconnectionIDSendBytes;
-    //The current sec number
-    private int currentSequenceNumber;
-    //The latest received acknumber
-    private int currentacknumber;
-    //The last timestamp difference that was calculated by this socket
-    private int timestampdifference;
-    //The address being sent to
-    private InetAddress sendAddress;
-    //The port being sent to
-    private int sendPort;
-
-    //Self explanatory
-    private int currentReceiveWindowSize;
-    private int currentSendWindowSize;
-    private int maxReceiveWindowSize;
-    private int maxSendWindowSize;
-
-    //Amount of bytes left in the receive buffer of the other end of the connection
-    private int otherReceiveWindowRemainingSize = Integer.MAX_VALUE;
-
-    //Maximum number of connection attempts when first initializing connection
-    private int maxconnectretransmitions = 2;
-    //Maximum timeout on the initializing connections
-    private int maxconnecttimeout = 10000;
-
-    //Whether the socket has sent out its fin packet to close the connection
-    private boolean sentfin = false;
-    //Whether the socket has received a fin packet
-    private boolean gotfin = false;
-    //Whether the socket has been closed by the user
-    private boolean closed = false;
-    //Whether the connection has been abruptly disconnected
-    private boolean interupted = false;
-
-    //The send buffer which stores the bytes that are waiting to be sent
-    private static CircularBuffer sendbuffer;
-    //The receive buffer which stores the bytes that have been received and are waiting to be read by the user
-    private static CircularBuffer receivebuffer;
-
-    private ArrayList<Integer> mindelaylist = new ArrayList<Integer>();
-    private long mindelayLastTimestamp = System.nanoTime();
-    int lasttimestampdifference = 0;
-
-    //The send window
-    private NetworkingWindow sendwindow;
-
-    //The receive window
-    private NetworkingWindow receivewindow;
-
-    //These values are used to compute the retransmission timeout
-    private int rtt = 0;
-    private int rtt_var = 0;
-    private int timeout = 1000;
-
-    //Keeps track of the number of consecutive timeouts we've had
-    private int consecutivetimeouts = 0;
-    //Number of consecutive timeouts before we give up
-    private int consecutivetimeoutlimit = 3;
-    //The packet size being used
-    private int packetsize = 1300;
-    //Our latency target value, this is in milliseconds
-    private int CCONTROL_TARGET = 100;
-    //The maximum change in the max send window on any given retransmission
-    private int MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000;
-    //Stores the timestamp for the window decay timer,
-    //which makes sure we don't throttle down too rapidly on packet-loss
-    private long window_decay_timer = System.nanoTime();
-    //The max decay in milliseconds
-    private int MAX_WINDOW_DECAY = 100;
-    //The base_delay for the socket
-    private int base_delay = 0;
-
-    //If this is the first ack we've processed, used to update the base_delay properly
-    private boolean first_time_updating_delay = true;
-
-    //The packet types
     /**
      * Regular data packet. Socket is in connected state and has data to send. An ST_DATA packet always has a data payload.
      */
@@ -131,20 +40,370 @@ public class UTPSocket {
      * When receiving an ST_SYN, the new socket should be initialized with the ID in the packet header. The send ID for the socket should be initialized to the ID + 1. The sequence number for the return channel is initialized to a random number. The other end expects an ST_STATE packet (only an ACK) in response.
      */
     public static final byte ST_SYN = 4;
-
     //Maximum size of a UDP packet
     public static final int MAXUDPLENGTH = 65515;
-
-    //The lock used to keep the two threads from causing trouble
-    private ReentrantLock lock = new ReentrantLock(false);
-
+    //The send buffer which stores the bytes that are waiting to be sent
+    private static CircularBuffer sendbuffer;
+    //The receive buffer which stores the bytes that have been received and are waiting to be read by the user
+    private static CircularBuffer receivebuffer;
+    //This is the main socket which is used to send and receive all our packets
+    DatagramSocket socket;
+    int lasttimestampdifference = 0;
     //Used for debug purposes, if you want to print out what the send rate is
     double bytessent = 0;
     long debugtimer = 0;
-
     boolean waitedafterclose = false;
-
     BlockingQueue<UTPPacket> packetBuffer = new LinkedBlockingQueue<>();
+    //To keep the connection stable when there are micro-spikes in latency, we buffer the last several
+    //delay values and pick the smallest one from the buffer. The below constant adjusts the buffer size.
+    //I've set it at 10 as that seemed to work best in my tests, but if you are getting weird behavior
+    //(like utp not backing off properly or overshooting the connection),
+    //you can try modifying this value downward to as low as 3.
+    private int CUR_DELAY_BUFFER_SIZE = 10;
+    //This is the physical buffer structure
+    private ArrayList<mindelaytuple> curdelaylist = new ArrayList<mindelaytuple>();
+    //The 2 byte long connection ID for the incoming connection
+    private byte[] currentconnectionIDReceiveBytes;
+    //The 2 byte long connection ID for the outgoing connection
+    private byte[] currentconnectionIDSendBytes;
+    //The current sec number
+    private int currentSequenceNumber;
+    //The latest received acknumber
+    private int currentacknumber;
+    //The last timestamp difference that was calculated by this socket
+    private int timestampdifference;
+    //The address being sent to
+    private InetAddress sendAddress;
+    //The port being sent to
+    private int sendPort;
+    //Self explanatory
+    private int currentReceiveWindowSize;
+    private int currentSendWindowSize;
+    private int maxReceiveWindowSize;
+    private int maxSendWindowSize;
+    //Amount of bytes left in the receive buffer of the other end of the connection
+    private int otherReceiveWindowRemainingSize = Integer.MAX_VALUE;
+    //Maximum number of connection attempts when first initializing connection
+    private int maxconnectretransmitions = 2;
+    //Maximum timeout on the initializing connections
+    private int maxconnecttimeout = 10000;
+    //Whether the socket has sent out its fin packet to close the connection
+    private boolean sentfin = false;
+    //Whether the socket has received a fin packet
+    private boolean gotfin = false;
+    //Whether the socket has been closed by the user
+    private boolean closed = false;
+    //Whether the connection has been abruptly disconnected
+    private boolean interupted = false;
+    private ArrayList<Integer> mindelaylist = new ArrayList<Integer>();
+    private long mindelayLastTimestamp = System.nanoTime();
+    //The send window
+    private NetworkingWindow sendwindow;
+    //The receive window
+    private NetworkingWindow receivewindow;
+    //These values are used to compute the retransmission timeout
+    private int rtt = 0;
+    private int rtt_var = 0;
+
+    //The packet types
+    private int timeout = 1000;
+    //Keeps track of the number of consecutive timeouts we've had
+    private int consecutivetimeouts = 0;
+    //Number of consecutive timeouts before we give up
+    private int consecutivetimeoutlimit = 3;
+    //The packet size being used
+    private int packetsize = 1300;
+    //Our latency target value, this is in milliseconds
+    private int CCONTROL_TARGET = 100;
+    //The maximum change in the max send window on any given retransmission
+    private int MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000;
+    //Stores the timestamp for the window decay timer,
+    //which makes sure we don't throttle down too rapidly on packet-loss
+    private long window_decay_timer = System.nanoTime();
+    //The max decay in milliseconds
+    private int MAX_WINDOW_DECAY = 100;
+    //The base_delay for the socket
+    private int base_delay = 0;
+    //If this is the first ack we've processed, used to update the base_delay properly
+    private boolean first_time_updating_delay = true;
+    //The lock used to keep the two threads from causing trouble
+    private ReentrantLock lock = new ReentrantLock(false);
+
+    //This initializes a new UTPSocket, this is the initializer for use by the client
+    public UTPSocket(DatagramSocket socket, InetAddress address, int port) throws Exception {
+        this.socket = socket;
+        maxReceiveWindowSize = 40000000;
+        maxSendWindowSize = packetsize;
+        currentReceiveWindowSize = 0;
+        currentSendWindowSize = 0;
+        receivebuffer = new CircularBuffer(40000000);
+        sendbuffer = new CircularBuffer(40000000);
+        sendwindow = new NetworkingWindow(100000);
+        receivewindow = new NetworkingWindow(100000);
+        sendAddress = address;
+        sendPort = port;
+        //Initializing a random connection ID
+        Random rand = new Random(System.nanoTime());
+        currentconnectionIDReceiveBytes = new byte[2];
+        currentconnectionIDSendBytes = new byte[2];
+        rand.nextBytes(currentconnectionIDReceiveBytes);
+        int connectionIDReceive = bytesToInt(currentconnectionIDReceiveBytes);
+        if (connectionIDReceive == Short.MAX_VALUE) {
+            connectionIDReceive--;
+            currentconnectionIDReceiveBytes[0] = intToBytes(connectionIDReceive)[2];
+            currentconnectionIDReceiveBytes[1] = intToBytes(connectionIDReceive)[3];
+        }
+        currentconnectionIDSendBytes[0] = intToBytes(connectionIDReceive + 1)[2];
+        currentconnectionIDSendBytes[1] = intToBytes(connectionIDReceive + 1)[3];
+        currentSequenceNumber = 1;
+    }
+
+    //Initializes a UTPSocket, this constructor is used by the UTPServerSocket class
+    public UTPSocket(DatagramSocket socket, InetAddress address, int port, byte[] connectionIDSendBytes, byte[] connectionIDReceiveBytes, int sequenceNumber) throws IOException {
+        this.socket = socket;
+        maxReceiveWindowSize = socket.getReceiveBufferSize() * 10;
+        maxSendWindowSize = packetsize;
+        currentReceiveWindowSize = 0;
+        currentSendWindowSize = 0;
+        receivebuffer = new CircularBuffer(4000000);
+        sendbuffer = new CircularBuffer(4000000);
+        sendwindow = new NetworkingWindow(100000);
+        receivewindow = new NetworkingWindow(100000);
+        sendAddress = address;
+        sendPort = port;
+        this.currentconnectionIDReceiveBytes = connectionIDReceiveBytes;
+        this.currentconnectionIDSendBytes = connectionIDSendBytes;
+        currentacknumber = 2;
+        currentSequenceNumber = sequenceNumber;
+        currentSequenceNumber++;
+    }
+
+    public void initializeSender() throws IOException {
+        //Start the connection
+        InitializeConnection(sendAddress, sendPort);
+        socket.setSoTimeout(10000);
+        ReceiverThread receive = new ReceiverThread();
+        SenderThread send = new SenderThread();
+        receive.start();
+        send.start();
+    }
+
+    public void initializeReceiver() throws IOException {
+        UTPPacket confirmConnection = new UTPPacket(ST_STATE, currentconnectionIDSendBytes, timestampdifference, currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
+        //We send a connection confirm packet
+        UTPSocketBinder.send(socket, confirmConnection);
+        socket.setSoTimeout(maxconnecttimeout);
+        //Now we wait for that packet to get acked
+        long start = System.nanoTime();
+        long current = start;
+        boolean connected = false;
+        while (current - start - 3000000000L < 0) {
+            UTPPacket confirmation;
+            try {
+                confirmation = packetBuffer.take();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                break;
+            }
+            if (confirmation.getType() == ST_STATE && confirmation.getAddress().equals(sendAddress) && confirmation.getConnectionID()[0] == currentconnectionIDSendBytes[0] && confirmation.getConnectionID()[1] == currentconnectionIDSendBytes[1]) {
+                connected = true;
+                break;
+            }
+            current = System.nanoTime();
+        }
+        //If no ack was received, we throw an Exception
+        if (!connected) {
+            throw new SocketTimeoutException("Did not receive ack for Connection Confirm packet");
+        }
+        //Otherwise, the connection was successfully established
+
+        ReceiverThread receive = new ReceiverThread();
+        SenderThread send = new SenderThread();
+        receive.start();
+        send.start();
+    }
+
+    //This establishes the connection by sending a SYN packet to the other end and waiting for a reply
+    private void InitializeConnection(InetAddress address, int port) throws IOException {
+        boolean connected = false;
+        for (int i = 0; i < maxconnectretransmitions; i++) {
+            UTPPacket initializeConnection = new UTPPacket(ST_SYN, currentconnectionIDReceiveBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], address, port, 0, -1);
+            //Send the initial SYN packet
+            UTPSocketBinder.send(socket, initializeConnection);
+            //Wait for a connection confirm packet
+            long start = System.nanoTime();
+            long current = start;
+            while (current - start - 3000000000L < 0) {
+                socket.setSoTimeout(maxconnecttimeout);
+                UTPPacket confirmation;
+                try {
+                    confirmation = packetBuffer.take();
+                    System.out.println("hoi");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    break;
+                }
+                System.out.println("hoi2");
+                //If we get a legitimate connection confirm packet
+                if (confirmation.getType() == ST_STATE && confirmation.getAddress().equals(address) && confirmation.getConnectionID()[0] == currentconnectionIDReceiveBytes[0] && confirmation.getConnectionID()[1] == currentconnectionIDReceiveBytes[1]) {
+                    currentacknumber = confirmation.getAckNumber();
+                    sendAddress = confirmation.getAddress();
+                    sendPort = confirmation.getPort();
+                    connected = true;
+                    UTPPacket ConnectionConfirmAck = new UTPPacket(ST_STATE, currentconnectionIDReceiveBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
+                    //Send an Ack of the Connection Confirm packet back to the other end
+                    UTPSocketBinder.send(socket, ConnectionConfirmAck);
+                    break;
+                    //We're done, connection is established
+                }
+                current = System.nanoTime();
+            }
+            if (connected) {
+                break;
+            }
+        }
+        if (!connected) {
+            throw new SocketException("Couldn't establish connection with remote host");
+        }
+    }
+
+    //Returns a new InputStream for this socket
+    public InputStream getInputStream() {
+        return new UTPInputStream();
+    }
+
+    //Returns a new OutputStream for this socket
+    public OutputStream getOutputStream() {
+        return new UTPOutputStream();
+    }
+
+    //closes this socket, causing a FIN packet to be sent and the connection to be terminated
+    //Any bytes already in the send buffer will be sent out before the connection terminates.
+    public void close() {
+        closed = true;
+    }
+
+    //Returns a byte array representing the given int
+    private byte[] intToBytes(int input) {
+        byte[] result = new byte[4];
+        result[0] = (byte) (input >>> 24);
+        result[1] = (byte) (input >>> 16);
+        result[2] = (byte) (input >>> 8);
+        result[3] = (byte) input;
+        return result;
+    }
+
+    //Returns an int representing the given byte array (assuming it is up to 4 bytes long)
+    private int bytesToInt(byte[] input) {
+        if (input == null || input.length <= 0) {
+            return 0;
+        } else if (input.length == 1) {
+            return (input[0] & 0xFF);
+        } else if (input.length == 2) {
+            return (input[0] & 0xFF) << 8 | (input[1] & 0xFF);
+        } else if (input.length == 3) {
+            return (input[0] & 0xFF) << 16 | (input[1] & 0xFF) << 8 | (input[2] & 0xFF);
+        } else {
+            return (input[0] & 0xFF) << 24 | (input[1] & 0xFF) << 16 | (input[2] & 0xFF) << 8 | (input[3] & 0xFF);
+        }
+    }
+
+    //This Circular Buffer class is used by the send and receive buffers
+    private static class CircularBuffer {
+        private Byte[] data;
+        private int head;
+        private int tail;
+
+        public CircularBuffer(Integer number) {
+            data = new Byte[number];
+            head = 0;
+            tail = 0;
+        }
+
+        //Stores an array of bytes into the buffer (this cuts down on the number of function calls)
+        public boolean storepacket(byte[] input) {
+            synchronized (this) {
+                if (data.length - this.size() < input.length) {
+                    return false;
+                }
+                int i = 0;
+                while (i < input.length) {
+                    data[tail++] = input[i];
+                    if (tail == data.length) {
+                        tail = 0;
+                    }
+                    i++;
+                }
+                return true;
+            }
+        }
+
+        //Stores a single byte into the buffer
+        public boolean store(byte value) {
+            synchronized (this) {
+                if (bufferFull()) {
+                    return false;
+                }
+                data[tail++] = value;
+                if (tail == data.length) {
+                    tail = 0;
+                }
+                return true;
+            }
+        }
+
+        //returns the size of the buffer
+        public int size() {
+            synchronized (this) {
+                if (head > tail) {
+                    return data.length - head + tail;
+                } else {
+                    return tail - head;
+                }
+            }
+        }
+
+        //Returns a byte array of the given size from the buffer, assumes size of buffer is > than sizeofpacket
+        public byte[] readpacket(int sizeofpacket) {
+            synchronized (this) {
+                byte[] newpacket = new byte[sizeofpacket];
+                int i = 0;
+                while (i < newpacket.length) {
+                    newpacket[i] = data[head++];
+                    if (head == data.length) {
+                        head = 0;
+                    }
+                    i++;
+                }
+                return newpacket;
+            }
+        }
+
+        //Returns a single byte, or -1 if the buffer is empty
+        public byte read() {
+            synchronized (this) {
+                if (head != tail) {
+                    byte value = data[head++];
+                    if (head == data.length) {
+                        head = 0;
+                    }
+                    return value;
+                } else {
+                    return -1;
+                }
+            }
+        }
+
+        //returns whether the buffer is full
+        private boolean bufferFull() {
+            synchronized (this) {
+                if (tail + 1 == head) {
+                    return true;
+                }
+                return tail == (data.length - 1) && head == 0;
+            }
+        }
+    }
 
     //The units stored in the base-delay list, timestamp is used to evict older entries,
     //difference is the actual time-stamp difference value being stored
@@ -584,144 +843,6 @@ public class UTPSocket {
         }
     }
 
-    //This initializes a new UTPSocket, this is the initializer for use by the client
-    public UTPSocket(DatagramSocket socket, InetAddress address, int port) throws Exception {
-        this.socket = socket;
-        maxReceiveWindowSize = 40000000;
-        maxSendWindowSize = packetsize;
-        currentReceiveWindowSize = 0;
-        currentSendWindowSize = 0;
-        receivebuffer = new CircularBuffer(40000000);
-        sendbuffer = new CircularBuffer(40000000);
-        sendwindow = new NetworkingWindow(100000);
-        receivewindow = new NetworkingWindow(100000);
-        sendAddress = address;
-        sendPort = port;
-        //Initializing a random connection ID
-        Random rand = new Random(System.nanoTime());
-        currentconnectionIDReceiveBytes = new byte[2];
-        currentconnectionIDSendBytes = new byte[2];
-        rand.nextBytes(currentconnectionIDReceiveBytes);
-        int connectionIDReceive = bytesToInt(currentconnectionIDReceiveBytes);
-        if (connectionIDReceive == Short.MAX_VALUE) {
-            connectionIDReceive--;
-            currentconnectionIDReceiveBytes[0] = intToBytes(connectionIDReceive)[2];
-            currentconnectionIDReceiveBytes[1] = intToBytes(connectionIDReceive)[3];
-        }
-        currentconnectionIDSendBytes[0] = intToBytes(connectionIDReceive + 1)[2];
-        currentconnectionIDSendBytes[1] = intToBytes(connectionIDReceive + 1)[3];
-        currentSequenceNumber = 1;
-    }
-
-    public void initializeSender() throws IOException {
-        //Start the connection
-        InitializeConnection(sendAddress, sendPort);
-        socket.setSoTimeout(10000);
-        ReceiverThread receive = new ReceiverThread();
-        SenderThread send = new SenderThread();
-        receive.start();
-        send.start();
-    }
-
-    //Initializes a UTPSocket, this constructor is used by the UTPServerSocket class
-    public UTPSocket(DatagramSocket socket, InetAddress address, int port, byte[] connectionIDSendBytes, byte[] connectionIDReceiveBytes, int sequenceNumber) throws IOException {
-        this.socket = socket;
-        maxReceiveWindowSize = socket.getReceiveBufferSize() * 10;
-        maxSendWindowSize = packetsize;
-        currentReceiveWindowSize = 0;
-        currentSendWindowSize = 0;
-        receivebuffer = new CircularBuffer(4000000);
-        sendbuffer = new CircularBuffer(4000000);
-        sendwindow = new NetworkingWindow(100000);
-        receivewindow = new NetworkingWindow(100000);
-        sendAddress = address;
-        sendPort = port;
-        this.currentconnectionIDReceiveBytes = connectionIDReceiveBytes;
-        this.currentconnectionIDSendBytes = connectionIDSendBytes;
-        currentacknumber = 2;
-        currentSequenceNumber = sequenceNumber;
-        currentSequenceNumber++;
-    }
-
-    public void initializeReceiver() throws IOException {
-        UTPPacket confirmConnection = new UTPPacket(ST_STATE, currentconnectionIDSendBytes, timestampdifference, currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
-        //We send a connection confirm packet
-        UTPSocketBinder.send(socket, confirmConnection);
-        socket.setSoTimeout(maxconnecttimeout);
-        //Now we wait for that packet to get acked
-        long start = System.nanoTime();
-        long current = start;
-        boolean connected = false;
-        while (current - start - 3000000000L < 0) {
-            UTPPacket confirmation;
-            try {
-                confirmation = packetBuffer.take();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                break;
-            }
-            if (confirmation.getType() == ST_STATE && confirmation.getAddress().equals(sendAddress) && confirmation.getConnectionID()[0] == currentconnectionIDSendBytes[0] && confirmation.getConnectionID()[1] == currentconnectionIDSendBytes[1]) {
-                connected = true;
-                break;
-            }
-            current = System.nanoTime();
-        }
-        //If no ack was received, we throw an Exception
-        if (!connected) {
-            throw new SocketTimeoutException("Did not receive ack for Connection Confirm packet");
-        }
-        //Otherwise, the connection was successfully established
-
-        ReceiverThread receive = new ReceiverThread();
-        SenderThread send = new SenderThread();
-        receive.start();
-        send.start();
-    }
-
-    //This establishes the connection by sending a SYN packet to the other end and waiting for a reply
-    private void InitializeConnection(InetAddress address, int port) throws IOException {
-        boolean connected = false;
-        for (int i = 0; i < maxconnectretransmitions; i++) {
-            UTPPacket initializeConnection = new UTPPacket(ST_SYN, currentconnectionIDReceiveBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], address, port, 0, -1);
-            //Send the initial SYN packet
-            UTPSocketBinder.send(socket, initializeConnection);
-            //Wait for a connection confirm packet
-            long start = System.nanoTime();
-            long current = start;
-            while (current - start - 3000000000L < 0) {
-                socket.setSoTimeout(maxconnecttimeout);
-                UTPPacket confirmation;
-                try {
-                    confirmation = packetBuffer.take();
-                    System.out.println("hoi");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    break;
-                }
-                System.out.println("hoi2");
-                //If we get a legitimate connection confirm packet
-                if (confirmation.getType() == ST_STATE && confirmation.getAddress().equals(address) && confirmation.getConnectionID()[0] == currentconnectionIDReceiveBytes[0] && confirmation.getConnectionID()[1] == currentconnectionIDReceiveBytes[1]) {
-                    currentacknumber = confirmation.getAckNumber();
-                    sendAddress = confirmation.getAddress();
-                    sendPort = confirmation.getPort();
-                    connected = true;
-                    UTPPacket ConnectionConfirmAck = new UTPPacket(ST_STATE, currentconnectionIDReceiveBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
-                    //Send an Ack of the Connection Confirm packet back to the other end
-                    UTPSocketBinder.send(socket, ConnectionConfirmAck);
-                    break;
-                    //We're done, connection is established
-                }
-                current = System.nanoTime();
-            }
-            if (connected) {
-                break;
-            }
-        }
-        if (!connected) {
-            throw new SocketException("Couldn't establish connection with remote host");
-        }
-    }
-
     //This is the UTPOutputStream class, it lets the user write bytes to the socket
     public class UTPOutputStream extends OutputStream {
 
@@ -768,7 +889,6 @@ public class UTPSocket {
 
         }
     }
-
 
     //This is the first of the two custom Circular Buffer classes used by the UTPSocket.
     //Ideally, they could probably be combined into one Generic class, but Java Generic arrays
@@ -964,103 +1084,6 @@ public class UTPSocket {
         }
     }
 
-    //This Circular Buffer class is used by the send and receive buffers
-    private static class CircularBuffer {
-        private Byte[] data;
-        private int head;
-        private int tail;
-
-        public CircularBuffer(Integer number) {
-            data = new Byte[number];
-            head = 0;
-            tail = 0;
-        }
-
-        //Stores an array of bytes into the buffer (this cuts down on the number of function calls)
-        public boolean storepacket(byte[] input) {
-            synchronized (this) {
-                if (data.length - this.size() < input.length) {
-                    return false;
-                }
-                int i = 0;
-                while (i < input.length) {
-                    data[tail++] = input[i];
-                    if (tail == data.length) {
-                        tail = 0;
-                    }
-                    i++;
-                }
-                return true;
-            }
-        }
-
-        //Stores a single byte into the buffer
-        public boolean store(byte value) {
-            synchronized (this) {
-                if (bufferFull()) {
-                    return false;
-                }
-                data[tail++] = value;
-                if (tail == data.length) {
-                    tail = 0;
-                }
-                return true;
-            }
-        }
-
-        //returns the size of the buffer
-        public int size() {
-            synchronized (this) {
-                if (head > tail) {
-                    return data.length - head + tail;
-                } else {
-                    return tail - head;
-                }
-            }
-        }
-
-        //Returns a byte array of the given size from the buffer, assumes size of buffer is > than sizeofpacket
-        public byte[] readpacket(int sizeofpacket) {
-            synchronized (this) {
-                byte[] newpacket = new byte[sizeofpacket];
-                int i = 0;
-                while (i < newpacket.length) {
-                    newpacket[i] = data[head++];
-                    if (head == data.length) {
-                        head = 0;
-                    }
-                    i++;
-                }
-                return newpacket;
-            }
-        }
-
-        //Returns a single byte, or -1 if the buffer is empty
-        public byte read() {
-            synchronized (this) {
-                if (head != tail) {
-                    byte value = data[head++];
-                    if (head == data.length) {
-                        head = 0;
-                    }
-                    return value;
-                } else {
-                    return -1;
-                }
-            }
-        }
-
-        //returns whether the buffer is full
-        private boolean bufferFull() {
-            synchronized (this) {
-                if (tail + 1 == head) {
-                    return true;
-                }
-                return tail == (data.length - 1) && head == 0;
-            }
-        }
-    }
-
     //This is the UTP Input Stream class, it lets the user read bytes from the socket
     public class UTPInputStream extends InputStream {
         long timer = System.nanoTime();
@@ -1109,47 +1132,6 @@ public class UTPSocket {
 
         public boolean markSupported() {
             return false;
-        }
-    }
-
-    //Returns a new InputStream for this socket
-    public InputStream getInputStream() {
-        return new UTPInputStream();
-    }
-
-    //Returns a new OutputStream for this socket
-    public OutputStream getOutputStream() {
-        return new UTPOutputStream();
-    }
-
-    //closes this socket, causing a FIN packet to be sent and the connection to be terminated
-    //Any bytes already in the send buffer will be sent out before the connection terminates.
-    public void close() {
-        closed = true;
-    }
-
-    //Returns a byte array representing the given int
-    private byte[] intToBytes(int input) {
-        byte[] result = new byte[4];
-        result[0] = (byte) (input >>> 24);
-        result[1] = (byte) (input >>> 16);
-        result[2] = (byte) (input >>> 8);
-        result[3] = (byte) input;
-        return result;
-    }
-
-    //Returns an int representing the given byte array (assuming it is up to 4 bytes long)
-    private int bytesToInt(byte[] input) {
-        if (input == null || input.length <= 0) {
-            return 0;
-        } else if (input.length == 1) {
-            return (input[0] & 0xFF);
-        } else if (input.length == 2) {
-            return (input[0] & 0xFF) << 8 | (input[1] & 0xFF);
-        } else if (input.length == 3) {
-            return (input[0] & 0xFF) << 16 | (input[1] & 0xFF) << 8 | (input[2] & 0xFF);
-        } else {
-            return (input[0] & 0xFF) << 24 | (input[1] & 0xFF) << 16 | (input[2] & 0xFF) << 8 | (input[3] & 0xFF);
         }
     }
 }

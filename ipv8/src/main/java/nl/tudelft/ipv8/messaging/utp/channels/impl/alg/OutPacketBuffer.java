@@ -14,9 +14,6 @@
  */
 package nl.tudelft.ipv8.messaging.utp.channels.impl.alg;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.DatagramPacket;
 import java.net.SocketAddress;
 import java.net.SocketException;
@@ -42,17 +39,15 @@ public class OutPacketBuffer {
     private ArrayList<UtpTimestampedPacketDTO> buffer = new ArrayList<>(size);
     private int bytesOnFly = 0;
     private long resendTimeOutMicros;
-
-    public void setResendtimeOutMicros(long timeOutMicroSec) {
-        this.resendTimeOutMicros = timeOutMicroSec;
-    }
-
     private MicroSecondsTimeStamp timeStamper;
     private SocketAddress addr;
     private long currentTime;
-
     public OutPacketBuffer(MicroSecondsTimeStamp stamper) {
         timeStamper = stamper;
+    }
+
+    public void setResendtimeOutMicros(long timeOutMicroSec) {
+        this.resendTimeOutMicros = timeOutMicroSec;
     }
 
     /**

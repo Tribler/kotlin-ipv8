@@ -34,22 +34,27 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
     private var channel: UtpSocketChannel? = null
 
     override fun send(peer: IPv4Address, data: ByteArray) {
-        logger.debug { "Sending with UTP to ${peer.ip}:${peer.port}" }
-        scope.launch(Dispatchers.IO) {
-            logger.debug { "Opening channel" }
-            channel = UtpSocketChannel.open(socket!!)
-            logger.debug { "Connecting to channel" }
-            val cFuture = channel!!.connect(InetSocketAddress(peer.ip, peer.port))
-            logger.debug { "Blocking" }
-            cFuture.block()
-            logger.debug { "Writing" }
-            logger.debug { "Data ${data.size}" }
-            val fut = channel!!.write(ByteBuffer.wrap(data))
-            logger.debug { "Blocking again" }
-            fut.block()
-            logger.debug { "Closing channel" }
-            channel!!.close()
-            logger.debug { "Done" }
+        if (channel == null) {
+            logger.debug { "Sending with UTP to ${peer.ip}:${peer.port}" }
+            scope.launch(Dispatchers.IO) {
+                logger.debug { "Opening channel" }
+                channel = UtpSocketChannel.open(socket!!)
+                logger.debug { "Connecting to channel" }
+                val cFuture = channel!!.connect(InetSocketAddress(peer.ip, peer.port))
+                logger.debug { "Blocking" }
+                cFuture.block()
+                logger.debug { "Writing" }
+                val fut = channel!!.write(ByteBuffer.wrap(data))
+                logger.debug { "Blocking again" }
+                fut.block()
+                logger.debug { "Closing channel" }
+                channel!!.close()
+                channel = null
+                logger.debug { "Done" }
+            }
+        } else {
+            logger.warn { "Not sending UTP packet because still busy..." }
+            return
         }
     }
 
