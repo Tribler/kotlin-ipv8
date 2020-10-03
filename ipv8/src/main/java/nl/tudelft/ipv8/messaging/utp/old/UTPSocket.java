@@ -1,4 +1,4 @@
-package nl.tudelft.ipv8.messaging.utp;
+package nl.tudelft.ipv8.messaging.utp.old;
 
 /*
 Created by Peter Lipay. University of Washington. June 2010.
@@ -23,27 +23,26 @@ public class UTPSocket {
     //I've set it at 10 as that seemed to work best in my tests, but if you are getting weird behavior
     //(like utp not backing off properly or overshooting the connection),
     //you can try modifying this value downward to as low as 3.
-    private int                      CUR_DELAY_BUFFER_SIZE = 10;
+    private int CUR_DELAY_BUFFER_SIZE = 10;
     //This is the physical buffer structure
-    private ArrayList<mindelaytuple> curdelaylist          = new ArrayList<mindelaytuple>();
-
+    private ArrayList<mindelaytuple> curdelaylist = new ArrayList<mindelaytuple>();
 
     //This is the main socket which is used to send and receive all our packets
     DatagramSocket socket;
     //The 2 byte long connection ID for the incoming connection
-    private byte[]         currentconnectionIDReceiveBytes;
+    private byte[] currentconnectionIDReceiveBytes;
     //The 2 byte long connection ID for the outgoing connection
     private byte[] currentconnectionIDSendBytes;
     //The current sec number
-    private int    currentSequenceNumber;
+    private int currentSequenceNumber;
     //The latest received acknumber
-    private int    currentacknumber;
+    private int currentacknumber;
     //The last timestamp difference that was calculated by this socket
-    private int            timestampdifference;
+    private int timestampdifference;
     //The address being sent to
-    private InetAddress    sendAddress;
+    private InetAddress sendAddress;
     //The port being sent to
-    private int            sendPort;
+    private int sendPort;
 
     //Self explanatory
     private int currentReceiveWindowSize;
@@ -57,14 +56,14 @@ public class UTPSocket {
     //Maximum number of connection attempts when first initializing connection
     private int maxconnectretransmitions = 2;
     //Maximum timeout on the initializing connections
-    private int maxconnecttimeout        = 3000;
+    private int maxconnecttimeout = 10000;
 
     //Whether the socket has sent out its fin packet to close the connection
-    private boolean sentfin    = false;
+    private boolean sentfin = false;
     //Whether the socket has received a fin packet
-    private boolean gotfin     = false;
+    private boolean gotfin = false;
     //Whether the socket has been closed by the user
-    private boolean closed     = false;
+    private boolean closed = false;
     //Whether the connection has been abruptly disconnected
     private boolean interupted = false;
 
@@ -73,8 +72,8 @@ public class UTPSocket {
     //The receive buffer which stores the bytes that have been received and are waiting to be read by the user
     private static CircularBuffer receivebuffer;
 
-    private ArrayList<Integer> mindelaylist          = new ArrayList<Integer>();
-    private long               mindelayLastTimestamp = System.nanoTime();
+    private ArrayList<Integer> mindelaylist = new ArrayList<Integer>();
+    private long mindelayLastTimestamp = System.nanoTime();
     int lasttimestampdifference = 0;
 
     //The send window
@@ -84,27 +83,27 @@ public class UTPSocket {
     private NetworkingWindow receivewindow;
 
     //These values are used to compute the retransmission timeout
-    private int rtt     = 0;
+    private int rtt = 0;
     private int rtt_var = 0;
     private int timeout = 1000;
 
     //Keeps track of the number of consecutive timeouts we've had
-    private int  consecutivetimeouts               = 0;
+    private int consecutivetimeouts = 0;
     //Number of consecutive timeouts before we give up
-    private int  consecutivetimeoutlimit           = 3;
+    private int consecutivetimeoutlimit = 3;
     //The packet size being used
-    private int  packetsize                        = 1300;
+    private int packetsize = 1300;
     //Our latency target value, this is in milliseconds
-    private int  CCONTROL_TARGET                   = 100;
+    private int CCONTROL_TARGET = 100;
     //The maximum change in the max send window on any given retransmission
-    private int  MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000;
+    private int MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000;
     //Stores the timestamp for the window decay timer,
     //which makes sure we don't throttle down too rapidly on packet-loss
-    private long window_decay_timer                = System.nanoTime();
+    private long window_decay_timer = System.nanoTime();
     //The max decay in milliseconds
-    private int  MAX_WINDOW_DECAY                  = 100;
+    private int MAX_WINDOW_DECAY = 100;
     //The base_delay for the socket
-    private int  base_delay                        = 0;
+    private int base_delay = 0;
 
     //If this is the first ack we've processed, used to update the base_delay properly
     private boolean first_time_updating_delay = true;
@@ -113,11 +112,11 @@ public class UTPSocket {
     /**
      * Regular data packet. Socket is in connected state and has data to send. An ST_DATA packet always has a data payload.
      */
-    public static final byte ST_DATA  = 0;
+    public static final byte ST_DATA = 0;
     /**
      * Finalize the connection. This is the last packet. It closes the connection, similar to TCP FIN flag. This connection will never have a sequence number greater than the sequence number in this packet. The socket records this sequence number as eof_pkt. This lets the socket wait for packets that might still be missing and arrive out of order even after receiving the ST_FIN packet.
      **/
-    public static final byte ST_FIN   = 1;
+    public static final byte ST_FIN = 1;
     /**
      * State packet. Used to transmit an ACK with no data. Packets that don't include any payload do not increase the seq_nr.
      */
@@ -131,7 +130,7 @@ public class UTPSocket {
      * <p>
      * When receiving an ST_SYN, the new socket should be initialized with the ID in the packet header. The send ID for the socket should be initialized to the ID + 1. The sequence number for the return channel is initialized to a random number. The other end expects an ST_STATE packet (only an ACK) in response.
      */
-    public static final byte ST_SYN   = 4;
+    public static final byte ST_SYN = 4;
 
     //Maximum size of a UDP packet
     public static final int MAXUDPLENGTH = 65515;
@@ -140,8 +139,8 @@ public class UTPSocket {
     private ReentrantLock lock = new ReentrantLock(false);
 
     //Used for debug purposes, if you want to print out what the send rate is
-    double bytessent  = 0;
-    long   debugtimer = 0;
+    double bytessent = 0;
+    long debugtimer = 0;
 
     boolean waitedafterclose = false;
 
@@ -151,7 +150,7 @@ public class UTPSocket {
     //difference is the actual time-stamp difference value being stored
     private class mindelaytuple {
         public long timestamp;
-        public int  difference;
+        public int difference;
 
         public mindelaytuple(long x, int y) {
             timestamp = x;
@@ -166,48 +165,57 @@ public class UTPSocket {
             debugtimer = System.nanoTime();
             while (true) {
                 lock.lock();
+                System.out.println("nl.tudelft UTPSocket.SenderThread - New iteration");
                 try {
                     if (System.nanoTime() - debugtimer >= 1000000000) {
-                        //Uncomment this line to print out the goodput sendrate over the last second
-                        System.out.println(System.nanoTime() + "," + bytessent / 1000);
                         bytessent = 0;
                         debugtimer = System.nanoTime();
                     }
+                    System.out.println("nl.tudelft UTPSocket.SenderThread - 1:" + sendwindow.size());
 
                     //If we've timed out, we resend all packets in the send window and set the max window size to one packet size
                     if (sendwindow.size() > 0 && (System.nanoTime() - sendwindow.get(sendwindow.size() - 1).getSendTime()) / 1000000 >= timeout) {
+                        System.out.println("nl.tudelft UTPSocket.SenderThread - 1.1");
                         maxSendWindowSize = packetsize;
 
                         //If we've exceeded the consecutive timeout limit, we assume the connection has been lost, and throw an exception
                         if (consecutivetimeouts >= consecutivetimeoutlimit) {
+                            System.out.println("nl.tudelft UTPSocket.SenderThread - 1.2");
                             interupted = true;
                             closed = true;
                             lock.unlock();
                             break;
                         } else if (consecutivetimeouts > 0) {
+                            System.out.println("nl.tudelft UTPSocket.SenderThread - 1.3");
                             timeout = timeout * 2;
                         }
                         for (int i = 0; i < sendwindow.size(); i++) {
-                            socket.send(sendwindow.get(i).getUDPPacket());
+                            System.out.println("nl.tudelft UTPSocket.SenderThread - 1.4");
+                            UTPSocketBinder.send(socket, sendwindow.get(i));
                         }
+                        System.out.println("nl.tudelft UTPSocket.SenderThread - 1.5");
                         consecutivetimeouts++;
                     }
+                    System.out.println("nl.tudelft UTPSocket.SenderThread - 2");
 
                     //if there's anything in the send-buffer that needs to be sent, we will send it
                     if (sendbuffer.size() > 0) {
+
+                        System.out.println("nl.tudelft UTPSocket.SenderThread - 3");
                         //If the window has enough room for a full packet,
                         //and there's a full packetsize worth of data to be sent in the send buffer, send it
                         if (maxSendWindowSize - currentSendWindowSize >= packetsize && sendbuffer.size() >= packetsize - 20 && otherReceiveWindowRemainingSize >= packetsize) {
+                            System.out.println("nl.tudelft UTPSocket.SenderThread - 4");
                             lock.unlock();
-                            int    datatosendsize = packetsize - 20;
-                            byte[] datatosend     = sendbuffer.readpacket(datatosendsize);
+                            int datatosendsize = packetsize - 20;
+                            byte[] datatosend = sendbuffer.readpacket(datatosendsize);
                             currentSequenceNumber++;
                             //We initialize our UTP packet to be sent
                             UTPPacket datapacket = new UTPPacket(ST_DATA, currentconnectionIDSendBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, datatosend, sendAddress, sendPort, 0, -1);
                             consecutivetimeouts = 0;
                             lock.lock();
                             //Here we convert the UTP packet to a UDP packet so we can send it through our datagram socket
-                            socket.send(datapacket.getUDPPacket());
+                            UTPSocketBinder.send(socket, datapacket);
                             //bytes sent is just for debug purposes, allows us to calculate the send rate
                             bytessent += datapacket.getSize() - 20;
                             //add the datapacket to the send window
@@ -216,7 +224,9 @@ public class UTPSocket {
                             currentSendWindowSize += datatosend.length + 20;
                             //Otherwise, if there's less than one packetsize of data to be sent, only send it if the window is currently empty, otherwise
                             //wait until we have a full packetsize of data to send
+                            System.out.println("nl.tudelft UTPSocket.SenderThread - 5");
                         } else if ((maxSendWindowSize > 0 && currentSendWindowSize == 0 && otherReceiveWindowRemainingSize > 20) || (closed && currentSendWindowSize + 20 < maxSendWindowSize)) {
+                            System.out.println("nl.tudelft UTPSocket.SenderThread - 6");
                             int datatosendsize = Math.min(Math.min(Math.min(sendbuffer.size(), packetsize - 20), maxSendWindowSize - currentSendWindowSize - 20), otherReceiveWindowRemainingSize - 20);
                             lock.unlock();
                             byte[] datatosend = sendbuffer.readpacket(datatosendsize);
@@ -226,43 +236,48 @@ public class UTPSocket {
                             lock.lock();
                             consecutivetimeouts = 0;
                             //Here we convert the UTP packet to a UDP packet so we can send it through our datagram socket
-                            socket.send(datapacket.getUDPPacket());
+                            UTPSocketBinder.send(socket, datapacket);
                             //bytes sent is just for debug purposes, allows us to calculate the send rate
                             bytessent += datapacket.getSize() - 20;
                             //add the datapacket to the send window
                             sendwindow.add(datapacket);
                             //increment the current window size
                             currentSendWindowSize += datatosend.length + 20;
+                            System.out.println("nl.tudelft UTPSocket.SenderThread - 7");
                         }
                         //If the window has been closed by the user, send a fin packet
-                    } else if (closed == true && sentfin == false && gotfin == false && sendwindow.size() == 0) {
+                    } else if (closed && !sentfin && !gotfin && sendwindow.size() == 0) {
+                        System.out.println("nl.tudelft UTPSocket.SenderThread - 8");
                         currentSequenceNumber++;
                         UTPPacket synpacket = new UTPPacket(ST_FIN, currentconnectionIDSendBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
-                        socket.send(synpacket.getUDPPacket());
+                        UTPSocketBinder.send(socket, synpacket);
                         sendwindow.add(synpacket);
                         currentSendWindowSize += 20;
                         sentfin = true;
                         //Once the fin packet has been acknowledged by the other end, the send thread terminates
-                    } else if (sendwindow.size() == 0 && closed == true) {
+                        System.out.println("nl.tudelft UTPSocket.SenderThread - 9");
+                    } else if (sendwindow.size() == 0 && closed) {
+                        System.out.println("nl.tudelft UTPSocket.SenderThread - 10");
                         lock.unlock();
                         break;
                     }
+                    System.out.println("nl.tudelft UTPSocket.SenderThread - 11");
+                    sleep(1000);
                     lock.unlock();
                 } catch (Exception e) {
                     lock.unlock();
                     e.printStackTrace();
                 }
             }
-
         }
-
-
     }
 
     //The receive thread
     private class ReceiverThread extends Thread {
         public void run() {
+            System.out.println("nl.tudelft UTPSocket.ReceiverThread - New iteration");
             while (true) {
+                System.out.println("nl.tudelft UTPSocket.ReceiverThread - 1");
                 //If the user has closed this socket, we terminate the receive thread
                 if ((closed && sendbuffer.size() == 0 && sendwindow.size() == 0) || interupted) {
                     if (waitedafterclose) {
@@ -271,14 +286,18 @@ public class UTPSocket {
                         waitedafterclose = true;
                     }
                 }
+                System.out.println("nl.tudelft UTPSocket.ReceiverThread - 2");
                 try {
                     //Receive any incoming UDP packets
                     UTPPacket next = packetBuffer.take();
+                    System.out.println("nl.tudelft UTPSocket.ReceiverThread - 3");
                     try {
                         //Make sure the packet is from the correct IP address and port number, and that
                         //its connection ID is correct, which means its part of this connection
                         if (sendAddress.equals(next.getAddress()) && sendPort == next.getPort() && next.getConnectionID()[0] == currentconnectionIDReceiveBytes[0] && next.getConnectionID()[1] == currentconnectionIDReceiveBytes[1]) {
+                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 4");
                             lock.lock();
+                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 4.1");
                             //Get the current timestamp
                             long systemtime = System.nanoTime();
                             //Convert it from nanoseconds into microseconds (we use microseconds for our timestamps to minimize wrapping)
@@ -286,18 +305,23 @@ public class UTPSocket {
                             //Calculate the difference between the current timestamp and the timestamp in the received packet,
                             //this value will be sent back to the sender in our next packet
                             timestampdifference = timestamp - next.getTimeStamp();
+                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 4.2");
                             lock.unlock();
+                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 4.3");
                             //If it's a fin packet, we're entering closing mode
                             if (next.getType() == ST_FIN) {
                                 gotfin = true;
                             }
+                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 5");
                             //If its a Data Packet or Fin packet, we'll need to send an acknowledgement
                             if (next.getType() == ST_DATA || next.getType() == ST_FIN) {
+                                System.out.println("nl.tudelft UTPSocket.ReceiverThread - 6");
                                 //If this is the next packet we're expecting (meaning its an in order packet)
                                 if (next.getSequenceNumber() == currentacknumber) {
                                     //Read the data payload from the packet into our receivebuffer
                                     byte[] currentdata = next.getPayload();
                                     if (receivebuffer != null) {
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 7");
                                         if (receivebuffer.storepacket(currentdata)) {
                                             currentacknumber++;
                                         }
@@ -305,6 +329,7 @@ public class UTPSocket {
                                     //If this packet filled in a gap in our receive window and there's now consecutive packets
                                     //in the receivewindow, we remove them and read them into the receive buffer
                                     while (receivewindow.size() > 0 && receivewindow.get(0).getSequenceNumber() == currentacknumber) {
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 8");
                                         UTPPacket removed = receivewindow.getAndRemove();
                                         currentdata = removed.getPayload();
                                         if (receivebuffer != null) {
@@ -317,19 +342,24 @@ public class UTPSocket {
                                         }
                                         currentReceiveWindowSize -= removed.getSize();
                                         currentacknumber++;
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 9");
                                     }
                                     if (gotfin && receivewindow.size() == 0) {
                                         closed = true;
                                     }
                                     //Send the ack for the current packet
                                     UTPPacket ack = new UTPPacket(ST_STATE, currentconnectionIDSendBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
-                                    socket.send(ack.getUDPPacket());
+                                    UTPSocketBinder.send(socket, ack);
+                                    System.out.println("nl.tudelft UTPSocket.ReceiverThread - 10");
                                     //If the packet was received out of sequence, we'll add it to our Receive Window
                                 } else if (next.getSequenceNumber() > currentacknumber) {
+                                    System.out.println("nl.tudelft UTPSocket.ReceiverThread - 11");
                                     boolean wasadded = false;
                                     //If the receive window is empty, add the packet to the start of the receive-window
                                     if (receivewindow.size() == 0) {
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 12");
                                         if (next.getSize() + (next.getSequenceNumber() - currentacknumber) * packetsize <= maxReceiveWindowSize) {
+                                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 13");
                                             //This approximates the receive window size. Since the packets between acknumber and this packet
                                             //haven't arrived yet, we assume that all the packets in between were maximum size. As they come in
                                             //and fill the receive-window, if they are smaller than max packet size, we'll decrease the window size accordingly
@@ -339,6 +369,7 @@ public class UTPSocket {
                                         }
                                         //If the receivewindow isn't empty, we need to traverse it to insert this packet into the correct position
                                     } else {
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 14");
                                         //The largest sequence number currently in the window
                                         int biggestsequencenumber = receivewindow.get(receivewindow.size() - 1).getSequenceNumber();
                                         //Max possible size is the largest possible size that the window will be after this operation
@@ -352,18 +383,24 @@ public class UTPSocket {
                                         } else {
                                             maxpossiblesize = currentReceiveWindowSize - (packetsize - next.getSize());
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 15");
                                         //If we won't exceed the max receive size, we insert this packet into the window
                                         if (maxpossiblesize <= maxReceiveWindowSize) {
+                                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 16");
                                             for (int i = 0; i < receivewindow.size(); i++) {
+                                                System.out.println("nl.tudelft UTPSocket.ReceiverThread - 17");
                                                 if (receivewindow.get(i).getSequenceNumber() == next.getSequenceNumber()) {
+                                                    System.out.println("nl.tudelft UTPSocket.ReceiverThread - 18");
                                                     //If this packet is already in the window, we don't need to add it again
                                                     break;
                                                 } else if (receivewindow.get(i).getSequenceNumber() > next.getSequenceNumber()) {
+                                                    System.out.println("nl.tudelft UTPSocket.ReceiverThread - 19");
                                                     receivewindow.add(next, i);
                                                     wasadded = true;
                                                     currentReceiveWindowSize = maxpossiblesize;
                                                     break;
                                                 } else if (i + 1 == receivewindow.size()) {
+                                                    System.out.println("nl.tudelft UTPSocket.ReceiverThread - 20");
                                                     receivewindow.add(next);
                                                     wasadded = true;
                                                     currentReceiveWindowSize = maxpossiblesize;
@@ -373,38 +410,45 @@ public class UTPSocket {
                                     }
                                     //If we added the packet to the window, send out an acknowledgement
                                     if (wasadded) {
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 21");
                                         UTPPacket ack = new UTPPacket(ST_STATE, currentconnectionIDSendBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 1, next.getSequenceNumber());
-                                        socket.send(ack.getUDPPacket());
+                                        UTPSocketBinder.send(socket, ack);
                                     }
                                 }
                             }
                             //Here we process the acknumber in the received ack packet
                             if (next.getType() == ST_STATE) {
+                                System.out.println("nl.tudelft UTPSocket.ReceiverThread - 22");
                                 lock.lock();
                                 otherReceiveWindowRemainingSize = next.getWindowSize();
                                 if (sendwindow.size() > 0) {
+                                    System.out.println("nl.tudelft UTPSocket.ReceiverThread - 23");
                                     //If the acknumber is within the sendwindow
                                     if ((next.getAckNumber()) - sendwindow.get(0).getSequenceNumber() >= 0) {
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 24");
                                         //Find the packet that's being acked (as the next packet that's expected to be received)
                                         UTPPacket ackedpacket = sendwindow.find(next.getAckNumber());
                                         if (ackedpacket != null) {
                                             //Increment that packet's ack-counter, if this exceeds 3, this packet has likely been lost
                                             ackedpacket.setAcks(ackedpacket.getAcks() + 1);
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 25");
                                         //This tallies the number of bytes that were acked by this ack packet
                                         int bytesacked = 0;
                                         //Remove all the packets in the send window that have a smaller sequence number than
                                         //the acked packet
                                         while (next.getAckNumber() - sendwindow.get(0).getSequenceNumber() > 0) {
+                                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 26");
                                             UTPPacket current = sendwindow.getAndRemove();
                                             if (current.getReSends() == 0) {
                                                 //This re-calculates the retransmission timeout
                                                 int rttpacket = ((int) (System.nanoTime() - current.getSendTime())) / 1000000;
-                                                int delta     = rtt - rttpacket;
+                                                int delta = rtt - rttpacket;
                                                 rtt_var += (Math.abs(delta) - rtt_var) / 4;
                                                 rtt += (rttpacket - rtt) / 8;
                                                 timeout = Math.max(rtt + (rtt_var * 4), 500);
                                             }
+                                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 27");
                                             bytesacked += current.getSize();
                                             currentSendWindowSize -= current.getSize();
                                             if (sendwindow.size() == 0) {
@@ -413,6 +457,7 @@ public class UTPSocket {
                                         }
                                         //This is a rough wrapping protection, if it looks like the timestamp difference values have started wrapping,
                                         //we'll reset our base_delay values
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 28");
                                         if ((lasttimestampdifference < 0 && next.getTimeStampDifference() > 0 && Math.abs(lasttimestampdifference) + Math.abs(next.getTimeStampDifference()) > ((double) Integer.MAX_VALUE * .8))
                                             || (lasttimestampdifference > 0 && next.getTimeStampDifference() < 0 && Math.abs(lasttimestampdifference) + Math.abs(next.getTimeStampDifference()) > ((double) Integer.MAX_VALUE * .8))) {
                                             while (mindelaylist.size() > 0) {
@@ -423,6 +468,7 @@ public class UTPSocket {
                                             }
                                             first_time_updating_delay = true;
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 29");
                                         lasttimestampdifference = next.getTimeStampDifference();
                                         //If we're updating the delay for the first time, we'll set the base_delay to whatever the current
                                         //timestamp difference was
@@ -438,6 +484,7 @@ public class UTPSocket {
                                                 base_delay = lasttimestampdifference;
                                             }
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 30");
                                         //Once a minute, we'll shift our base_delay window forward by a minute, and recalculate our base_delay
                                         if (System.nanoTime() - 60000000000L > mindelayLastTimestamp) {
                                             mindelaylist.add(Integer.MAX_VALUE);
@@ -453,6 +500,7 @@ public class UTPSocket {
                                             }
                                             mindelayLastTimestamp = System.nanoTime();
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 31");
                                         //our_delay will be equal to timestamp_difference - base_delay
                                         int our_delay = 0;
                                         if (first_time_updating_delay) {
@@ -466,6 +514,7 @@ public class UTPSocket {
                                             curdelaylist.remove(0);
                                             curdelaylist.add(new mindelaytuple(System.nanoTime(), next.getTimeStampDifference() - base_delay));
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 32");
                                         //Here we're picking the minimum our_delay from our buffer
                                         if (curdelaylist.size() > 0) {
                                             our_delay = curdelaylist.get(0).difference;
@@ -473,6 +522,7 @@ public class UTPSocket {
                                                 our_delay = Math.min(our_delay, curdelaylist.get(i).difference);
                                             }
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 33");
                                         //Off_target is equal to the Control Target - our_delay, since CCONTROL_TARGET is in milliseconds
                                         //and our_delay is in microseconds, which is why we multiply CCONTROL_TARGET by 1000
                                         double off_target = CCONTROL_TARGET * 1000 - ((double) our_delay);
@@ -482,6 +532,7 @@ public class UTPSocket {
                                         } else {
                                             off_target = Math.min(off_target, CCONTROL_TARGET * 1000);
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 34");
                                         //Now we scale off_target in units of the CCONTROL_TARGET. Because of the
                                         //above clamping, this means that delay_factor will always be between -1 and 1.
                                         double delay_factor = off_target / (double) (CCONTROL_TARGET * 1000);
@@ -497,6 +548,7 @@ public class UTPSocket {
                                         } else {
                                             first_time_updating_delay = false;
                                         }
+                                        System.out.println("nl.tudelft UTPSocket.ReceiverThread - 35");
                                         //If the packet's extension bit is turned on and it has a selective ack, it means it's selectively acking
                                         //a packet in our send_window, so we find that packet and remove it from our send window
                                         if (next.getExtension() == 1 && next.hasSelectiveAck()) {
@@ -504,6 +556,7 @@ public class UTPSocket {
                                         }
                                         //If this is the 4'th duplicate ack in a row, we assume the packet is lost and need to resend it
                                         if (ackedpacket != null && ackedpacket.getAcks() >= 4 && ackedpacket.getAcks() % 4 == 0) {
+                                            System.out.println("nl.tudelft UTPSocket.ReceiverThread - 36");
                                             //So we aren't constantly resending the same packet, we have a window_decay timer, which
                                             //we use to only resend the packet every MAX_WINDOW_DECAY interval
                                             if (System.nanoTime() - window_decay_timer >= MAX_WINDOW_DECAY * 1000000) {
@@ -511,13 +564,14 @@ public class UTPSocket {
                                                 window_decay_timer = System.nanoTime();
                                                 //As packet loss often happens in bursts, we actually resend up to 3 packets
                                                 for (int i = 0; i < Math.min(sendwindow.size(), 3); i++) {
-                                                    socket.send(sendwindow.get(i).getUDPPacket());
+                                                    UTPSocketBinder.send(socket, sendwindow.get(i));
                                                 }
                                             }
                                         }
                                     }
                                 }
                                 lock.unlock();
+                                System.out.println("nl.tudelft UTPSocket.ReceiverThread - 37");
                             }
                         }
                     } catch (Exception e) {
@@ -533,12 +587,12 @@ public class UTPSocket {
     //This initializes a new UTPSocket, this is the initializer for use by the client
     public UTPSocket(DatagramSocket socket, InetAddress address, int port) throws Exception {
         this.socket = socket;
-        maxReceiveWindowSize = 4000000;
+        maxReceiveWindowSize = 40000000;
         maxSendWindowSize = packetsize;
         currentReceiveWindowSize = 0;
         currentSendWindowSize = 0;
-        receivebuffer = new CircularBuffer(4000000);
-        sendbuffer = new CircularBuffer(4000000);
+        receivebuffer = new CircularBuffer(40000000);
+        sendbuffer = new CircularBuffer(40000000);
         sendwindow = new NetworkingWindow(100000);
         receivewindow = new NetworkingWindow(100000);
         sendAddress = address;
@@ -557,12 +611,14 @@ public class UTPSocket {
         currentconnectionIDSendBytes[0] = intToBytes(connectionIDReceive + 1)[2];
         currentconnectionIDSendBytes[1] = intToBytes(connectionIDReceive + 1)[3];
         currentSequenceNumber = 1;
+    }
+
+    public void initializeSender() throws IOException {
         //Start the connection
-        InitializeConnection(address, port);
-        //System.out.println("Connection Established");
-        socket.setSoTimeout(3000);
+        InitializeConnection(sendAddress, sendPort);
+        socket.setSoTimeout(10000);
         ReceiverThread receive = new ReceiverThread();
-        SenderThread   send    = new SenderThread();
+        SenderThread send = new SenderThread();
         receive.start();
         send.start();
     }
@@ -585,13 +641,16 @@ public class UTPSocket {
         currentacknumber = 2;
         currentSequenceNumber = sequenceNumber;
         currentSequenceNumber++;
-        UTPPacket confirmConnection = new UTPPacket(ST_STATE, currentconnectionIDSendBytes, timestampdifference, currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], address, port, 0, -1);
+    }
+
+    public void initializeReceiver() throws IOException {
+        UTPPacket confirmConnection = new UTPPacket(ST_STATE, currentconnectionIDSendBytes, timestampdifference, currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
         //We send a connection confirm packet
-        socket.send(confirmConnection.getUDPPacket());
+        UTPSocketBinder.send(socket, confirmConnection);
         socket.setSoTimeout(maxconnecttimeout);
         //Now we wait for that packet to get acked
-        long    start     = System.nanoTime();
-        long    current   = start;
+        long start = System.nanoTime();
+        long current = start;
         boolean connected = false;
         while (current - start - 3000000000L < 0) {
             UTPPacket confirmation;
@@ -613,10 +672,8 @@ public class UTPSocket {
         }
         //Otherwise, the connection was successfully established
 
-        //System.out.println("Connection Established");
-
         ReceiverThread receive = new ReceiverThread();
-        SenderThread   send    = new SenderThread();
+        SenderThread send = new SenderThread();
         receive.start();
         send.start();
     }
@@ -627,31 +684,33 @@ public class UTPSocket {
         for (int i = 0; i < maxconnectretransmitions; i++) {
             UTPPacket initializeConnection = new UTPPacket(ST_SYN, currentconnectionIDReceiveBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], address, port, 0, -1);
             //Send the initial SYN packet
-            socket.send(initializeConnection.getUDPPacket());
+            UTPSocketBinder.send(socket, initializeConnection);
             //Wait for a connection confirm packet
-            long start   = System.nanoTime();
+            long start = System.nanoTime();
             long current = start;
             while (current - start - 3000000000L < 0) {
                 socket.setSoTimeout(maxconnecttimeout);
                 UTPPacket confirmation;
                 try {
                     confirmation = packetBuffer.take();
+                    System.out.println("hoi");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     break;
                 }
-                    //If we get a legitimate connection confirm packet
-                    if (confirmation.getType() == ST_STATE && confirmation.getAddress().equals(address) && confirmation.getConnectionID()[0] == currentconnectionIDReceiveBytes[0] && confirmation.getConnectionID()[1] == currentconnectionIDReceiveBytes[1]) {
-                        currentacknumber = confirmation.getAckNumber();
-                        sendAddress = confirmation.getAddress();
-                        sendPort = confirmation.getPort();
-                        connected = true;
-                        UTPPacket ConnectionConfirmAck = new UTPPacket(ST_STATE, currentconnectionIDReceiveBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
-                        //Send an Ack of the Connection Confirm packet back to the other end
-                        socket.send(ConnectionConfirmAck.getUDPPacket());
-                        break;
-                        //We're done, connection is established
-                    }
+                System.out.println("hoi2");
+                //If we get a legitimate connection confirm packet
+                if (confirmation.getType() == ST_STATE && confirmation.getAddress().equals(address) && confirmation.getConnectionID()[0] == currentconnectionIDReceiveBytes[0] && confirmation.getConnectionID()[1] == currentconnectionIDReceiveBytes[1]) {
+                    currentacknumber = confirmation.getAckNumber();
+                    sendAddress = confirmation.getAddress();
+                    sendPort = confirmation.getPort();
+                    connected = true;
+                    UTPPacket ConnectionConfirmAck = new UTPPacket(ST_STATE, currentconnectionIDReceiveBytes, timestampdifference, maxReceiveWindowSize - currentReceiveWindowSize, currentSequenceNumber, currentacknumber, new byte[0], sendAddress, sendPort, 0, -1);
+                    //Send an Ack of the Connection Confirm packet back to the other end
+                    UTPSocketBinder.send(socket, ConnectionConfirmAck);
+                    break;
+                    //We're done, connection is established
+                }
                 current = System.nanoTime();
             }
             if (connected) {
@@ -672,18 +731,23 @@ public class UTPSocket {
                 if (interupted) {
                     throw new IOException("Connection Interrupted");
                 } else if (sendbuffer == null || closed) {
+                    System.out.println("!!!!!!!!!!!!!!!!!!!!!! Outputstream closed");
                     throw new IOException("Output stream has been closed");
                 } else {
                     if (!sendbuffer.store(bytes[0])) {
+                        System.out.println("!!!!!!!!!!!!!!!!!!!!!! Sendbuffer full");
                         throw new IOException("Send Buffer is Already Full, you are writing faster than your connection can send out new packets");
                     }
                     if (!sendbuffer.store(bytes[1])) {
+                        System.out.println("!!!!!!!!!!!!!!!!!!!!!! Sendbuffer full");
                         throw new IOException("Send Buffer is Already Full, you are writing faster than your connection can send out new packets");
                     }
                     if (!sendbuffer.store(bytes[2])) {
+                        System.out.println("!!!!!!!!!!!!!!!!!!!!!! Sendbuffer full");
                         throw new IOException("Send Buffer is Already Full, you are writing faster than your connection can send out new packets");
                     }
                     if (!sendbuffer.store(bytes[3])) {
+                        System.out.println("!!!!!!!!!!!!!!!!!!!!!! Sendbuffer full");
                         throw new IOException("Send Buffer is Already Full, you are writing faster than your connection can send out new packets");
                     }
                 }
@@ -698,6 +762,11 @@ public class UTPSocket {
             result[3] = (byte) input;
             return result;
         }
+
+        public void close() throws IOException {
+            super.close();
+
+        }
     }
 
 
@@ -708,8 +777,8 @@ public class UTPSocket {
     //This one is used by the Receive Window and the Send Window
     private class NetworkingWindow {
         private UTPPacket[] data;
-        private int         head;
-        private int         tail;
+        private int head;
+        private int tail;
 
         public NetworkingWindow(Integer number) {
             data = new UTPPacket[number];
@@ -898,8 +967,8 @@ public class UTPSocket {
     //This Circular Buffer class is used by the send and receive buffers
     private static class CircularBuffer {
         private Byte[] data;
-        private int    head;
-        private int    tail;
+        private int head;
+        private int tail;
 
         public CircularBuffer(Integer number) {
             data = new Byte[number];
@@ -954,7 +1023,7 @@ public class UTPSocket {
         public byte[] readpacket(int sizeofpacket) {
             synchronized (this) {
                 byte[] newpacket = new byte[sizeofpacket];
-                int    i         = 0;
+                int i = 0;
                 while (i < newpacket.length) {
                     newpacket[i] = data[head++];
                     if (head == data.length) {
@@ -994,9 +1063,9 @@ public class UTPSocket {
 
     //This is the UTP Input Stream class, it lets the user read bytes from the socket
     public class UTPInputStream extends InputStream {
-        long   timer = System.nanoTime();
-        byte[] next  = new byte[4];
-        int    len   = 0;
+        long timer = System.nanoTime();
+        byte[] next = new byte[4];
+        int len = 0;
 
         //Reads a byte from the socket, returns -1 if connection was closed
         public int read() throws IOException {

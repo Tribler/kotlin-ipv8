@@ -63,7 +63,7 @@ class IPv8BluetoothLeScanner(
     }
 
     fun start() {
-        logger.debug { "startScan" }
+//        logger.debug { "startScan" }
 
         isScanning = true
 
@@ -78,7 +78,7 @@ class IPv8BluetoothLeScanner(
     }
 
     fun stop() {
-        logger.debug { "stopScan" }
+//        logger.debug { "stopScan" }
 
         isScanning = false
 

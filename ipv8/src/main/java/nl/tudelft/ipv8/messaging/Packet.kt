@@ -2,11 +2,11 @@ package nl.tudelft.ipv8.messaging
 
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.exception.PacketDecodingException
+import nl.tudelft.ipv8.exception.PacketDecodingExceptionSilent
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.payload.BinMemberAuthenticationPayload
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
-import java.lang.IllegalArgumentException
 
 class Packet(
     val source: Address,
@@ -30,15 +30,21 @@ class Packet(
      * @throws PacketDecodingException If the packet is authenticated and the signature is invalid.
      */
     @Throws(PacketDecodingException::class)
-    fun <T> getAuthPayload(deserializer: Deserializable<T>): Pair<Peer, T> {
-        val (peer, remainder) = getAuthPayload()
+    fun <T> getAuthPayload(
+        deserializer: Deserializable<T>,
+        ignoreInvalidPK: Boolean = false
+    ): Pair<Peer, T> {
+        val (peer, remainder) = getAuthPayload(ignoreInvalidPK)
         val (_, distSize) = GlobalTimeDistributionPayload.deserialize(remainder)
         val (payload, _) = deserializer.deserialize(remainder, distSize)
         return Pair(peer, payload)
     }
 
     @Throws(PacketDecodingException::class)
-    fun <T> getDecryptedAuthPayload(deserializer: Deserializable<T>, privateKey: PrivateKey): Pair<Peer, T> {
+    fun <T> getDecryptedAuthPayload(
+        deserializer: Deserializable<T>,
+        privateKey: PrivateKey
+    ): Pair<Peer, T> {
         val (peer, remainder) = getAuthPayload()
         val (_, distSize) = GlobalTimeDistributionPayload.deserialize(remainder)
         val encrypted = remainder.copyOfRange(distSize, remainder.size)
@@ -63,14 +69,15 @@ class Packet(
      * @throws PacketDecodingException If the packet is authenticated and the signature is invalid.
      */
     @Throws(PacketDecodingException::class)
-    private fun getAuthPayload(): Pair<Peer, ByteArray> {
+    private fun getAuthPayload(ignoreInvalidPK: Boolean = false): Pair<Peer, ByteArray> {
         // prefix + message type
         val authOffset = PREFIX_SIZE + 1
         val (auth, authSize) = BinMemberAuthenticationPayload.deserialize(data, authOffset)
         val publicKey = try {
             defaultCryptoProvider.keyFromPublicBin(auth.publicKey)
         } catch (e: IllegalArgumentException) {
-            throw PacketDecodingException("Incoming packet has an invalid public key", e)
+            throw if (ignoreInvalidPK) PacketDecodingExceptionSilent("Incoming packet has an invalid signature")
+            else PacketDecodingException("Incoming packet has an invalid signature", e)
         }
         val signatureOffset = data.size - publicKey.getSignatureLength()
         val signature = data.copyOfRange(signatureOffset, data.size)
@@ -83,8 +90,10 @@ class Packet(
 
         // Return the peer and remaining payloads
         val peer = Peer.createFromAddress(publicKey, source)
-        val remainder = data.copyOfRange(authOffset + authSize,
-            data.size - publicKey.getSignatureLength())
+        val remainder = data.copyOfRange(
+            authOffset + authSize,
+            data.size - publicKey.getSignatureLength()
+        )
 
         return Pair(peer, remainder)
     }

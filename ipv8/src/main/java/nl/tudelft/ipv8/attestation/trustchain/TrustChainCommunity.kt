@@ -18,7 +18,7 @@ import nl.tudelft.ipv8.util.toHex
 import kotlin.coroutines.Continuation
 import kotlin.math.max
 
-private val logger = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger("TrustChainCommunity")
 
 /**
  * The community implementing TrustChain, a scalable, tamper-proof, distributed ledger. The

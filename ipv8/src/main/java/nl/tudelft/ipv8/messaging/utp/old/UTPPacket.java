@@ -1,4 +1,4 @@
-package nl.tudelft.ipv8.messaging.utp;
+package nl.tudelft.ipv8.messaging.utp.old;
 
 /*
 Created by Peter Lipay. University of Washington. June 2010.
@@ -116,8 +116,7 @@ public class UTPPacket {
         //Initializing all of our fields
         address = p.getAddress();
         port = p.getPort();
-        byte placeholder = (byte)((header[0]& 0xFF) << 4);
-        type = (byte)(placeholder >>> 4);
+        type = header[0];
         extension = header[1];
         connectionID = new byte[2];
         connectionID[0] = header[2];
@@ -208,6 +207,11 @@ public class UTPPacket {
         return payload;
     }
 
+    //Returns the data payload array
+    public void setPayload(byte[] payload) {
+        this.payload = payload;
+    }
+
     //Returns the number of times the packet has been acked
     public int getAcks() {
         return acks;
@@ -288,12 +292,12 @@ public class UTPPacket {
         } else {
             header = new byte[25];
         }
-        byte version_type = (byte)((1 & 0xFF) << 4 | (1 & 0xFF));
-        header[0] = version_type;
+//        byte version_type = (byte)((1 & 0xFF) << 4 | (1 & 0xFF));
+        header[0] = intToBytes(type)[3];
         header[1] = intToBytes(extension)[3];
         header[2] = connectionID[0];
         header[3] = connectionID[1];
-        byte[] temp = new byte[4];
+        byte[] temp;
         temp = intToBytes(timestampdifference);
         header[8] = temp[0];
         header[9] = temp[1];
@@ -318,7 +322,6 @@ public class UTPPacket {
             header[23] = temp[3];
             header[24] = 0;
         }
-        temp = new byte[4];
         sendtime = System.nanoTime();
         timestamp = (int)((sendtime-((sendtime/1000000000/1000)*1000000000*1000))/1000);
         temp = intToBytes(timestamp);
@@ -334,8 +337,7 @@ public class UTPPacket {
                 data[i] = payload[i-header.length];
             }
         }
-        DatagramPacket toreturn = new DatagramPacket(data, data.length,address, port);
-        return toreturn;
+        return new DatagramPacket(data, data.length,address, port);
     }
 
 }

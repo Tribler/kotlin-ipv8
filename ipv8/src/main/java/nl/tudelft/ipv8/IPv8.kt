@@ -5,6 +5,9 @@ import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
 import java.lang.IllegalStateException
+import java.util.*
+import kotlin.concurrent.schedule
+import kotlin.concurrent.timerTask
 import kotlin.math.roundToLong
 
 class IPv8(
@@ -85,11 +88,8 @@ class IPv8(
 
     private fun startLoopingCall() {
         val interval = (configuration.walkerInterval * 1000).roundToLong()
-        loopingCallJob = scope.launch {
-            while (true) {
-                onTick()
-                delay(interval)
-            }
+        Timer().schedule(0, interval) {
+            onTick()
         }
     }
 

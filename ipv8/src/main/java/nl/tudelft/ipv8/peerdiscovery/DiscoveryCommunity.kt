@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.peerdiscovery
 
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Address
@@ -13,12 +14,14 @@ import nl.tudelft.ipv8.peerdiscovery.payload.SimilarityRequestPayload
 import nl.tudelft.ipv8.peerdiscovery.payload.SimilarityResponsePayload
 import java.util.*
 
-private val logger = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger("DiscoveryCommunity")
 
 class DiscoveryCommunity : Community(), PingOverlay {
     override val serviceId = "7e313685c1912a141279f8248fc8db5899c5df5a"
 
     private val pingRequestCache: MutableMap<Int, PingRequest> = mutableMapOf()
+
+    var firstMessage = false
 
     init {
         messageHandlers[MessageId.SIMILARITY_REQUEST] = ::onSimilarityRequestPacket
@@ -44,11 +47,21 @@ class DiscoveryCommunity : Community(), PingOverlay {
         return serializePacket(MessageId.SIMILARITY_REQUEST, payload, peer = peer)
     }
 
+    fun sendSimilarityRequest(address: Address) {
+        val myPeerSet = network.serviceOverlays.values.map { it.myPeer }.toSet()
+        for (myPeer in myPeerSet) {
+            val packet = createSimilarityRequest(myPeer)
+            logger.debug ("-> SimilarityRequest address: ${address}")
+            super.send(address, packet)
+        }
+    }
+
     fun sendSimilarityRequest(peer: Peer) {
         val myPeerSet = network.serviceOverlays.values.map { it.myPeer }.toSet()
         for (myPeer in myPeerSet) {
             val packet = createSimilarityRequest(myPeer)
-            send(peer, packet)
+            logger.debug ("-> SimilarityRequest address: ${peer.address}")
+            super.send(peer, packet)
         }
     }
 
@@ -72,7 +85,7 @@ class DiscoveryCommunity : Community(), PingOverlay {
         pingRequestCache[identifier] = pingRequest
         // TODO: implement cache timeout
 
-        send(peer, packet)
+        super.send(peer, packet)
     }
 
     internal fun createPong(identifier: Int): ByteArray {
@@ -116,7 +129,12 @@ class DiscoveryCommunity : Community(), PingOverlay {
         payload: IntroductionResponsePayload
     ) {
         super.onIntroductionResponse(peer, payload)
-        sendSimilarityRequest(peer)
+        sendSimilarityRequest(payload.lanIntroductionAddress)
+        sendSimilarityRequest(payload.wanIntroductionAddress)
+//        if (!firstMessage) {
+//            onIntroductionResponse(peer, IntroductionResponsePayload(destinationAddress=IPv4Address("192.168.1.128", 8090), sourceLanAddress=IPv4Address("192.168.1.213", 8090), sourceWanAddress=IPv4Address("80.112.139.99", 1024), lanIntroductionAddress=IPv4Address("192.168.1.213", 8090), wanIntroductionAddress=IPv4Address("80.112.139.99", 1024), connectionType=ConnectionType.UNKNOWN, tunnel=false, identifier=180))
+//            firstMessage = true
+//        }
     }
 
     internal fun onSimilarityRequest(
@@ -131,7 +149,8 @@ class DiscoveryCommunity : Community(), PingOverlay {
         val myPeerSet = network.serviceOverlays.values.map { it.myPeer }.toSet()
         for (myPeer in myPeerSet) {
             val packet = createSimilarityResponse(payload.identifier, myPeer)
-            send(peer, packet)
+            logger.debug ("-> SimilarityRequest response address: ${peer.address} (${peer.lanAddress}, ${payload.wanAddress})")
+            super.send(peer, packet)
         }
     }
 
@@ -140,6 +159,7 @@ class DiscoveryCommunity : Community(), PingOverlay {
         payload: SimilarityResponsePayload
     ) {
         logger.debug("<- $payload")
+        logger.debug ("<- SimilarityResponse address: ${peer.address}")
 
         if (maxPeers >= 0 && getPeers().size >= maxPeers && !network.verifiedPeers.contains(peer)) {
             logger.info("Dropping similarity response from $peer, too many peers!")
@@ -157,7 +177,11 @@ class DiscoveryCommunity : Community(), PingOverlay {
         logger.debug("<- $payload")
 
         val packet = createPong(payload.identifier)
-        send(address, packet)
+        super.send(address, packet)
+    }
+
+    override fun send(address: Address, data: ByteArray) {
+        // skip
     }
 
     internal fun onPong(
