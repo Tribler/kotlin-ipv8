@@ -150,7 +150,7 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
     /**
      * @return The Connection ID for Outgoing Packets
      */
-    public long getConnectionIdsending() {
+    public long getConnectionIdSending() {
         return connectionIdSending;
     }
 

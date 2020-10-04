@@ -316,7 +316,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
         ackPacket.setAckNumber(longToUshort(getAckNumber()));
         ackPacket.setTimestampDifference(timestampDifference);
         ackPacket.setTimestamp(timeStamper.utpTimeStamp());
-        ackPacket.setConnectionId(longToUshort(getConnectionIdsending()));
+        ackPacket.setConnectionId(longToUshort(getConnectionIdSending()));
         ackPacket.setWindowSize(longToUint(advertisedWindow));
 
         ackPacket.setFirstExtension(SELECTIVE_ACK);
@@ -367,7 +367,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
         ackPacket.setExtensions(extensions);
         ackPacket.setTimestampDifference(timestampDifference);
         ackPacket.setTimestamp(timeStamper.utpTimeStamp());
-        ackPacket.setConnectionId(longToUshort(getConnectionIdsending()));
+        ackPacket.setConnectionId(longToUshort(getConnectionIdSending()));
         ackPacket.setTypeVersion(STATE);
         ackPacket.setWindowSize(longToUint(windowSize));
         sendPacket(ackPacket);
@@ -498,7 +498,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
 
         ackPacket.setTimestampDifference(timedifference);
         ackPacket.setTimestamp(timeStamper.utpTimeStamp());
-        ackPacket.setConnectionId(longToUshort(getConnectionIdsending()));
+        ackPacket.setConnectionId(longToUshort(getConnectionIdSending()));
         ackPacket.setTypeVersion(STATE);
         ackPacket.setWindowSize(longToUint(advertisedWindow));
         return ackPacket;
@@ -509,7 +509,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
         pkt.setSequenceNumber(longToUshort(getSequenceNumber()));
         incrementSequenceNumber();
         pkt.setAckNumber(longToUshort(getAckNumber()));
-        pkt.setConnectionId(longToUshort(getConnectionIdsending()));
+        pkt.setConnectionId(longToUshort(getConnectionIdSending()));
         pkt.setTimestamp(timeStamper.utpTimeStamp());
         pkt.setTypeVersion(UtpPacketUtils.DATA);
         return pkt;

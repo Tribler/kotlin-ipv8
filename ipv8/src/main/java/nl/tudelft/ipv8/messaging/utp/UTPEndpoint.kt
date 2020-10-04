@@ -196,7 +196,7 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
 	 */
     private fun registerChannel(channel: UtpSocketChannel): Boolean {
         val triplet = ConnectionIdTriplet(
-            channel, channel.connectionIdReceiving, channel.connectionIdsending
+            channel, channel.connectionIdReceiving, channel.connectionIdSending
         )
         if (isChannelRegistrationNecessary(channel)) {
             connectionIds.put((channel.connectionIdReceiving and 0xFFFF), triplet)
