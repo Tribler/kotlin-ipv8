@@ -81,7 +81,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
      */
     @Override
     public void receivePacket(DatagramPacket udpPacket) {
-        UTPSocketChannelLoggerKt.getLogger().debug("receivePacket");
+        UTPSocketChannelImplLoggerKt.getLogger().debug("receivePacket");
         if (isSynAckPacket(udpPacket)) {
             handleSynAckPacket(udpPacket);
         } else if (isResetPacket(udpPacket)) {
@@ -100,7 +100,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     }
 
     private void handleFinPacket(DatagramPacket udpPacket) {
-        UTPSocketChannelLoggerKt.getLogger().debug("handleFinPacket");
+        UTPSocketChannelImplLoggerKt.getLogger().debug("handleFinPacket");
         stateLock.lock();
         try {
             setState(UtpSocketState.GOT_FIN);
@@ -121,7 +121,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     }
 
     private void handleResetPacket(DatagramPacket udpPacket) {
-        UTPSocketChannelLoggerKt.getLogger().debug("handleResetPacket");
+        UTPSocketChannelImplLoggerKt.getLogger().debug("handleResetPacket");
         this.close();
     }
 
@@ -130,7 +130,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     }
 
     private void handleSynAckPacket(DatagramPacket udpPacket) {
-        UTPSocketChannelLoggerKt.getLogger().debug("handleSyncAckPacket");
+        UTPSocketChannelImplLoggerKt.getLogger().debug("handleSyncAckPacket");
         UtpPacket pkt = extractUtpPacket(udpPacket);
         if ((pkt.getConnectionId() & 0xFFFF) == getConnectionIdReceiving()) {
             stateLock.lock();
@@ -197,7 +197,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     }
 
     private void handleIncomingConnectionRequest(DatagramPacket udpPacket) {
-        UTPSocketChannelLoggerKt.getLogger().debug("handleIncomingConnectionRequest");
+        UTPSocketChannelImplLoggerKt.getLogger().debug("handleIncomingConnectionRequest");
         UtpPacket utpPacket = extractUtpPacket(udpPacket);
 
         if (acceptSyn(udpPacket)) {
@@ -220,7 +220,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     }
 
     private boolean acceptSyn(DatagramPacket udpPacket) {
-        UTPSocketChannelLoggerKt.getLogger().debug("acceptSyn");
+        UTPSocketChannelImplLoggerKt.getLogger().debug("acceptSyn");
         UtpPacket pkt = extractUtpPacket(udpPacket);
         return getState() == CLOSED
             || (getState() == CONNECTED && isSameAddressAndId(

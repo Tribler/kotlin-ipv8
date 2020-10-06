@@ -59,7 +59,7 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
     }
 
     fun onPacket(packet: DatagramPacket) {
-        //logger.debug { "Data ${packet.data.size} = ${packet.data.joinToString("\n")}" }
+        logger.debug("Received UTP packet from ${packet.address.hostAddress}")
 
         // Unwrap prefix
         val unwrappedData = packet.data.copyOfRange(1, packet.length)
