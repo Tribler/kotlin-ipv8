@@ -28,6 +28,8 @@ import nl.tudelft.ipv8.messaging.utp.channels.impl.alg.UtpAlgorithm;
 import nl.tudelft.ipv8.messaging.utp.data.MicroSecondsTimeStamp;
 import nl.tudelft.ipv8.messaging.utp.data.UtpPacket;
 
+import static nl.tudelft.ipv8.messaging.utp.data.UtpPacketUtils.extractUtpPacket;
+
 /**
  * Handles the writing job of a channel...
  *
@@ -62,7 +64,6 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         IOException possibleExp = null;
         boolean exceptionOccurred = false;
 //        buffer.flip();
-        int durchgang = 0;
         while (continueSending()) {
             UTPWritingRunnableLoggerKt.getLogger().debug("New iteration: " + buffer.position());
             if (!checkForAcks()) {
@@ -76,7 +77,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
             for (DatagramPacket datagramPacket : packetsToResend) {
                 datagramPacket.setSocketAddress(channel.getRemoteAdress());
                 channel.sendPacket(datagramPacket);
-                UTPWritingRunnableLoggerKt.getLogger().debug("Resent packets");
+                UTPWritingRunnableLoggerKt.getLogger().debug("Resent packet: " + extractUtpPacket(datagramPacket).getSequenceNumber());
             }
 
             if (algorithm.isTimedOut()) {
@@ -92,9 +93,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 //            UTPWritingRunnableLoggerKt.getLogger().debug("Almost sending: " + algorithm.canSendNextPacket() + ", " + !exceptionOccurred + ", " + !graceFullInterrupt + ", " + buffer.hasRemaining());
             while (algorithm.canSendNextPacket() && !exceptionOccurred && !graceFullInterrupt && buffer.hasRemaining()) {
                 try {
-                    UTPWritingRunnableLoggerKt.getLogger().debug("Sending next packet");
                     DatagramPacket packet = getNextPacket();
-                    UTPWritingRunnableLoggerKt.getLogger().debug(Arrays.toString(packet.getData()));
                     channel.sendPacket(packet);
                 } catch (IOException exp) {
                     UTPWritingRunnableLoggerKt.getLogger().debug("Exception 2");
@@ -106,7 +105,6 @@ public class UtpWritingRunnable extends Thread implements Runnable {
                 }
             }
             updateFuture();
-            durchgang++;
         }
 
         if (possibleExp != null) {
@@ -170,6 +168,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         int leftInBuffer = buffer.remaining();
         utpPacket.setWindowSize(leftInBuffer);
         byte[] utpPacketBytes = utpPacket.toByteArray();
+        UTPWritingRunnableLoggerKt.getLogger().debug("Sending next packet: " + utpPacket.getSequenceNumber());
         DatagramPacket udpPacket = new DatagramPacket(utpPacketBytes, utpPacketBytes.length, channel.getRemoteAdress());
         algorithm.markPacketOnfly(utpPacket, udpPacket);
         return udpPacket;

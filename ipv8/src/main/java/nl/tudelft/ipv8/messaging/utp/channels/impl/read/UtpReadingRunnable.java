@@ -83,7 +83,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
                         lastPacketTimestamp = timeStamper.timeStamp();
                     }
                     if (isPacketExpected(timestampedPair.utpPacket())) {
-                        UTPReadingRunnableLoggerKt.getLogger().debug("Handle expected packet");
+                        UTPReadingRunnableLoggerKt.getLogger().debug("Handle expected packet: " + timestampedPair.utpPacket().getSequenceNumber());
                         handleExpectedPacket(timestampedPair);
                     } else {
                         UTPReadingRunnableLoggerKt.getLogger().debug("Handle UUNNNEXPECTED PACKET");

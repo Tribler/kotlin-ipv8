@@ -182,6 +182,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
                           long windowSize) throws IOException {
         UtpPacket ackPacket = createAckPacket(utpPacket, timestampDifference,
             windowSize);
+        UTPSocketChannelImplLoggerKt.getLogger().debug("ackPacket: " + ackPacket.getAckNumber());
         sendPacket(ackPacket);
     }
 
@@ -307,6 +308,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     public void selectiveAckPacket(SelectiveAckHeaderExtension headerExtension,
                                    int timestampDifference, long advertisedWindow) throws IOException {
         UtpPacket sack = createSelectiveAckPacket(headerExtension, timestampDifference, advertisedWindow);
+        UTPSocketChannelImplLoggerKt.getLogger().debug("selectiveAckPacket: " + sack.getAckNumber());
         sendPacket(sack);
     }
 
