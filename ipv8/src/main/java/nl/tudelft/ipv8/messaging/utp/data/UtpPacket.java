@@ -136,8 +136,8 @@ public class UtpPacket {
 
         for (UtpHeaderExtension extension : extensions) {
             byte[] extensionBytes = extension.toByteArray();
-            for (int j = 0; j < extensionBytes.length; j++) {
-                header[offset++] = extensionBytes[j];
+            for (byte extensionByte : extensionBytes) {
+                header[offset++] = extensionByte;
             }
         }
         UtpPacketLoggerKt.getLogger().debug("header: " + Arrays.toString(header));
@@ -219,7 +219,7 @@ public class UtpPacket {
         /*while*/ if (extension != null) {
             int extensionLength = array[extensionStartIndex + 1] & 0xFF;
             byte[] bitmask = new byte[extensionLength];
-            UtpPacketLoggerKt.getLogger().debug("extension: " + Arrays.toString(bitmask));
+            UtpPacketLoggerKt.getLogger().debug("array: " + Arrays.toString(bitmask));
             System.arraycopy(array, extensionStartIndex + 2, bitmask, 0, extensionLength);
             extension.setNextExtension(array[extensionStartIndex]);
             extension.setBitMask(bitmask);

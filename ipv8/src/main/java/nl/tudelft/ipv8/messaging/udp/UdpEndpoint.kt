@@ -182,7 +182,7 @@ open class UdpEndpoint(
     }
 
     internal fun handleReceivedPacket(receivePacket: DatagramPacket) {
-        logger.debug("Received packet from " + "${receivePacket.address.hostAddress}:${receivePacket.port}")
+//        logger.debug("Received packet from " + "${receivePacket.address.hostAddress}:${receivePacket.port}")
 
         // Check whether prefix is IPv8, TFTP, or UTP
         when (receivePacket.data[0]) {

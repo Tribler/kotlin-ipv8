@@ -14,12 +14,14 @@
  */
 package nl.tudelft.ipv8.messaging.utp.channels.impl;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
+import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -34,6 +36,7 @@ import nl.tudelft.ipv8.messaging.utp.channels.futures.UtpCloseFuture;
 import nl.tudelft.ipv8.messaging.utp.channels.futures.UtpWriteFuture;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.alg.UtpAlgConfiguration;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.conn.ConnectionTimeOutRunnable;
+import nl.tudelft.ipv8.messaging.utp.channels.impl.read.SkippedPacketBuffer;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.read.UTPReadingRunnableLoggerKt;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.read.UtpReadFutureImpl;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.read.UtpReadingRunnable;
@@ -44,6 +47,7 @@ import nl.tudelft.ipv8.messaging.utp.data.SelectiveAckHeaderExtension;
 import nl.tudelft.ipv8.messaging.utp.data.UtpHeaderExtension;
 import nl.tudelft.ipv8.messaging.utp.data.UtpPacket;
 import nl.tudelft.ipv8.messaging.utp.data.UtpPacketUtils;
+import nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil;
 
 import static nl.tudelft.ipv8.messaging.utp.channels.UtpSocketState.CLOSED;
 import static nl.tudelft.ipv8.messaging.utp.channels.UtpSocketState.CONNECTED;
@@ -76,6 +80,46 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     private UtpReadingRunnable reader;
     private ScheduledExecutorService retryConnectionTimeScheduler;
     private int connectionAttempts = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+    private static final int PACKET_DIFF_WARP = 50000;
+    private final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    private SkippedPacketBuffer skippedBuffer = new SkippedPacketBuffer();
+    private boolean exceptionOccured = false;
+    private boolean graceFullInterrupt;
+    private boolean isRunning;
+    private long totalPayloadLength = 0;
+    private long lastPacketTimestamp;
+    private int lastPayloadLength;
+    private UtpReadFutureImpl readFuture;
+    private long nowtimeStamp;
+    private long lastPackedReceived;
+    private long startReadingTimeStamp;
+    private boolean gotLastPacket = false;
+    // in case we ack every x-th packet, this is the counter.
+    private int currentPackedAck = 0;
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -185,9 +229,247 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
 
     private void handleDataPacket(DatagramPacket udpPacket) {
         UtpPacket utpPacket = extractUtpPacket(udpPacket);
-        readingQueue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
-        UTPSocketChannelImplLoggerKt.getLogger().debug("handleDataPacket, seq=" + utpPacket.getSequenceNumber() + ", ack=" + utpPacket.getAckNumber());
+        UTPSocketChannelImplLoggerKt.getLogger().debug("handleDataPacket, seq=" + utpPacket.getSequenceNumber() + ", ack=" + utpPacket.getAckNumber() + ", exp=" + getExpectedSeqNr());
+        UtpTimestampedPacketDTO timestampedPair = new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp());
+        currentPackedAck++;
+//                    UTPReadingRunnableLoggerKt.getLogger().debug("Seq: " + (timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF));
+        lastPackedReceived = timestampedPair.stamp();
+        try {
+            if (isLastPacket(timestampedPair)) {
+                gotLastPacket = true;
+                UTPReadingRunnableLoggerKt.getLogger().debug("GOT LAST PACKET");
+                lastPacketTimestamp = timeStamper.timeStamp();
+            }
+            if (isPacketExpected(timestampedPair.utpPacket())) {
+                UTPReadingRunnableLoggerKt.getLogger().debug("Handle expected packet: " + timestampedPair.utpPacket().getSequenceNumber());
+                handleExpectedPacket(timestampedPair);
+            } else {
+                UTPReadingRunnableLoggerKt.getLogger().debug("Handle UUNNNEXPECTED PACKET");
+                handleUnexpectedPacket(timestampedPair);
+            }
+            if (ackThisPacket()) {
+                currentPackedAck = 0;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+
+    private boolean isTimedOut() {
+        //TODO: extract constants...
+        /* time out after 4sec, when eof not reached */
+        boolean timedOut = nowtimeStamp - lastPackedReceived >= 4000000;
+        /* but if remote socket has not received synack yet, he will try to reconnect
+         * await that as well */
+        boolean connectionReattemptAwaited = nowtimeStamp - startReadingTimeStamp >= 4000000;
+        return timedOut && connectionReattemptAwaited;
+    }
+
+    private boolean isLastPacket(UtpTimestampedPacketDTO timestampedPair) {
+        return (timestampedPair.utpPacket().getWindowSize()) == 0;
+    }
+
+    private void handleExpectedPacket(UtpTimestampedPacketDTO timestampedPair) throws IOException {
+        if (hasSkippedPackets()) {
+            bos.write(timestampedPair.utpPacket().getPayload());
+            int payloadLength = timestampedPair.utpPacket().getPayload().length;
+            lastPayloadLength = payloadLength;
+            totalPayloadLength += payloadLength;
+            Queue<UtpTimestampedPacketDTO> packets = skippedBuffer.getAllUntillNextMissing();
+            int lastSeqNumber = 0;
+            if (packets.isEmpty()) {
+                lastSeqNumber = timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF;
+            }
+            UtpPacket lastPacket = null;
+            for (UtpTimestampedPacketDTO p : packets) {
+                bos.write(p.utpPacket().getPayload());
+                payloadLength += p.utpPacket().getPayload().length;
+                lastSeqNumber = p.utpPacket().getSequenceNumber() & 0xFFFF;
+                lastPacket = p.utpPacket();
+            }
+            skippedBuffer.reindex(lastSeqNumber);
+            UTPSocketChannelImplLoggerKt.getLogger().debug("set Ack number 1 to " + lastSeqNumber);
+            setAckNumber(lastSeqNumber);
+            //if still has skipped packets, need to selectively ack
+            if (hasSkippedPackets()) {
+                if (ackThisPacket()) {
+                    SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
+                    selectiveAckPacket(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                }
+
+            } else {
+                if (ackThisPacket()) {
+                    ackPacket(lastPacket, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                }
+            }
+        } else {
+            if (ackThisPacket()) {
+                ackPacket(timestampedPair.utpPacket(), getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+            } else {
+                UTPSocketChannelImplLoggerKt.getLogger().debug("set Ack number 2 to " + (timestampedPair.utpPacket().getSequenceNumber()) + ", " + (timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF));
+                setAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
+            }
+            bos.write(timestampedPair.utpPacket().getPayload());
+            totalPayloadLength += timestampedPair.utpPacket().getPayload().length;
+        }
+    }
+
+    private boolean ackThisPacket() {
+        return currentPackedAck >= UtpAlgConfiguration.SKIP_PACKETS_UNTIL_ACK;
+    }
+
+    /**
+     * Returns the average space available in the buffer in Bytes.
+     *
+     * @return bytes
+     */
+    public long getLeftSpaceInBuffer() throws IOException {
+        return (skippedBuffer.getFreeSize()) * lastPayloadLength;
+    }
+
+    private int getTimestampDifference(UtpTimestampedPacketDTO timestampedPair) {
+        return timeStamper.utpDifference(timestampedPair.utpTimeStamp(), timestampedPair.utpPacket().getTimestamp());
+    }
+
+    private void handleUnexpectedPacket(UtpTimestampedPacketDTO timestampedPair) throws IOException {
+        int expected = getExpectedSeqNr();
+        int seqNr = timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF;
+        if (skippedBuffer.isEmpty()) {
+            skippedBuffer.setExpectedSequenceNumber(expected);
+        }
+        //TODO: wrapping seq nr: expected can be 5 e.g.
+        // but buffer can receive 65xxx, which already has been acked, since seq numbers wrapped.
+        // current implementation puts this wrongly into the buffer. it should go in the else block
+        // possible fix: alreadyAcked = expected > seqNr || seqNr - expected > CONSTANT;
+        boolean alreadyAcked = expected > seqNr || seqNr - expected > PACKET_DIFF_WARP;
+
+        boolean saneSeqNr = expected == skippedBuffer.getExpectedSequenceNumber();
+        if (saneSeqNr && !alreadyAcked) {
+            skippedBuffer.bufferPacket(timestampedPair);
+            // need to create header extension after the packet is put into the incoming buffer.
+            SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
+            if (ackThisPacket()) {
+                selectiveAckPacket(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+            }
+        } else if (ackThisPacket()) {
+            SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
+            ackAlreadyAcked(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+        }
+    }
+
+    /**
+     * True if this packet is expected.
+     *
+     * @param utpPacket packet
+     */
+    public boolean isPacketExpected(UtpPacket utpPacket) {
+        int seqNumberFromPacket = utpPacket.getSequenceNumber() & 0xFFFF;
+        return getExpectedSeqNr() == seqNumberFromPacket;
+    }
+
+    private int getExpectedSeqNr() {
+        int ackNumber = getAckNumber();
+        if (ackNumber == UnsignedTypesUtil.MAX_USHORT) {
+            UTPSocketChannelImplLoggerKt.getLogger().debug("getExpectedSeqNr returning instead of " + ackNumber + 1 + ": 1");
+            return 1;
+        }
+        return ackNumber + 1;
+    }
+
+    private boolean hasSkippedPackets() {
+        return !skippedBuffer.isEmpty();
+    }
+
+    public void graceFullInterrupt() {
+        this.graceFullInterrupt = true;
+    }
+
+    private boolean continueReading() {
+        return !graceFullInterrupt && !exceptionOccured
+            && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
+    }
+
+    private boolean timeAwaitedAfterLastPacket() {
+        return (timeStamper.timeStamp() - lastPacketTimestamp) > UtpAlgConfiguration.TIME_WAIT_AFTER_LAST_PACKET
+            && gotLastPacket;
+    }
+
+    public boolean isRunning() {
+        return isRunning;
+    }
+
+    public MicroSecondsTimeStamp getTimestamp() {
+        return timeStamper;
+    }
+
+    public void setTimestamp(MicroSecondsTimeStamp timestamp) {
+        this.timeStamper = timestamp;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     private void handleStatePacket(DatagramPacket udpPacket) {
         UtpPacket utpPacket = extractUtpPacket(udpPacket);
@@ -226,6 +508,9 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
         UTPSocketChannelImplLoggerKt.getLogger().debug("handleIncomingConnectionRequest");
         UtpPacket utpPacket = extractUtpPacket(udpPacket);
 
+        lastPayloadLength = UtpAlgConfiguration.MAX_PACKET_SIZE;
+        this.startReadingTimeStamp = timeStamper.timeStamp();
+
         if (acceptSyn(udpPacket)) {
             int timeStamp = timeStamper.utpTimeStamp();
             setRemoteAddress(udpPacket.getSocketAddress());
@@ -255,6 +540,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     @Override
     protected void setAckNrFromPacketSqNr(UtpPacket utpPacket) {
         short ackNumberS = utpPacket.getSequenceNumber();
+        UTPSocketChannelImplLoggerKt.getLogger().debug("set Ack number 3 to " + (ackNumberS) + ", " + (ackNumberS & 0xFFFF));
         setAckNumber(ackNumberS & 0xFFFF);
     }
 
@@ -318,7 +604,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
 
     @Override
     public UtpReadFutureImpl read(Consumer<byte[]> onFileReceived) {
-        UtpReadFutureImpl readFuture = null;
         UTPSocketChannelImplLoggerKt.getLogger().debug("UtpReadingRunnable creation 1");
         try {
             readFuture = new UtpReadFutureImpl(onFileReceived);
@@ -330,8 +615,8 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
         } else {
             UTPSocketChannelImplLoggerKt.getLogger().debug("UtpReadingRunnable already running: " + reader.isRunning());
         }
-        reader = new UtpReadingRunnable(this, timeStamper, readFuture);
-        reader.start();
+//        reader = new UtpReadingRunnable(this, timeStamper, readFuture);
+//        reader.start();
         UTPSocketChannelImplLoggerKt.getLogger().debug("UtpReadingRunnable creation 2");
         return readFuture;
     }

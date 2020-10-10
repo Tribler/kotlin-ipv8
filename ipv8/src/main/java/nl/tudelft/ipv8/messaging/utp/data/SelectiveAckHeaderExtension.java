@@ -88,13 +88,12 @@ public class SelectiveAckHeaderExtension extends UtpHeaderExtension {
 
     @Override
     public byte[] toByteArray() {
+        UtpPacketLoggerKt.getLogger().debug("toByteArray: extension = " + nextExtension + ", length = " + bitMask.length + " or " + longToUbyte(bitMask.length));
         //TODO: not create a new byte array
         byte[] array = new byte[2 + bitMask.length];
         array[0] = nextExtension;
         array[1] = longToUbyte(bitMask.length);
-        for (int i = 0; i < bitMask.length; i++) {
-            array[i + 2] = bitMask[i];
-        }
+        System.arraycopy(bitMask, 0, array, 2, bitMask.length);
         return array;
     }
 }

@@ -162,7 +162,7 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
 	 * handles syn packet.
 	 */
     private fun synReceived(packet: DatagramPacket?) {
-//        if (handleDoubleSyn(packet)) { DIT MOET WSS WEL AAAAAAAAAAAAAANSTTTTTTTTTTTTAAAAAAAAAAANNNNNN!!!!!!!1
+//        if (handleDoubleSyn(packet)) {
 //            return
 //        }
         if (packet != null) {
