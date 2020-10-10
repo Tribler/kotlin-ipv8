@@ -36,7 +36,7 @@ public class UtpPacketUtils {
 
     public static final byte SELECTIVE_ACK = longToUbyte(1);
 
-    public static final int DEF_HEADER_LENGTH = 20; // For the ipv8 utp prefix
+    public static final int DEF_HEADER_LENGTH = 20;
 
     public static byte[] joinByteArray(byte[] array1, byte[] array2) {
 

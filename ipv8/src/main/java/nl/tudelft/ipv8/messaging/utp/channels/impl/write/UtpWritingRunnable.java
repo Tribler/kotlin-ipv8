@@ -22,6 +22,7 @@ import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import nl.tudelft.ipv8.messaging.utp.channels.impl.MyQueue;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpSocketChannelImpl;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpTimestampedPacketDTO;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.alg.UtpAlgorithm;
@@ -123,7 +124,8 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 
 
     private boolean checkForAcks() {
-        BlockingQueue<UtpTimestampedPacketDTO> queue = channel.getDataGramQueue();
+        /*BlockingQueue<UtpTimestampedPacketDTO>*/
+        MyQueue queue = channel.getWritingQueue();
         try {
             waitAndProcessAcks(queue);
         } catch (InterruptedException ie) {
@@ -132,7 +134,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         return true;
     }
 
-    private void waitAndProcessAcks(BlockingQueue<UtpTimestampedPacketDTO> queue) throws InterruptedException {
+    private void waitAndProcessAcks(/*BlockingQueue<UtpTimestampedPacketDTO>*/MyQueue queue) throws InterruptedException {
         long waitingTimeMicros = algorithm.getWaitingTimeMicroSeconds();
         UtpTimestampedPacketDTO temp = queue.poll(waitingTimeMicros, TimeUnit.MICROSECONDS);
         if (temp != null) {
@@ -144,7 +146,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         }
     }
 
-    private void processAcks(BlockingQueue<UtpTimestampedPacketDTO> queue) {
+    private void processAcks(/*BlockingQueue<UtpTimestampedPacketDTO>*/MyQueue queue) {
         UtpTimestampedPacketDTO pair;
         while ((pair = queue.poll()) != null) {
             algorithm.ackReceived(pair);
@@ -184,12 +186,10 @@ public class UtpWritingRunnable extends Thread implements Runnable {
     }
 
     private boolean continueSending() {
-        UTPWritingRunnableLoggerKt.getLogger().debug("Continue sending: " + graceFullInterrupt + ", " + allPacketsAckedSendAndAcked() + ", " + (!graceFullInterrupt && !allPacketsAckedSendAndAcked()));
         return !graceFullInterrupt && !allPacketsAckedSendAndAcked();
     }
 
     private boolean allPacketsAckedSendAndAcked() {
-        UTPWritingRunnableLoggerKt.getLogger().debug("allPacketsAckedSendAndAcked: " + algorithm.areAllPacketsAcked() + ", " + buffer.hasRemaining());
 //		return finSend && algorithm.areAllPacketsAcked() && !buffer.hasRemaining();
         return algorithm.areAllPacketsAcked() && !buffer.hasRemaining();
     }

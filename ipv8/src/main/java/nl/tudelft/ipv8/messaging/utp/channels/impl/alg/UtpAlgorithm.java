@@ -292,7 +292,7 @@ public class UtpAlgorithm {
         if (burstFull) {
             currentBurstSend = 0;
         }
-        UTPWritingRunnableLoggerKt.getLogger().debug("canSendNextPacket: " + !burstFull + ", " + windowNotFull + ", " + ((advertisedWindowSize < maxWindow && advertisedWindowSizeSet) ? advertisedWindowSize : maxWindow) + ", " + currentWindow);
+//        UTPWritingRunnableLoggerKt.getLogger().debug("canSendNextPacket: " + !burstFull + ", " + windowNotFull + ", " + ((advertisedWindowSize < maxWindow && advertisedWindowSizeSet) ? advertisedWindowSize : maxWindow) + ", " + currentWindow);
         return SEND_IN_BURST ? (!burstFull && windowNotFull) : windowNotFull;
     }
 

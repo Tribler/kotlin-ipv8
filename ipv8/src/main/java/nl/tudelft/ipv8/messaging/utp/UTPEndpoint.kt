@@ -73,11 +73,11 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
     }
 
     fun onPacket(packet: DatagramPacket) {
-        logger.debug("Received UTP packet from ${packet.address.hostAddress}:${packet.port}")
 
         // Unwrap prefix
         val unwrappedData = packet.data.copyOfRange(1, packet.length)
         packet.data = unwrappedData
+        logger.debug("Received UTP packet from ${packet.address.hostAddress}:${packet.port}, seq=" + UtpPacketUtils.extractUtpPacket(packet).sequenceNumber + ", ack=" + UtpPacketUtils.extractUtpPacket(packet).ackNumber)
 
         /*val sb = StringBuilder(packet.data.joinToString(", "))
         if (sb.length > 950) {

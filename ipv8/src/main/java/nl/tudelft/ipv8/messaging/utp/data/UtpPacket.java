@@ -15,6 +15,7 @@
 package nl.tudelft.ipv8.messaging.utp.data;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil;
 
@@ -134,13 +135,13 @@ public class UtpPacket {
         System.arraycopy(extensionlessArray, 0, header, 0, extensionlessArray.length);
 
         for (UtpHeaderExtension extension : extensions) {
-            byte[] extenionBytes = extension.toByteArray();
-            for (int j = 0; j < extenionBytes.length; j++) {
-                header[offset++] = extenionBytes[j];
+            byte[] extensionBytes = extension.toByteArray();
+            for (int j = 0; j < extensionBytes.length; j++) {
+                header[offset++] = extensionBytes[j];
             }
         }
+        UtpPacketLoggerKt.getLogger().debug("header: " + Arrays.toString(header));
         return joinByteArray(header, getPayload());
-
     }
 
     private byte[] getExtensionlessByteArray() {
@@ -205,9 +206,7 @@ public class UtpPacket {
 
         payload = new byte[length - utpOffset];
         System.arraycopy(array, utpOffset, payload, 0, length - utpOffset);
-
     }
-
 
     private int loadExtensions(byte[] array) {
         byte extensionType = array[1];
@@ -217,9 +216,10 @@ public class UtpPacket {
         ArrayList<UtpHeaderExtension> list = new ArrayList<UtpHeaderExtension>();
         UtpHeaderExtension extension = UtpHeaderExtension.resolve(extensionType);
 
-        while (extension != null) {
+        /*while*/ if (extension != null) {
             int extensionLength = array[extensionStartIndex + 1] & 0xFF;
             byte[] bitmask = new byte[extensionLength];
+            UtpPacketLoggerKt.getLogger().debug("extension: " + Arrays.toString(bitmask));
             System.arraycopy(array, extensionStartIndex + 2, bitmask, 0, extensionLength);
             extension.setNextExtension(array[extensionStartIndex]);
             extension.setBitMask(bitmask);
@@ -228,9 +228,11 @@ public class UtpPacket {
             int nextPossibleExtensionIndex = extensionLength + 2 + extensionStartIndex;
             // packet is enough big
             if (array.length > nextPossibleExtensionIndex) {
+                UtpPacketLoggerKt.getLogger().debug("NEXT EXTENSION");
                 extension = UtpHeaderExtension.resolve(array[nextPossibleExtensionIndex]);
                 extensionStartIndex = nextPossibleExtensionIndex;
             } else { // packet end reached.
+                UtpPacketLoggerKt.getLogger().debug("EXTENSION TO NULL");
                 extension = null;
             }
         }

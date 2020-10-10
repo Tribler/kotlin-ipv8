@@ -20,6 +20,7 @@ import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import nl.tudelft.ipv8.messaging.utp.channels.impl.MyQueue;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpSocketChannelImpl;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpTimestampedPacketDTO;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.alg.UtpAlgConfiguration;
@@ -66,7 +67,8 @@ public class UtpReadingRunnable extends Thread implements Runnable {
         UTPReadingRunnableLoggerKt.getLogger().debug("Starting reading");
         isRunning = true;
         IOException exp = null;
-        BlockingQueue<UtpTimestampedPacketDTO> queue = channel.getDataGramQueue();
+        /*BlockingQueue<UtpTimestampedPacketDTO>*/
+        MyQueue queue = channel.getReadingQueue();
         while (continueReading()) {
             UTPReadingRunnableLoggerKt.getLogger().debug("Getting data from queue");
             try {
@@ -74,8 +76,9 @@ public class UtpReadingRunnable extends Thread implements Runnable {
                 UTPReadingRunnableLoggerKt.getLogger().debug("Got data from queue: " + (timestampedPair == null));
                 nowtimeStamp = timeStamper.timeStamp();
                 if (timestampedPair != null) {
+                    UTPReadingRunnableLoggerKt.getLogger().debug("Got data from queue, seq=" + timestampedPair.utpPacket().getSequenceNumber());
                     currentPackedAck++;
-                    UTPReadingRunnableLoggerKt.getLogger().debug("Seq: " + (timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF));
+//                    UTPReadingRunnableLoggerKt.getLogger().debug("Seq: " + (timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF));
                     lastPackedReceived = timestampedPair.stamp();
                     if (isLastPacket(timestampedPair)) {
                         gotLastPacket = true;
@@ -112,11 +115,11 @@ public class UtpReadingRunnable extends Thread implements Runnable {
                 exp = ioe;
                 exp.printStackTrace();
                 exceptionOccured = true;
-            } catch (InterruptedException iexp) {
+            }/* catch (InterruptedException iexp) {
                 UTPReadingRunnableLoggerKt.getLogger().debug("Exception 2");
                 iexp.printStackTrace();
                 exceptionOccured = true;
-            } catch (ArrayIndexOutOfBoundsException aexp) {
+            }*/ catch (ArrayIndexOutOfBoundsException aexp) {
                 UTPReadingRunnableLoggerKt.getLogger().debug("Exception 3");
                 aexp.printStackTrace();
                 exceptionOccured = true;

@@ -34,6 +34,7 @@ import nl.tudelft.ipv8.messaging.utp.channels.futures.UtpCloseFuture;
 import nl.tudelft.ipv8.messaging.utp.channels.futures.UtpWriteFuture;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.alg.UtpAlgConfiguration;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.conn.ConnectionTimeOutRunnable;
+import nl.tudelft.ipv8.messaging.utp.channels.impl.read.UTPReadingRunnableLoggerKt;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.read.UtpReadFutureImpl;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.read.UtpReadingRunnable;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.write.UtpWriteFutureImpl;
@@ -67,11 +68,28 @@ import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.longToU
 public class UtpSocketChannelImpl extends UtpSocketChannel {
 
     private final Object sendLock = new Object();
-    private volatile BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<>();
+//    private volatile BlockingQueue<UtpTimestampedPacketDTO> writingQueue = new LinkedBlockingQueue<>();
+//    private volatile BlockingQueue<UtpTimestampedPacketDTO> readingQueue = new LinkedBlockingQueue<>();
+    private volatile MyQueue writingQueue = new MyQueue();
+    private volatile MyQueue readingQueue = new MyQueue();
     private UtpWritingRunnable writer;
     private UtpReadingRunnable reader;
     private ScheduledExecutorService retryConnectionTimeScheduler;
     private int connectionAttempts = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     public UtpSocketChannelImpl() {
     }
@@ -89,9 +107,9 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
         } else if (isSynPkt(udpPacket)) {
             handleIncomingConnectionRequest(udpPacket);
         } else if (isDataPacket(udpPacket)) {
-            handlePacket(udpPacket);
+            handleDataPacket(udpPacket);
         } else if (isStatePacket(udpPacket)) {
-            handlePacket(udpPacket);
+            handleStatePacket(udpPacket);
         } else if (isFinPacket(udpPacket)) {
             handleFinPacket(udpPacket);
         } else {
@@ -165,9 +183,16 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
         connectionAttempts++;
     }
 
-    private void handlePacket(DatagramPacket udpPacket) {
+    private void handleDataPacket(DatagramPacket udpPacket) {
         UtpPacket utpPacket = extractUtpPacket(udpPacket);
-        queue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
+        readingQueue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
+        UTPSocketChannelImplLoggerKt.getLogger().debug("handleDataPacket, seq=" + utpPacket.getSequenceNumber() + ", ack=" + utpPacket.getAckNumber());
+    }
+
+    private void handleStatePacket(DatagramPacket udpPacket) {
+        UtpPacket utpPacket = extractUtpPacket(udpPacket);
+        writingQueue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
+        UTPSocketChannelImplLoggerKt.getLogger().debug("handleStatePacket, seq=" + utpPacket.getSequenceNumber() + ", ack=" + utpPacket.getAckNumber());
     }
 
     /**
@@ -207,7 +232,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
             setConnectionIdsFromPacket(utpPacket);
             setupRandomSeqNumber();
             setAckNrFromPacketSqNr(utpPacket);
-            printState("[Syn received] ");
             int timestampDifference = timeStamper.utpDifference(timeStamp,
                 utpPacket.getTimestamp());
             UtpPacket ackPacket = createAckPacket(utpPacket,
@@ -260,8 +284,16 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
         return future;
     }
 
-    public BlockingQueue<UtpTimestampedPacketDTO> getDataGramQueue() {
-        return queue;
+    public /*BlockingQueue<UtpTimestampedPacketDTO>*/MyQueue getReadingQueue() {
+        return readingQueue;
+    }
+
+//    public void resetReadQueue() {
+//        readingQueue = new LinkedBlockingQueue<>();
+//    }
+
+    public /*BlockingQueue<UtpTimestampedPacketDTO>*/MyQueue getWritingQueue() {
+        return writingQueue;
     }
 
     /**
@@ -287,13 +319,20 @@ public class UtpSocketChannelImpl extends UtpSocketChannel {
     @Override
     public UtpReadFutureImpl read(Consumer<byte[]> onFileReceived) {
         UtpReadFutureImpl readFuture = null;
+        UTPSocketChannelImplLoggerKt.getLogger().debug("UtpReadingRunnable creation 1");
         try {
             readFuture = new UtpReadFutureImpl(onFileReceived);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        if (reader == null) {
+            UTPSocketChannelImplLoggerKt.getLogger().debug("UtpReadingRunnable already running: false");
+        } else {
+            UTPSocketChannelImplLoggerKt.getLogger().debug("UtpReadingRunnable already running: " + reader.isRunning());
+        }
         reader = new UtpReadingRunnable(this, timeStamper, readFuture);
         reader.start();
+        UTPSocketChannelImplLoggerKt.getLogger().debug("UtpReadingRunnable creation 2");
         return readFuture;
     }
 
