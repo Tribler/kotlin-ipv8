@@ -13,6 +13,7 @@ import nl.tudelft.ipv8.messaging.utp.channels.UtpSocketState
 import nl.tudelft.ipv8.messaging.utp.channels.futures.UtpReadFuture
 import nl.tudelft.ipv8.messaging.utp.channels.impl.receive.ConnectionIdTriplet
 import nl.tudelft.ipv8.messaging.utp.data.UtpPacketUtils
+import nl.tudelft.ipv8.messaging.utp.data.logger
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket
@@ -27,15 +28,13 @@ import java.util.zip.GZIPOutputStream
 private val logger = KotlinLogging.logger {}
 
 class UTPEndpoint : Endpoint<IPv4Address>() {
-    //    var utpSocket: UTPSocket? = null
     var socket: DatagramSocket? = null
 
-    private val connectionIds: MutableMap<Int, ConnectionIdTriplet> = HashMap()
+    private val connectionIds: MutableMap<Short, ConnectionIdTriplet> = HashMap()
 
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
 
-    private var channel: UtpSocketChannel? = null
     private var busySending = false
 
     override fun send(peer: IPv4Address, data: ByteArray) {
@@ -51,18 +50,18 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
                     compressedData = os.toByteArray()
                 }
                 logger.debug { "Opening channel" }
-                channel = UtpSocketChannel.open(socket!!)
+                val channel = UtpSocketChannel.open(socket!!)
                 logger.debug { "Connecting to channel" }
-                val cFuture = channel!!.connect(InetSocketAddress(peer.ip, peer.port))
+                val cFuture = channel.connect(InetSocketAddress(peer.ip, peer.port))
+                registerChannel(channel)
                 logger.debug { "Blocking" }
                 cFuture.block()
                 logger.debug { "Writing" }
-                val fut = channel!!.write(ByteBuffer.wrap(compressedData!!))
+                val fut = channel.write(ByteBuffer.wrap(compressedData!!))
                 logger.debug { "Blocking again" }
                 fut.block()
                 logger.debug { "Closing channel" }
-                channel!!.close()
-                channel = null
+                channel.close()
                 logger.debug { "Done" }
                 busySending = false
             }
@@ -73,104 +72,29 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
     }
 
     fun onPacket(packet: DatagramPacket) {
-
-        // Unwrap prefix
         val unwrappedData = packet.data.copyOfRange(1, packet.length)
         packet.data = unwrappedData
-        logger.debug("Received UTP packet from ${packet.address.hostAddress}:${packet.port}, seq=" + UtpPacketUtils.extractUtpPacket(packet).sequenceNumber + ", ack=" + UtpPacketUtils.extractUtpPacket(packet).ackNumber)
-
-        /*val sb = StringBuilder(packet.data.joinToString(", "))
-        if (sb.length > 950) {
-            logger.debug { "sb.length = " + sb.length }
-            val chunkCount: Int = sb.length / 950 // integer division
-            for (i in 0..chunkCount) {
-                val max = 950 * (i + 1)
-                if (max >= sb.length) {
-                    logger.debug { "chunk " + i + " of " + chunkCount + ":" + sb.substring(950 * i) }
-                } else {
-                    logger.debug { "chunk " + i + " of " + chunkCount + ":" + sb.substring(950 * i, max) }
-                }
-            }
-        } else {
-            logger.debug { sb.toString() }
-        }*/
+        val utpPacket = UtpPacketUtils.extractUtpPacket(packet)
+        logger.debug("Received UTP packet from ${packet.address.hostAddress}:${packet.port}, seq=" + utpPacket.sequenceNumber + ", ack=" + utpPacket.ackNumber)
 
         if (UtpPacketUtils.isSynPkt(packet)) {
             logger.debug { "syn received" }
             synReceived(packet)
         } else {
-            channel!!.receivePacket(packet)
-//            val utpPacket = UtpPacketUtils.extractUtpPacket(packet)
-//            val triplet = connectionIds.get(utpPacket.connectionId)
-//            triplet?.channel?.receivePacket(packet)
+            connectionIds[utpPacket.connectionId]!!.channel!!.receivePacket(packet)
         }
-
-
-        //If the packet is at least 20 bytes in length (the minimum UTP header size)
-        //We assume it's a UTP Packet and try to establish a connection
-        /*if (packet.length >= 20) {
-            val utpPacket = UTPPacket(packet)
-            logger.debug {
-                "Received UTP packet of type ${utpPacket.type} (${packet.length} B) " +
-                    "from ${packet.address.hostAddress}:${packet.port}"
-            }
-            when (utpPacket.type) {
-                UTPSocket.ST_SYN.toInt() -> {
-                    scope.launch {
-                        val connectionIDSendBytes: ByteArray = utpPacket.connectionID
-                        val connectionIDReceiveBytes = ByteArray(2)
-                        val temp = HelperClass.intToBytes(
-                            HelperClass.bytesToInt(
-                                connectionIDSendBytes
-                            ) + 1
-                        )
-                        connectionIDReceiveBytes[0] = temp[2]
-                        connectionIDReceiveBytes[1] = temp[3]
-                        val secnumber = 0
-                        //Now we try to confirm the connection, this will involve sending a connection confirm packet
-                        //and waiting for an ACK (similar to TCP's 3-way handshake). If we are unsuccessful,
-                        //we'll loop back and wait for incoming packets again
-                        //Now we try to confirm the connection, this will involve sending a connection confirm packet
-                        //and waiting for an ACK (similar to TCP's 3-way handshake). If we are unsuccessful,
-                        //we'll loop back and wait for incoming packets again
-                        try {
-                            utpSocket =
-                                UTPSocket(
-                                    socket,
-                                    utpPacket.address,
-                                    utpPacket.port,
-                                    connectionIDSendBytes,
-                                    connectionIDReceiveBytes,
-                                    secnumber
-                                )
-                            utpSocket!!.initializeReceiver()
-                        } catch (e: SocketTimeoutException) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-                else -> {
-                    utpSocket!!.packetBuffer.put(utpPacket)
-                    System.out.println("asdf")
-                }
-            }
-        }*/
     }
 
-
-    /*
-	 * handles syn packet.
-	 */
     private fun synReceived(packet: DatagramPacket?) {
-//        if (handleDoubleSyn(packet)) {
-//            return
-//        }
+        if (handleDoubleSyn(packet)) {
+            return
+        }
         if (packet != null) {
-            channel = UtpSocketChannel.open(socket)
-            channel!!.receivePacket(packet)
-            registerChannel(channel!!)
+            val channel = UtpSocketChannel.open(socket)
+            channel.receivePacket(packet)
+            registerChannel(channel)
 
-            val readFuture: UtpReadFuture = channel!!.read { data: ByteArray ->
+            val readFuture: UtpReadFuture = channel.read { data: ByteArray ->
                 val sourceAddress = IPv4Address(packet.address.hostAddress, packet.port)
                 logger.debug("Received UTP file (${data.size} B) from $sourceAddress")
                 logger.debug { "Data ${data.size}" }
@@ -187,12 +111,6 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
                 readFuture.block()
                 logger.debug("Done blocking readFuture")
             }
-
-            /* Collision in Connection ids or failed to ack.
-			 * Ignore Syn Packet and let other side handle the issue. */
-//            if (!registered) {
-//                utpChannel = null
-//            }
         }
     }
 
@@ -202,8 +120,8 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
     private fun handleDoubleSyn(packet: DatagramPacket?): Boolean {
         val pkt = UtpPacketUtils.extractUtpPacket(packet)
         var connId = pkt.connectionId
-        connId = (connId and 0xFFFF) + 1
-        val triplet: ConnectionIdTriplet? = connectionIds.get(connId)
+        connId = (connId + 1).toShort()
+        val triplet: ConnectionIdTriplet? = connectionIds[connId]
         if (triplet != null) {
             triplet.channel.receivePacket(packet)
             return true
@@ -211,27 +129,24 @@ class UTPEndpoint : Endpoint<IPv4Address>() {
         return false
     }
 
-    /*
-	 * registers a channel.
-	 */
     private fun registerChannel(channel: UtpSocketChannel): Boolean {
-        val triplet = ConnectionIdTriplet(
-            channel, channel.connectionIdReceiving, channel.connectionIdSending
-        )
+        val triplet =
+            ConnectionIdTriplet(channel, channel.connectionIdReceiving, channel.connectionIdSending)
         if (isChannelRegistrationNecessary(channel)) {
-            connectionIds.put((channel.connectionIdReceiving and 0xFFFF), triplet)
+            connectionIds[channel.connectionIdReceiving] = triplet
             return true
         }
 
         /* Connection id collision found or not been able to ack.
-		 *  ignore this syn packet */return false
+		 *  ignore this syn packet */
+        return false
     }
 
     /*
 	 * true if channel reg. is required.
 	 */
     private fun isChannelRegistrationNecessary(channel: UtpSocketChannel): Boolean {
-        return (connectionIds.get(channel.connectionIdReceiving) == null
+        return (connectionIds[channel.connectionIdReceiving] == null
             && channel.state != UtpSocketState.SYN_ACKING_FAILED)
     }
 

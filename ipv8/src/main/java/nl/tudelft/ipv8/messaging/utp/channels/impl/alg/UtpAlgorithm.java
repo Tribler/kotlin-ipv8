@@ -1,17 +1,3 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.channels.impl.alg;
 
 import java.net.DatagramPacket;
@@ -21,7 +7,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpTimestampedPacketDTO;
-import nl.tudelft.ipv8.messaging.utp.channels.impl.write.UTPWritingRunnableLoggerKt;
 import nl.tudelft.ipv8.messaging.utp.data.MicroSecondsTimeStamp;
 import nl.tudelft.ipv8.messaging.utp.data.SelectiveAckHeaderExtension;
 import nl.tudelft.ipv8.messaging.utp.data.UtpHeaderExtension;
@@ -69,7 +54,7 @@ public class UtpAlgorithm {
         rtt = MINIMUM_TIMEOUT_MILLIS * 2;
         timeStamper = timestamper;
         buffer = new OutPacketBuffer(timestamper);
-        buffer.setRemoteAdress(addr);
+        buffer.setRemoteAddress(addr);
         timeStampNow = timeStamper.timeStamp();
     }
 
@@ -79,7 +64,7 @@ public class UtpAlgorithm {
      * @param pair packet with the meta data.
      */
     public void ackReceived(UtpTimestampedPacketDTO pair) {
-        int seqNrToAck = pair.utpPacket().getAckNumber() & 0xFFFF;
+        short seqNrToAck = pair.utpPacket().getAckNumber();
         UTPAlgorithmLoggerKt.getLogger().debug("Received ACK " + pair.utpPacket().toString());
         timeStampNow = timeStamper.timeStamp();
         lastAckReceived = timeStampNow;
@@ -87,6 +72,7 @@ public class UtpAlgorithm {
         updateAdvertisedWindowSize(advertisedWindow);
         int packetSizeJustAcked = buffer.markPacketAcked(seqNrToAck, timeStampNow,
             UtpAlgConfiguration.AUTO_ACK_SMALLER_THAN_ACK_NUMBER);
+        UTPAlgorithmLoggerKt.getLogger().debug("packetSizeJustAcked " + packetSizeJustAcked);
         if (packetSizeJustAcked > 0) {
             updateRtt(timeStampNow, seqNrToAck);
             updateWindow(pair.utpPacket(), timeStampNow, packetSizeJustAcked, pair.utpTimeStamp());
@@ -115,11 +101,11 @@ public class UtpAlgorithm {
                         // thats why we start with j=2. most significant bit is index 7, j would be 9 then.
                         int sackSeqNr = i * 8 + j + seqNrToAck;
                         // sackSeqNr can overflow too !!
-                        if (sackSeqNr > UnsignedTypesUtil.MAX_USHORT) {
-                            sackSeqNr -= UnsignedTypesUtil.MAX_USHORT;
+                        if (sackSeqNr > Short.MAX_VALUE) {
+                            sackSeqNr += UnsignedTypesUtil.MAX_USHORT;
                         }
                         // dont ack smaller seq numbers in case of Selective ack !!!!!
-                        packetSizeJustAcked = buffer.markPacketAcked(sackSeqNr, timeStampNow, false);
+                        packetSizeJustAcked = buffer.markPacketAcked((short) sackSeqNr, timeStampNow, false);
                         if (packetSizeJustAcked > 0 && !windowAlreadyUpdated) {
                             windowAlreadyUpdated = true;
                             updateRtt(timeStampNow, sackSeqNr);
@@ -184,7 +170,7 @@ public class UtpAlgorithm {
             maxWindow = 0;
         }
 
-        buffer.setResendtimeOutMicros(getTimeOutMicros());
+        buffer.setResendTimeOutMicros(getTimeOutMicros());
 
         if (maxWindow == 0) {
             lastZeroWindow = timeStampNow;
@@ -372,11 +358,11 @@ public class UtpAlgorithm {
      * sets the current ack position based on the sequence number
      */
     public void initiateAckPosition(int sequenceNumber) {
-        if (sequenceNumber == 0) {
-            throw new IllegalArgumentException("sequence number cannot be 0");
+        if (sequenceNumber == Short.MIN_VALUE) {
+            throw new IllegalArgumentException("sequence number cannot be Short.MIN_VALUE");
         }
-        if (sequenceNumber == 1) {
-            currentAckPosition = (int) UnsignedTypesUtil.MAX_USHORT;
+        if (sequenceNumber == Short.MIN_VALUE + 1) {
+            currentAckPosition = Short.MAX_VALUE;
         } else {
             currentAckPosition = sequenceNumber - 1;
         }
@@ -408,15 +394,6 @@ public class UtpAlgorithm {
 
     private boolean continueImmediately(long timeOutInMicroSeconds, long oldestTimeStamp) {
         return timeOutInMicroSeconds < 0 && (oldestTimeStamp != 0);
-    }
-
-    /**
-     * terminates.
-     */
-    public void end(int bytesSend, boolean successfull) {
-        if (successfull) {
-//            log.debug("Total packets send: " + totalPackets + ", Total Packets Resend: " + resendedPackets);
-        }
     }
 
     /**

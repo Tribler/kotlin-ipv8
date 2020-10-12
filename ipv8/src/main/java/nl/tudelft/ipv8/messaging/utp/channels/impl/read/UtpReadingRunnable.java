@@ -1,17 +1,3 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.channels.impl.read;
 
 import java.io.ByteArrayOutputStream;
@@ -20,22 +6,14 @@ import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import nl.tudelft.ipv8.messaging.utp.channels.impl.MyQueue;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpSocketChannelImpl;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpTimestampedPacketDTO;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.alg.UtpAlgConfiguration;
 import nl.tudelft.ipv8.messaging.utp.data.MicroSecondsTimeStamp;
 import nl.tudelft.ipv8.messaging.utp.data.SelectiveAckHeaderExtension;
 import nl.tudelft.ipv8.messaging.utp.data.UtpPacket;
-import nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil;
 
-/**
- * Reads incoming data.
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public class UtpReadingRunnable extends Thread implements Runnable {
-    private static final int PACKET_DIFF_WARP = 50000;
     private final ByteArrayOutputStream bos = new ByteArrayOutputStream();
     private UtpSocketChannelImpl channel;
     private SkippedPacketBuffer skippedBuffer = new SkippedPacketBuffer();
@@ -67,8 +45,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
         UTPReadingRunnableLoggerKt.getLogger().debug("Starting reading");
         isRunning = true;
         IOException exp = null;
-        /*BlockingQueue<UtpTimestampedPacketDTO>*/
-        MyQueue queue = channel.getReadingQueue();
+        BlockingQueue<UtpTimestampedPacketDTO> queue = channel.getReadingQueue();
         while (continueReading()) {
             UTPReadingRunnableLoggerKt.getLogger().debug("Getting data from queue");
             try {
@@ -78,7 +55,6 @@ public class UtpReadingRunnable extends Thread implements Runnable {
                 if (timestampedPair != null) {
                     UTPReadingRunnableLoggerKt.getLogger().debug("Got data from queue, seq=" + timestampedPair.utpPacket().getSequenceNumber());
                     currentPackedAck++;
-//                    UTPReadingRunnableLoggerKt.getLogger().debug("Seq: " + (timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF));
                     lastPackedReceived = timestampedPair.stamp();
                     if (isLastPacket(timestampedPair)) {
                         gotLastPacket = true;
@@ -115,11 +91,11 @@ public class UtpReadingRunnable extends Thread implements Runnable {
                 exp = ioe;
                 exp.printStackTrace();
                 exceptionOccured = true;
-            }/* catch (InterruptedException iexp) {
+            } catch (InterruptedException iexp) {
                 UTPReadingRunnableLoggerKt.getLogger().debug("Exception 2");
                 iexp.printStackTrace();
                 exceptionOccured = true;
-            }*/ catch (ArrayIndexOutOfBoundsException aexp) {
+            } catch (ArrayIndexOutOfBoundsException aexp) {
                 UTPReadingRunnableLoggerKt.getLogger().debug("Exception 3");
                 aexp.printStackTrace();
                 exceptionOccured = true;
@@ -157,15 +133,15 @@ public class UtpReadingRunnable extends Thread implements Runnable {
             lastPayloadLength = payloadLength;
             totalPayloadLength += payloadLength;
             Queue<UtpTimestampedPacketDTO> packets = skippedBuffer.getAllUntillNextMissing();
-            int lastSeqNumber = 0;
+            short lastSeqNumber = 0;
             if (packets.isEmpty()) {
-                lastSeqNumber = timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF;
+                lastSeqNumber = timestampedPair.utpPacket().getSequenceNumber();
             }
             UtpPacket lastPacket = null;
             for (UtpTimestampedPacketDTO p : packets) {
                 bos.write(p.utpPacket().getPayload());
                 payloadLength += p.utpPacket().getPayload().length;
-                lastSeqNumber = p.utpPacket().getSequenceNumber() & 0xFFFF;
+                lastSeqNumber = p.utpPacket().getSequenceNumber();
                 lastPacket = p.utpPacket();
             }
             skippedBuffer.reindex(lastSeqNumber);
@@ -186,7 +162,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
             if (ackThisPacket()) {
                 channel.ackPacket(timestampedPair.utpPacket(), getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
             } else {
-                channel.setAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
+                channel.setAckNumber(timestampedPair.utpPacket().getSequenceNumber());
             }
             bos.write(timestampedPair.utpPacket().getPayload());
             totalPayloadLength += timestampedPair.utpPacket().getPayload().length;
@@ -211,8 +187,8 @@ public class UtpReadingRunnable extends Thread implements Runnable {
     }
 
     private void handleUnexpectedPacket(UtpTimestampedPacketDTO timestampedPair) throws IOException {
-        int expected = getExpectedSeqNr();
-        int seqNr = timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF;
+        short expected = getExpectedSeqNr();
+        short seqNr = timestampedPair.utpPacket().getSequenceNumber();
         if (skippedBuffer.isEmpty()) {
             skippedBuffer.setExpectedSequenceNumber(expected);
         }
@@ -220,7 +196,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
         // but buffer can receive 65xxx, which already has been acked, since seq numbers wrapped.
         // current implementation puts this wrongly into the buffer. it should go in the else block
         // possible fix: alreadyAcked = expected > seqNr || seqNr - expected > CONSTANT;
-        boolean alreadyAcked = expected > seqNr || seqNr - expected > PACKET_DIFF_WARP;
+        boolean alreadyAcked = expected > seqNr;
 
         boolean saneSeqNr = expected == skippedBuffer.getExpectedSequenceNumber();
         if (saneSeqNr && !alreadyAcked) {
@@ -242,16 +218,16 @@ public class UtpReadingRunnable extends Thread implements Runnable {
      * @param utpPacket packet
      */
     public boolean isPacketExpected(UtpPacket utpPacket) {
-        int seqNumberFromPacket = utpPacket.getSequenceNumber() & 0xFFFF;
+        short seqNumberFromPacket = utpPacket.getSequenceNumber();
         return getExpectedSeqNr() == seqNumberFromPacket;
     }
 
-    private int getExpectedSeqNr() {
-        int ackNumber = channel.getAckNumber();
-        if (ackNumber == UnsignedTypesUtil.MAX_USHORT) {
+    private short getExpectedSeqNr() {
+        short ackNumber = channel.getAckNumber();
+        if (ackNumber == Short.MAX_VALUE) {
             return 1;
         }
-        return ackNumber + 1;
+        return (short) (ackNumber + 1);
     }
 
     private boolean hasSkippedPackets() {
@@ -263,8 +239,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
     }
 
     private boolean continueReading() {
-        return !graceFullInterrupt && !exceptionOccured
-            && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
+        return !graceFullInterrupt && !exceptionOccured && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
     }
 
     private boolean timeAwaitedAfterLastPacket() {

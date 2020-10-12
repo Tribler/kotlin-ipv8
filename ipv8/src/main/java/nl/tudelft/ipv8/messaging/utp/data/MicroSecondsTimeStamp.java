@@ -1,17 +1,3 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.data;
 
 import nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil;
@@ -20,11 +6,6 @@ import nl.tudelft.ipv8.messaging.utp.data.bytes.exceptions.ByteOverflowException
 import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.MAX_UINT;
 import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.longToUint;
 
-/**
- * Implements micro second accuracy timestamps for uTP headers and to measure time elapsed.
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public class MicroSecondsTimeStamp {
 
     private static long initDateMillis = System.currentTimeMillis();
@@ -62,8 +43,6 @@ public class MicroSecondsTimeStamp {
     /**
      * calculates the utp Difference of timestamps (this - other)
      *
-     * @param thisTimeStamp
-     * @param othertimestamp
      * @return difference.
      */
     public int utpDifference(int thisTimeStamp, int othertimestamp) {
@@ -78,7 +57,6 @@ public class MicroSecondsTimeStamp {
         return longToUint(differenceL);
     }
 
-
     /**
      * @return timestamp with micro second resulution
      */
@@ -88,18 +66,4 @@ public class MicroSecondsTimeStamp {
         long deltaMs = (currentNs - startNs) / 1000;
         return (initDateMillis * 1000 + deltaMs);
     }
-
-
-    public long getBegin() {
-        return (initDateMillis * 1000);
-    }
-
-    public long getStartNs() {
-        return startNs;
-    }
-
-    public long getInitDateMs() {
-        return initDateMillis;
-    }
-
 }

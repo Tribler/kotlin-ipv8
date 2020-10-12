@@ -1,17 +1,3 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.data;
 
 import java.util.ArrayList;
@@ -22,16 +8,11 @@ import nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil;
 import static nl.tudelft.ipv8.messaging.utp.data.UtpPacketUtils.DEF_HEADER_LENGTH;
 import static nl.tudelft.ipv8.messaging.utp.data.UtpPacketUtils.joinByteArray;
 
-/**
- * uTP Package
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public class UtpPacket {
 
     private byte typeVersion;
     private byte firstExtension;
-    private int connectionId;
+    private short connectionId;
     private int timestamp;
     private int timestampDifference;
     private int windowSize;
@@ -69,11 +50,11 @@ public class UtpPacket {
         this.typeVersion = typeVersion;
     }
 
-    public int getConnectionId() {
+    public short getConnectionId() {
         return connectionId;
     }
 
-    public void setConnectionId(int connectionId) {
+    public void setConnectionId(short connectionId) {
         this.connectionId = connectionId;
     }
 
@@ -117,15 +98,10 @@ public class UtpPacket {
         this.ackNumber = ackNumber;
     }
 
-    /**
-     * Returns a byte array version of this packet.
-     */
     public byte[] toByteArray() {
-
-        if (!hasExtensions()) {
+        if (noExtensions()) {
             return joinByteArray(getExtensionlessByteArray(), getPayload());
         }
-
 
         int offset = DEF_HEADER_LENGTH;
         int headerLength = offset + getTotalLengthOfExtensions();
@@ -145,19 +121,23 @@ public class UtpPacket {
     }
 
     private byte[] getExtensionlessByteArray() {
-        return new byte[]{typeVersion, firstExtension, (byte) (((short) connectionId) >> 8), (byte) (connectionId),
+        return new byte[]{
+            typeVersion,
+            firstExtension,
+            (byte) (connectionId >> 8), (byte) (connectionId),
             (byte) (timestamp >> 24), (byte) (timestamp >> 16), (byte) (timestamp >> 8), (byte) (timestamp),
             (byte) (timestampDifference >> 24), (byte) (timestampDifference >> 16), (byte) (timestampDifference >> 8), (byte) (timestampDifference),
             (byte) (windowSize >> 24), (byte) (windowSize >> 16), (byte) (windowSize >> 8), (byte) (windowSize),
-            (byte) (sequenceNumber >> 8), (byte) (sequenceNumber), (byte) (ackNumber >> 8), (byte) (ackNumber),};
+            (byte) (sequenceNumber >> 8), (byte) (sequenceNumber), (byte) (ackNumber >> 8), (byte) (ackNumber)
+        };
     }
 
-    private boolean hasExtensions() {
-        return !((extensions == null || extensions.length == 0) && firstExtension == 0);
+    private boolean noExtensions() {
+        return (extensions == null || extensions.length == 0) && firstExtension == 0;
     }
 
     private int getTotalLengthOfExtensions() {
-        if (!hasExtensions()) {
+        if (noExtensions()) {
             return 0;
         }
         int length = 0;
@@ -189,7 +169,6 @@ public class UtpPacket {
         if (array == null) {
             return;
         }
-
         typeVersion = array[0];
         firstExtension = array[1];
         connectionId = UnsignedTypesUtil.bytesToUshort(array[2], array[3]);
@@ -213,28 +192,18 @@ public class UtpPacket {
         int extensionStartIndex = 20;
         int totalLength = 0;
 
-        ArrayList<UtpHeaderExtension> list = new ArrayList<UtpHeaderExtension>();
+        ArrayList<UtpHeaderExtension> list = new ArrayList<>();
         UtpHeaderExtension extension = UtpHeaderExtension.resolve(extensionType);
 
-        /*while*/ if (extension != null) {
-            int extensionLength = array[extensionStartIndex + 1] & 0xFF;
+        if (extension != null) {
+            int extensionLength = array[extensionStartIndex + 1] + 128;
             byte[] bitmask = new byte[extensionLength];
-            UtpPacketLoggerKt.getLogger().debug("array: " + Arrays.toString(bitmask));
+            UtpPacketLoggerKt.getLogger().debug("extension: " + Arrays.toString(array));
             System.arraycopy(array, extensionStartIndex + 2, bitmask, 0, extensionLength);
             extension.setNextExtension(array[extensionStartIndex]);
             extension.setBitMask(bitmask);
             list.add(extension);
             totalLength = extensionLength + 2;
-            int nextPossibleExtensionIndex = extensionLength + 2 + extensionStartIndex;
-            // packet is enough big
-            if (array.length > nextPossibleExtensionIndex) {
-                UtpPacketLoggerKt.getLogger().debug("NEXT EXTENSION");
-                extension = UtpHeaderExtension.resolve(array[nextPossibleExtensionIndex]);
-                extensionStartIndex = nextPossibleExtensionIndex;
-            } else { // packet end reached.
-                UtpPacketLoggerKt.getLogger().debug("EXTENSION TO NULL");
-                extension = null;
-            }
         }
 
         UtpHeaderExtension[] extensions = list.toArray(new UtpHeaderExtension[list.size()]);
@@ -275,21 +244,19 @@ public class UtpPacket {
 
     @Override
     public String toString() {
-        String ret = "[Type: " + (typeVersion & 0xFF) + "] " +
+        StringBuilder ret = new StringBuilder("[Type: " + (typeVersion & 0xFF) + "] " +
             "[FirstExt: " + (firstExtension & 0xFF) + "] " +
-            "[ConnId: " + (connectionId & 0xFFFF) + "] " +
+            "[ConnId: " + connectionId + "] " +
             "[Wnd: " + (windowSize & 0xFFFFFFFF) + " " +
-            "[Seq: " + (sequenceNumber & 0xFFFF) + "] " +
-            "[Ack: " + (ackNumber & 0xFFFF) + "] ";
+            "[Seq: " + sequenceNumber + "] " +
+            "[Ack: " + ackNumber + "] ");
 
         if (extensions != null) {
             for (int i = 0; i < extensions.length; i++) {
-                ret += "[Ext_" + i + ": " + (extensions[i].getNextExtension() & 0xFF) + " " + extensions[i].getLength() + "] ";
+                ret.append("[Ext_").append(i).append(": ").append(extensions[i].getNextExtension() & 0xFF).append(" ").append(extensions[i].getLength()).append("] ");
             }
         }
-        return ret;
-
-
+        return ret.toString();
     }
 
 

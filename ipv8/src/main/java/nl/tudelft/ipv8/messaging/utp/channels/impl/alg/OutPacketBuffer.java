@@ -1,22 +1,7 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.channels.impl.alg;
 
 import java.net.DatagramPacket;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -26,27 +11,20 @@ import nl.tudelft.ipv8.messaging.utp.data.MicroSecondsTimeStamp;
 import nl.tudelft.ipv8.messaging.utp.data.UtpPacketUtils;
 import nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil;
 
-/*Logging*/
-
-/**
- * Out buffer that handles outgoing packets.
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public class OutPacketBuffer {
-
     private static int size = 3000;
     private ArrayList<UtpTimestampedPacketDTO> buffer = new ArrayList<>(size);
     private int bytesOnFly = 0;
     private long resendTimeOutMicros;
     private MicroSecondsTimeStamp timeStamper;
-    private SocketAddress addr;
+    private SocketAddress address;
     private long currentTime;
+
     public OutPacketBuffer(MicroSecondsTimeStamp stamper) {
         timeStamper = stamper;
     }
 
-    public void setResendtimeOutMicros(long timeOutMicroSec) {
+    public void setResendTimeOutMicros(long timeOutMicroSec) {
         this.resendTimeOutMicros = timeOutMicroSec;
     }
 
@@ -73,11 +51,11 @@ public class OutPacketBuffer {
      * @param ackSmallerThanThisSeq if true, ack all packets lower than this sequence number, if false, only ack this sequence number.
      * @return bytes acked. negative there was no packed with that sequence number.
      */
-    public int markPacketAcked(int seqNrToAck, long timestamp, boolean ackSmallerThanThisSeq) {
+    public int markPacketAcked(short seqNrToAck, long timestamp, boolean ackSmallerThanThisSeq) {
         int bytesJustAcked = -1;
         UtpTimestampedPacketDTO pkt = findPacket(seqNrToAck);
         if (pkt != null) {
-            if ((pkt.utpPacket().getSequenceNumber() & 0xFFFF) == seqNrToAck) {
+            if (pkt.utpPacket().getSequenceNumber() == seqNrToAck) {
                 if (!pkt.isPacketAcked()) {
                     int payloadLength = pkt.utpPacket().getPayload() == null ? 0
                         : pkt.utpPacket().getPayload().length;
@@ -87,7 +65,7 @@ public class OutPacketBuffer {
                 pkt.setPacketAcked(true);
                 if (ackSmallerThanThisSeq) {
                     for (UtpTimestampedPacketDTO toAck : buffer) {
-                        if ((toAck.utpPacket().getSequenceNumber() & 0xFFFF) == seqNrToAck) {
+                        if (toAck.utpPacket().getSequenceNumber() == seqNrToAck) {
                             break;
                         } else {
                             toAck.setPacketAcked(true);
@@ -104,21 +82,20 @@ public class OutPacketBuffer {
     private UtpTimestampedPacketDTO findPacket(int seqNrToAck) {
 
         if (!buffer.isEmpty()) {
-            int firstSeqNr = buffer.get(0).utpPacket().getSequenceNumber() & 0xFFFF;
+            short firstSeqNr = buffer.get(0).utpPacket().getSequenceNumber();
             int index = seqNrToAck - firstSeqNr;
             if (index < 0) {
                 // overflow in seq nr
                 index += UnsignedTypesUtil.MAX_USHORT;
             }
 
-            if (index < buffer.size()
-                && (buffer.get(index).utpPacket().getSequenceNumber() & 0xFFFF) == seqNrToAck) {
+            if (index < buffer.size() && (buffer.get(index).utpPacket().getSequenceNumber()) == seqNrToAck) {
                 return buffer.get(index);
             } else {
                 // bug -> search sequentially until fixed
                 for (int i = 0; i < buffer.size(); i++) {
                     UtpTimestampedPacketDTO pkt = buffer.get(i);
-                    if ((pkt.utpPacket().getSequenceNumber() & 0xFFFF) == seqNrToAck) {
+                    if ((pkt.utpPacket().getSequenceNumber()) == seqNrToAck) {
                         return pkt;
                     }
                 }
@@ -155,7 +132,6 @@ public class OutPacketBuffer {
      *
      * @param maxResend maximum number of packets to resend.
      * @return Queue with all packets that must be resend.
-     * @throws SocketException
      */
     public Queue<UtpTimestampedPacketDTO> getPacketsToResend(int maxResend) {
         currentTime = timeStamper.timeStamp();
@@ -192,7 +168,7 @@ public class OutPacketBuffer {
         // 		 ukackedPacket.datagram.getData()[x + 1] = newtimestamp[1]
         // 		 ukackedPacket.datagram.getData()[x + 2] = newtimestamp[2]
         // 		 ukackedPacket.datagram.getData()[x + 3] = newtimestamp[3]
-        unackedPkt.setDgPacket(new DatagramPacket(newBytes, newBytes.length, addr));
+        unackedPkt.setDgPacket(new DatagramPacket(newBytes, newBytes.length, address));
         unackedPkt.setStamp(currentTime);
     }
 
@@ -253,8 +229,8 @@ public class OutPacketBuffer {
         return -1;
     }
 
-    public void setRemoteAdress(SocketAddress addr) {
-        this.addr = addr;
+    public void setRemoteAddress(SocketAddress address) {
+        this.address = address;
 
     }
 

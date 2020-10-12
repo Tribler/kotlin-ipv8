@@ -1,17 +1,3 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.channels.impl.read;
 
 import java.io.IOException;
@@ -27,34 +13,28 @@ import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpTimestampedPacketDTO;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.alg.UtpAlgConfiguration;
 import nl.tudelft.ipv8.messaging.utp.data.SelectiveAckHeaderExtension;
 
-import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.MAX_USHORT;
-
-/**
- * This buffer handles packets that arrived out of order.
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public class SkippedPacketBuffer {
 
     private static final int SIZE = 2000;
     private UtpTimestampedPacketDTO[] buffer = new UtpTimestampedPacketDTO[SIZE];
-    private int expectedSequenceNumber = 0;
+    private short expectedSequenceNumber = Short.MIN_VALUE;
     private int elementCount = 0;
-    private int debug_lastSeqNumber;
-    private int debug_lastPosition;
+    private short debug_lastSeqNumber;
+    private short debug_lastPosition;
 
     /**
      * puts the packet in the buffer.
      *
      * @param pkt the packet with meta data.
-     * @throws IOException
      */
     public void bufferPacket(UtpTimestampedPacketDTO pkt) throws IOException {
-        int sequenceNumber = pkt.utpPacket().getSequenceNumber() & 0xFFFF;
-        int position = sequenceNumber - expectedSequenceNumber;
+        short sequenceNumber = pkt.utpPacket().getSequenceNumber();
+        short position;
         debug_lastSeqNumber = sequenceNumber;
-        if (position < 0) {
+        if (sequenceNumber - expectedSequenceNumber < 0) {
             position = mapOverflowPosition(sequenceNumber);
+        } else {
+            position = (short) (sequenceNumber - expectedSequenceNumber);
         }
         debug_lastPosition = position;
         elementCount++;
@@ -69,15 +49,15 @@ public class SkippedPacketBuffer {
 
     }
 
-    private int mapOverflowPosition(int sequenceNumber) {
-        return (int) (MAX_USHORT - expectedSequenceNumber + sequenceNumber);
+    private short mapOverflowPosition(int sequenceNumber) {
+        return (short) (Short.MAX_VALUE - expectedSequenceNumber + sequenceNumber);
     }
 
-    public int getExpectedSequenceNumber() {
+    public short getExpectedSequenceNumber() {
         return expectedSequenceNumber;
     }
 
-    public void setExpectedSequenceNumber(int seq) {
+    public void setExpectedSequenceNumber(short seq) {
         this.expectedSequenceNumber = seq;
     }
 
@@ -144,11 +124,11 @@ public class SkippedPacketBuffer {
     }
 
     public void reindex(int lastSeqNumber) throws IOException {
-        int expectedSequenceNumber = 0;
-        if (lastSeqNumber == MAX_USHORT) {
+        short expectedSequenceNumber;
+        if (lastSeqNumber == Short.MAX_VALUE) {
             expectedSequenceNumber = 1;
         } else {
-            expectedSequenceNumber = lastSeqNumber + 1;
+            expectedSequenceNumber = (short) (lastSeqNumber + 1);
         }
         setExpectedSequenceNumber(expectedSequenceNumber);
         UtpTimestampedPacketDTO[] oldBuffer = buffer;
@@ -193,7 +173,7 @@ public class SkippedPacketBuffer {
                 if (buffer[i] == null) {
                     seq = "_; ";
                 } else {
-                    seq = (buffer[i].utpPacket().getSequenceNumber() & 0xFFFF) + "; ";
+                    seq = buffer[i].utpPacket().getSequenceNumber() + "; ";
                 }
                 bbuffer.put((i + " -> " + seq).getBytes());
                 if (i % 50 == 0) {

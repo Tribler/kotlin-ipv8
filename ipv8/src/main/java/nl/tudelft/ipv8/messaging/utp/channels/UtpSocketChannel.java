@@ -1,17 +1,3 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.channels;
 
 import java.io.IOException;
@@ -37,17 +23,11 @@ import nl.tudelft.ipv8.messaging.utp.data.UtpPacketUtils;
 import static nl.tudelft.ipv8.messaging.utp.channels.UtpSocketState.CLOSED;
 import static nl.tudelft.ipv8.messaging.utp.channels.UtpSocketState.SYN_SENT;
 import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.MAX_USHORT;
-import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.longToUshort;
 
-/**
- * Interface for a Socket
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public abstract class UtpSocketChannel implements UtpPacketRecievable {
 
     /* Sequencing begin */
-    protected static int DEF_SEQ_START = 1;
+    protected static short DEF_SEQ_START = Short.MIN_VALUE + 1;
     /* lock for the socket state* */
     protected final ReentrantLock stateLock = new ReentrantLock();
     /* timestamping utility */
@@ -57,7 +37,7 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
      */
     protected SocketAddress remoteAddress;
     /* current ack Number */
-    protected int ackNumber;
+    protected short ackNumber;
     /* reference to the underlying UDP Socket */
     protected DatagramSocket dgSocket;
     /*
@@ -69,17 +49,16 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
     /* Current state of the socket */
     protected volatile UtpSocketState state = null;
     /* ID for outgoing packets */
-    private long connectionIdSending;
+    private short connectionIdSending;
     /* current sequenceNumber */
-    private int sequenceNumber;
+    private short sequenceNumber;
     /* ID for incoming packets */
-    private int connectionIdReceiving;
+    private short connectionIdReceiving;
 
     /**
      * Opens a new Socket and binds it to any available port
      *
      * @return {@link UtpSocketChannel}
-     * @throws IOException see {@link DatagramSocket#DatagramSocket()}
      */
     public static UtpSocketChannel open(DatagramSocket socket) {
         UtpSocketChannelImpl c = new UtpSocketChannelImpl();
@@ -91,7 +70,6 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
     /**
      * Connects this Socket to the specified address
      *
-     * @param address
      * @return {@link UtpConnectFuture}
      */
     public UtpConnectFuture connect(SocketAddress address) {
@@ -103,21 +81,23 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
                 e.printStackTrace();
                 return null;
             }
-            /* fill packet, set initial variables and send packet */
-            setRemoteAddress(address);
-            setupConnectionId();
-            setSequenceNumber(DEF_SEQ_START);
+            try {
+                /* fill packet, set initial variables and send packet */
+                setRemoteAddress(address);
+                setupConnectionId();
+                setSequenceNumber(DEF_SEQ_START);
 
-            UtpPacket synPacket = UtpPacketUtils.createSynPacket();
-            synPacket
-                .setConnectionId(longToUshort(getConnectionIdReceiving()));
-            synPacket.setTimestamp(timeStamper.utpTimeStamp());
-            sendPacket(synPacket);
-            setState(SYN_SENT);
-            printState("[Syn send] ");
+                UtpPacket synPacket = UtpPacketUtils.createSynPacket();
+                synPacket.setConnectionId(getConnectionIdReceiving());
+                synPacket.setTimestamp(timeStamper.utpTimeStamp());
+                sendPacket(synPacket);
+                setState(SYN_SENT);
 
-            incrementSequenceNumber();
-            startConnectionTimeOutCounter(synPacket);
+                incrementSequenceNumber();
+                startConnectionTimeOutCounter(synPacket);
+            } catch (IOException exp) {
+                // DO NOTHING, let's try later with reconnect runnable
+            }
         } finally {
             stateLock.unlock();
         }
@@ -150,8 +130,13 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
     /**
      * @return The Connection ID for Outgoing Packets
      */
-    public long getConnectionIdSending() {
+    public short getConnectionIdSending() {
         return connectionIdSending;
+    }
+
+    /* set connection ID for outgoing packets */
+    protected void setConnectionIdSending(short connectionIdSending) {
+        this.connectionIdSending = connectionIdSending;
     }
 
     /**
@@ -165,18 +150,11 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
 
     public abstract boolean isWriting();
 
-    /**
-     * @return true, if this socket is connected to another socket.
-     */
-    public boolean isConnected() {
-        return getState() == UtpSocketState.CONNECTED;
-    }
-
-    public int getConnectionIdReceiving() {
+    public short getConnectionIdReceiving() {
         return connectionIdReceiving;
     }
 
-    protected void setConnectionIdReceiving(int connectionIdReceiving) {
+    protected void setConnectionIdReceiving(short connectionIdReceiving) {
         this.connectionIdReceiving = connectionIdReceiving;
     }
 
@@ -192,17 +170,17 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
         return remoteAddress;
     }
 
-    public int getAckNumber() {
+    public short getAckNumber() {
         return ackNumber;
     }
 
-    protected abstract void setAckNumber(int ackNumber);
+    protected abstract void setAckNumber(short ackNumber);
 
-    public int getSequenceNumber() {
+    public short getSequenceNumber() {
         return sequenceNumber;
     }
 
-    protected void setSequenceNumber(int sequenceNumber) {
+    protected void setSequenceNumber(short sequenceNumber) {
         this.sequenceNumber = sequenceNumber;
     }
 
@@ -210,17 +188,8 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
         return dgSocket;
     }
 
-    protected abstract void setDgSocket(DatagramSocket dgSocket);
-
     /* signal the implementation to start the reConnect Timer */
     protected abstract void startConnectionTimeOutCounter(UtpPacket synPacket);
-
-    /* debug method to print id's, seq# and ack# */
-    protected void printState(String msg) {
-        String state = "[ConnID Sending: " + connectionIdSending + "] "
-            + "[ConnID Recv: " + connectionIdReceiving + "] [SeqNr. "
-            + sequenceNumber + "] [AckNr: " + ackNumber + "]";
-    }
 
     /* implementation to cancel all operations and close the socket */
     protected abstract void abortImpl();
@@ -231,9 +200,11 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
      * to happen Seq# == 0 not possible.
      */
     protected void incrementSequenceNumber() {
-        int seqNumber = getSequenceNumber() + 1;
-        if (seqNumber > MAX_USHORT) {
-            seqNumber = 1;
+        short seqNumber;
+        if (getSequenceNumber() + 1 >= Short.MAX_VALUE) {
+            seqNumber = Short.MIN_VALUE + 1;
+        } else {
+            seqNumber = (short) (getSequenceNumber() + 1);
         }
         setSequenceNumber(seqNumber);
     }
@@ -242,9 +213,9 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
      * general methods to send packets need to be public in the impl, but also
      * need to be accessed from this class.
      */
-    protected abstract void sendPacket(UtpPacket packet);
+    protected abstract void sendPacket(UtpPacket packet) throws IOException;
 
-    protected abstract void sendPacket(DatagramPacket pkt);
+    protected abstract void sendPacket(DatagramPacket pkt) throws IOException;
 
     /*
      * sets up connection ids. incoming = rnd outgoing = incoming + 1
@@ -252,14 +223,9 @@ public abstract class UtpSocketChannel implements UtpPacketRecievable {
     private void setupConnectionId() {
         Random rnd = new Random();
         int max = (int) (MAX_USHORT - 1);
-        int rndInt = rnd.nextInt(max);
+        short rndInt = (short) (rnd.nextInt(max) + Short.MIN_VALUE);
         setConnectionIdReceiving(rndInt);
-        setConnectionIdSending(rndInt + 1);
-    }
-
-    /* set connection ID for outgoing packets */
-    protected void setConnectionIdSending(long connectionIdSending) {
-        this.connectionIdSending = connectionIdSending;
+        setConnectionIdSending((short) (rndInt + 1));
     }
 
     /**

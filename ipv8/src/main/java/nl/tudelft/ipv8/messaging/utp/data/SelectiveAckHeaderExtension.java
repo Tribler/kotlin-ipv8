@@ -1,28 +1,9 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.data;
 
 import java.util.Arrays;
 
 import static nl.tudelft.ipv8.messaging.utp.data.bytes.UnsignedTypesUtil.longToUbyte;
 
-/**
- * Selective ACK header extension.
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public class SelectiveAckHeaderExtension extends UtpHeaderExtension {
 
     /* Bit mappings */
@@ -92,7 +73,10 @@ public class SelectiveAckHeaderExtension extends UtpHeaderExtension {
         //TODO: not create a new byte array
         byte[] array = new byte[2 + bitMask.length];
         array[0] = nextExtension;
-        array[1] = longToUbyte(bitMask.length);
+        if (bitMask.length > 255) {
+            throw new RuntimeException("Bitmask too long");
+        }
+        array[1] = (byte) (bitMask.length - 128);
         System.arraycopy(bitMask, 0, array, 2, bitMask.length);
         return array;
     }

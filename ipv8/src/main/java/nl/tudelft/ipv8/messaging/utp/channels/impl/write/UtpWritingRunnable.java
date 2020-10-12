@@ -1,28 +1,12 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package nl.tudelft.ipv8.messaging.utp.channels.impl.write;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import nl.tudelft.ipv8.messaging.utp.channels.impl.MyQueue;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpSocketChannelImpl;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.UtpTimestampedPacketDTO;
 import nl.tudelft.ipv8.messaging.utp.channels.impl.alg.UtpAlgorithm;
@@ -31,11 +15,6 @@ import nl.tudelft.ipv8.messaging.utp.data.UtpPacket;
 
 import static nl.tudelft.ipv8.messaging.utp.data.UtpPacketUtils.extractUtpPacket;
 
-/**
- * Handles the writing job of a channel...
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public class UtpWritingRunnable extends Thread implements Runnable {
 
     private ByteBuffer buffer;
@@ -57,14 +36,13 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 
     @Override
     public void run() {
-        UTPWritingRunnableLoggerKt.getLogger().debug("Starting sending");
+        UTPWritingRunnableLoggerKt.getLogger().debug("Starting sending with sequence number: " + channel.getSequenceNumber());
         algorithm.initiateAckPosition(channel.getSequenceNumber());
         algorithm.setTimeStamper(timeStamper);
         algorithm.setByteBuffer(buffer);
         isRunning = true;
         IOException possibleExp = null;
         boolean exceptionOccurred = false;
-//        buffer.flip();
         while (continueSending()) {
             UTPWritingRunnableLoggerKt.getLogger().debug("New iteration: " + buffer.position());
             if (!checkForAcks()) {
@@ -87,23 +65,9 @@ public class UtpWritingRunnable extends Thread implements Runnable {
                 possibleExp = new IOException("timed out");
                 exceptionOccurred = true;
             }
-//			if(!checkForAcks()) {
-//				graceFullInterrupt = true;
-//				break;
-//			}
-//            UTPWritingRunnableLoggerKt.getLogger().debug("Almost sending: " + algorithm.canSendNextPacket() + ", " + !exceptionOccurred + ", " + !graceFullInterrupt + ", " + buffer.hasRemaining());
             while (algorithm.canSendNextPacket() && !exceptionOccurred && !graceFullInterrupt && buffer.hasRemaining()) {
-                try {
-                    DatagramPacket packet = getNextPacket();
-                    channel.sendPacket(packet);
-                } catch (IOException exp) {
-                    UTPWritingRunnableLoggerKt.getLogger().debug("Exception 2");
-                    exp.printStackTrace();
-                    graceFullInterrupt = true;
-                    possibleExp = exp;
-                    exceptionOccurred = true;
-                    break;
-                }
+                DatagramPacket packet = getNextPacket();
+                channel.sendPacket(packet);
             }
             updateFuture();
         }
@@ -112,7 +76,6 @@ public class UtpWritingRunnable extends Thread implements Runnable {
             exceptionOccurred(possibleExp);
         }
         isRunning = false;
-        algorithm.end(buffer.position(), !exceptionOccurred);
         future.finished(possibleExp, buffer.position());
         UTPWritingRunnableLoggerKt.getLogger().debug("WRITER OUT");
         channel.removeWriter();
@@ -124,8 +87,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 
 
     private boolean checkForAcks() {
-        /*BlockingQueue<UtpTimestampedPacketDTO>*/
-        MyQueue queue = channel.getWritingQueue();
+        BlockingQueue<UtpTimestampedPacketDTO> queue = channel.getWritingQueue();
         try {
             waitAndProcessAcks(queue);
         } catch (InterruptedException ie) {
@@ -134,27 +96,35 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         return true;
     }
 
-    private void waitAndProcessAcks(/*BlockingQueue<UtpTimestampedPacketDTO>*/MyQueue queue) throws InterruptedException {
+    private void waitAndProcessAcks(BlockingQueue<UtpTimestampedPacketDTO> queue) throws InterruptedException {
         long waitingTimeMicros = algorithm.getWaitingTimeMicroSeconds();
+        UTPWritingRunnableLoggerKt.getLogger().debug("1");
         UtpTimestampedPacketDTO temp = queue.poll(waitingTimeMicros, TimeUnit.MICROSECONDS);
+        UTPWritingRunnableLoggerKt.getLogger().debug("2");
         if (temp != null) {
+            UTPWritingRunnableLoggerKt.getLogger().debug("3");
             algorithm.ackReceived(temp);
             algorithm.removeAcked();
+            UTPWritingRunnableLoggerKt.getLogger().debug("4");
             if (queue.peek() != null) {
                 processAcks(queue);
             }
+            UTPWritingRunnableLoggerKt.getLogger().debug("5");
         }
     }
 
-    private void processAcks(/*BlockingQueue<UtpTimestampedPacketDTO>*/MyQueue queue) {
+    private void processAcks(BlockingQueue<UtpTimestampedPacketDTO> queue) {
         UtpTimestampedPacketDTO pair;
+        UTPWritingRunnableLoggerKt.getLogger().debug("6");
         while ((pair = queue.poll()) != null) {
+            UTPWritingRunnableLoggerKt.getLogger().debug("7");
             algorithm.ackReceived(pair);
             algorithm.removeAcked();
+            UTPWritingRunnableLoggerKt.getLogger().debug("8");
         }
     }
 
-    private DatagramPacket getNextPacket() throws IOException {
+    private DatagramPacket getNextPacket() {
         int packetSize = algorithm.sizeOfNextPacket();
         int remainingBytes = buffer.remaining();
 
@@ -186,6 +156,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
     }
 
     private boolean continueSending() {
+        UTPWritingRunnableLoggerKt.getLogger().debug("" + (!graceFullInterrupt && !allPacketsAckedSendAndAcked()) + ".... <=" + graceFullInterrupt + ", " + allPacketsAckedSendAndAcked());
         return !graceFullInterrupt && !allPacketsAckedSendAndAcked();
     }
 
