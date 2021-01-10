@@ -1,14 +1,12 @@
 package nl.tudelft.ipv8.attestation.wallet
 
-import com.google.gson.Gson
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.messaging.payload.BinMemberAuthenticationPayload
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
+import org.json.JSONObject
 import java.util.*
-import com.google.gson.JsonObject as JsonObject
 
 
 private val logger = KotlinLogging.logger {}
@@ -22,48 +20,58 @@ open class WalletCommunity : Community() {
     private val allowedAttestations = mutableMapOf<String, Array<String>>()
 
 
-    init {
-
-    }
-
-
     fun requestAttestation(
         peer: Peer,
         attributeName: String,
-        secretKey: PrivateKey,
-        metadata: String = ""
+        privateKey: PrivateKey,
+        metadata: String = "{}"
     ) {
-        val publicKey = secretKey.pub()
-        var metadata = Gson().fromJson(metadata, JsonObject::class.java)
+        val publicKey = privateKey.pub()
+        val inputMetadata = JSONObject(metadata)
+        val idFormat = inputMetadata.opt("id_format")
 
+        val metadataJson = JSONObject()
+        metadataJson.put("attribute", attributeName)
+        metadataJson.put("public_key", publicKey.keyToBin())
+        metadataJson.putOpt("id_format", idFormat)
 
-        metadata.get("attribute") ?: metadata.addProperty("attribute", attributeName)
-        metadata.get("public_key")
-            ?: metadata.addProperty("public_key", publicKey.keyToBin().toString())
-        metadata.get("id_format") ?: metadata.addProperty("id_format", "id_metadata")
-        val metadataString = metadata.toString()
+        inputMetadata.keys().forEach {
+            metadataJson.put(it, inputMetadata.get(it))
+        }
 
         val globalTime = claimGlobalTime()
-//        val auth = BinMemberAuthenticationPayload(myPeer.publicKey.keyToBin())
-        val payload = RequestAttestationPayload(metadataString)
-//        val dist = GlobalTimeDistributionPayload(globalTime)
+        val payload = RequestAttestationPayload(metadataJson.toString())
 
-        val gtimeStr = globalTime.toString()
-        this.attestationRequestCache[peer.mid + gtimeStr] = AttestationRequest(
+        val gTimeStr = globalTime.toString()
+        this.attestationRequestCache[peer.mid + gTimeStr] = AttestationRequest(
             this,
-            peer.mid + gtimeStr,
-            secretKey,
+            peer.mid + gTimeStr,
+            privateKey,
             attributeName,
-            metadata.get("id_format").toString()
+            metadataJson.get("id_format").toString()
         )
         this.allowedAttestations[peer.mid] =
-            (this.allowedAttestations[peer.mid] ?: emptyArray()) + arrayOf(gtimeStr)
+            (this.allowedAttestations[peer.mid] ?: emptyArray()) + arrayOf(gTimeStr)
 
         val packet =
             serializePacket(MessageId.ATTESTATION_REQUEST, payload, true, timestamp = globalTime)
         endpoint.send(peer, packet)
     }
 
+    suspend fun onRequestAttestation(
+        peer: Peer,
+        dist: GlobalTimeDistributionPayload,
+        payload: RequestAttestationPayload
+    ) {
+
+        val attribute = metadata.get("attribute")
+
+        val pubkeyEncoded = metadata.get("public_key").asString
+        val idFormat = metadata.get("id_format")
+        val idAlgorithm = TODO() // TODO: add schemas
+
+
+    }
 
 
     object MessageId {
