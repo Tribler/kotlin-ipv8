@@ -80,18 +80,12 @@ open class WalletCommunity : Community() {
 
 
     class AttestationRequest(
-        community: WalletCommunity,
-        mid: String,
-        key: PrivateKey,
-        name: String,
-        id_format: String
+        val community: WalletCommunity,
+        val mid: String,
+        val privateKey: PrivateKey,
+        val name: String,
+        val idFormat: String
     ) {
-        val community = community
-        val mid = mid
-        val key = key
-        val name = name
-        val id_format = id_format
-
         fun onTimeOut() {
             logger.info("Attestation Request $mid")
         }
