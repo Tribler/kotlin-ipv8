@@ -1,0 +1,16 @@
+CREATE TABLE attestations (
+    hash BLOB NOT NULL,
+    blob BLOB NOT NULL,
+    key  BLOB NOT NULL
+);
+
+getAttestation:
+INSERT INTO attestations (hash, blob, key) VALUES(?, ?, ?);
+
+getAttestationByHash:
+SELECT blob FROM attestations WHERE hash = ?;
+
+getAll:
+SELECT * FROM attestations;
+
+
