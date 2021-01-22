@@ -24,7 +24,11 @@ class Metadata(
 
     @ExperimentalStdlibApi
     override fun toString(): String {
-        return "Metadata(${this.tokenPointer.toHex()},\n${String(this.serializedJSONObject)}"
+        return "Metadata(${this.tokenPointer.toHex()},\n${this.serializedJSONObject.toString(Charsets.UTF_8)}"
+    }
+
+    override fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int): Metadata {
+        return Companion.deserialize(data, publicKey, offset)
     }
 
     companion object {

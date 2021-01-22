@@ -30,6 +30,10 @@ class Token(
         return this.previousTokenHash + this.contentHash
     }
 
+    override fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int): Token {
+        return Companion.deserialize(data, publicKey, offset)
+    }
+
     fun receiveContent(content: ByteArray): Boolean {
         contentHash = sha3_256(content)
         if (this.contentHash == contentHash) {

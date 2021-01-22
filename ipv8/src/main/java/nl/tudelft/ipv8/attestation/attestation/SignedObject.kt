@@ -1,14 +1,15 @@
 package nl.tudelft.ipv8.attestation.attestation
 
+import com.goterl.lazycode.lazysodium.interfaces.Sign
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.util.sha3_256
 
-abstract class SignedObject(privateKey: PrivateKey? = null, signature: ByteArray? = null) {
+abstract class SignedObject(val privateKey: PrivateKey? = null, signature: ByteArray? = null) {
 
     var hash = byteArrayOf()
-    lateinit var signature: ByteArray;
+    open lateinit var signature: ByteArray;
     private val crypto = defaultCryptoProvider
 
 
@@ -39,11 +40,7 @@ abstract class SignedObject(privateKey: PrivateKey? = null, signature: ByteArray
         return this.getPlaintext() + this.signature
     }
 
-    companion object {
-        fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int = 0): Any {
-            throw RuntimeException("This method must be overridden.")
-        }
-    }
+    abstract fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int = 0): SignedObject
 
     // TODO: override `equals` and `hashcode`.
 }

@@ -6,10 +6,12 @@ const val SERIALIZED_USHORT_SIZE = 2
 const val SERIALIZED_UINT_SIZE = 4
 const val SERIALIZED_ULONG_SIZE = 8
 const val SERIALIZED_LONG_SIZE = 4
+const val SERIALIZED_UBYTE_SIZE = 1
 
 const val SERIALIZED_PUBLIC_KEY_SIZE = 74
 const val HASH_SIZE = 32
 const val SIGNATURE_SIZE = 64
+const val SERIALIZED_SHA1_HASH_SIZE = 20
 
 interface Serializable {
     fun serialize(): ByteArray
@@ -88,6 +90,12 @@ fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
     return buffer.int.toLong()
 }
 
+fun deserializeUChar(buffer: ByteArray, offset: Int = 0): UByte {
+    val ubuffer = buffer.toUByteArray()
+    return  ubuffer[offset]
+
+}
+
 fun serializeVarLen(bytes: ByteArray): ByteArray {
     return serializeUInt(bytes.size.toUInt()) + bytes
 }
@@ -98,6 +106,7 @@ fun deserializeVarLen(buffer: ByteArray, offset: Int = 0): Pair<ByteArray, Int> 
         offset + SERIALIZED_UINT_SIZE + len)
     return Pair(payload, SERIALIZED_UINT_SIZE + len)
 }
+
 
 /**
  * Can only be used as the last element in a payload as it will consume the remainder of the
