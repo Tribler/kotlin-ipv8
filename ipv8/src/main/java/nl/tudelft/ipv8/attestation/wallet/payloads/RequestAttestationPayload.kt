@@ -1,20 +1,19 @@
-package nl.tudelft.ipv8.attestation.wallet
+package nl.tudelft.ipv8.attestation.wallet.payloads
 
 import nl.tudelft.ipv8.messaging.Deserializable
 import nl.tudelft.ipv8.messaging.Serializable
-import nl.tudelft.ipv8.messaging.deserializeUShort
-import nl.tudelft.ipv8.messaging.serializeUShort
+import nl.tudelft.ipv8.messaging.deserializeVarLen
+import nl.tudelft.ipv8.messaging.serializeVarLen
 import nl.tudelft.ipv8.util.hexToBytes
 
 
 // TODO: Add default payload class
 class RequestAttestationPayload(val metadata: String) : Serializable {
     private val msgId = 5
-    private val formatList = arrayOf<String>("raw")
 
 
     override fun serialize(): ByteArray {
-        return metadata.hexToBytes()
+        return serializeVarLen(metadata.toByteArray(Charsets.US_ASCII))
     }
 
     companion object Deserializer : Deserializable<RequestAttestationPayload> {
@@ -22,7 +21,9 @@ class RequestAttestationPayload(val metadata: String) : Serializable {
             buffer: ByteArray,
             offset: Int
         ): Pair<RequestAttestationPayload, Int> {
-            return Pair(RequestAttestationPayload(buffer.toString()), buffer.size)
+            val (metadata, metadataSize) = deserializeVarLen(buffer, offset)
+            return Pair(RequestAttestationPayload(metadata.toString(Charsets.US_ASCII)),
+                metadataSize)
         }
 
     }
