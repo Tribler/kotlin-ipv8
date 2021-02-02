@@ -300,7 +300,7 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
 
         val (privateKey, idFormat) = this.attestationKeys[payload.hash]!!
 
-        val privateAttestation = schemaManager.deserializePrivate(idFormat, privateKey, attestationBlob)
+        val privateAttestation = schemaManager.deserializePrivate(privateKey, attestationBlob, idFormat)
         val publicAttestationBlob = privateAttestation.serialize()
         this.cachedAttestationBlobs[payload.hash] = privateAttestation
         this.sendAttestation(peer.address, publicAttestationBlob)

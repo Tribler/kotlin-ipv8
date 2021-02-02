@@ -22,7 +22,7 @@ class BonehAttestation(
     }
 
     companion object {
-        fun deserialize(serialized: ByteArray, idFormat: String? = null): BonehAttestation {
+        fun deserialize(serialized: ByteArray, idFormat: String): BonehAttestation {
             val publicKey = BonehPublicKey.deserialize(serialized)
             val bitPairs = arrayListOf<BitPairAttestation>()
             var rem = serialized.copyOfRange(publicKey!!.serialize().size, serialized.size)
@@ -32,6 +32,14 @@ class BonehAttestation(
                 rem = rem.copyOfRange(attest.serialize().size, rem.size)
             }
             return BonehAttestation(publicKey, bitPairs, idFormat)
+        }
+
+        fun deserializePrivate(
+            privateKey: PrivateKey,
+            serialized: ByteArray,
+            idFormat: String,
+        ): WalletAttestation {
+            return this.deserialize(serialized, idFormat)
         }
     }
 
@@ -44,6 +52,6 @@ class BonehAttestation(
         serialized: ByteArray,
         idFormat: String,
     ): WalletAttestation {
-        return this.deserialize(serialized, idFormat)
+        return BonehAttestation.deserializePrivate(privateKey, serialized, idFormat)
     }
 }

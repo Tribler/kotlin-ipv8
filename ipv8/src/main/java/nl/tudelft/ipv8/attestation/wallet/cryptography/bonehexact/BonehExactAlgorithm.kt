@@ -14,6 +14,7 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
     IdentityAlgorithm(idFormat, formats) {
 
     val keySize = formats[idFormat]?.get("key_size") as Int
+    val attestationClass = BonehAttestation
     lateinit var attestationFunction: (BonehPublicKey, ByteArray) -> BonehAttestation
     lateinit var aggregateReference: (ByteArray) -> HashMap<Int, Int>
 
@@ -42,6 +43,10 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
         }
         // TODO add other hash functions.
 
+    }
+
+    override fun deserialize(serialized: ByteArray, idFormat: String): WalletAttestation {
+        return this.attestationClass.deserialize(serialized, idFormat)
     }
 
     override fun generateSecretKey(): PrivateKey {
@@ -95,7 +100,7 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
         return internalProcessChallengeResponse(aggregate, deserialized.toInt())
     }
 
-    override fun createCertaintyAggregate(attestation: WalletAttestation?): MutableMap<Int, Int> {
+    override fun createCertaintyAggregate(attestation: WalletAttestation?): HashMap<Int, Int> {
         return createEmptyRelativityMap()
     }
 

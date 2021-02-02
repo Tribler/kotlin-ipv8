@@ -2,41 +2,48 @@ package nl.tudelft.ipv8.attestation.schema
 
 import nl.tudelft.ipv8.attestation.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.WalletAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehExactAlgorithm
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
 import nl.tudelft.ipv8.keyvault.PrivateKey
+
+const val CRYPTO_BASE_PACKAGE = "nl.tudelft.ipv8.attestation.wallet.cryptography."
 
 class SchemaManager {
 
     private val formats = HashMap<String, HashMap<String, Any>>()
-    private val algorithms = HashMap<String, Class<IdentityAlgorithm>>()
 
-
-    fun getAlgorithmClass(algorithmName: String): Class<IdentityAlgorithm> {
-        if (algorithmName in this.algorithms.keys) {
-            return this.algorithms[algorithmName]!!
-        }
-
-        lateinit var algorithm: IdentityAlgorithm
-        when (algorithmName) {
+    fun deserialize(serialized: ByteArray, idFormat: String): WalletAttestation {
+        return when (val algorithmName = getAlgorithmName(idFormat)) {
             "bonehexact" -> {
-                TODO()
-                algorithm = TODO()
+                BonehAttestation.deserialize(serialized, idFormat)
             }
             "pengbaorange" -> {
-                TODO()
-                algorithm = TODO()
+                TODO("Not yet implemented.")
             }
             "irmaexact" -> {
-                TODO()
-                algorithm = TODO()
+                TODO("Not yet implemented.")
             }
             else -> {
                 throw RuntimeException("Attempted to load unknown proof algorithm: ${algorithmName}.")
             }
         }
+    }
 
-        this.algorithms[algorithmName] = algorithm
-        return algorithm
-
+    fun deserializePrivate(privateKey: PrivateKey, serialized: ByteArray, idFormat: String): WalletAttestation {
+        return when (val algorithmName = getAlgorithmName(idFormat)) {
+            "bonehexact" -> {
+                BonehAttestation.deserializePrivate(privateKey, serialized, idFormat)
+            }
+            "pengbaorange" -> {
+                TODO("Not yet implemented.")
+            }
+            "irmaexact" -> {
+                TODO("Not yet implemented.")
+            }
+            else -> {
+                throw RuntimeException("Attempted to load unknown proof algorithm: ${algorithmName}.")
+            }
+        }
     }
 
     fun registerSchema(
@@ -54,34 +61,25 @@ class SchemaManager {
         TODO()
     }
 
-    fun getAlgorithmInstance(schemaName: String): IdentityAlgorithm {
-        val schema = this.formats[schemaName]
-        val identityAlgorithmClass = this.getAlgorithmClass(schema!!["algorithm"] as String)
-        return identityAlgorithmClass.getDeclaredConstructor()
-            .newInstance(schemaName, this.formats)
-    }
-
-    fun getAlgorithmName(idFormat: String): String {
-        return this.formats[idFormat]?.get("algorithm").toString()
-    }
-
-    fun deserializePrivate(idFormat: String, privateKey: PrivateKey, attestationBlob: ByteArray): WalletAttestation {
-        when (val algorithmName = this.getAlgorithmName(idFormat)) {
+    fun getAlgorithmInstance(idFormat: String): IdentityAlgorithm {
+        return when (val algorithmName = getAlgorithmName(idFormat)) {
             "bonehexact" -> {
-                return TODO()
+                BonehExactAlgorithm(idFormat, this.formats)
             }
             "pengbaorange" -> {
-                return TODO()
-
+                TODO("Not yet implemented.")
             }
             "irmaexact" -> {
-                TODO()
-                return TODO()
+                TODO("Not yet implemented.")
             }
             else -> {
                 throw RuntimeException("Attempted to load unknown proof algorithm: ${algorithmName}.")
             }
         }
+    }
+
+    fun getAlgorithmName(idFormat: String): String {
+        return this.formats[idFormat]?.get("algorithm").toString()
     }
 
 }
