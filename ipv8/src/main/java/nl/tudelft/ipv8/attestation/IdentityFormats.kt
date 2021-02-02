@@ -1,6 +1,5 @@
-package nl.tudelft.ipv8.attestation.attestation
+package nl.tudelft.ipv8.attestation
 
-import nl.tudelft.ipv8.attestation.wallet.bonehexact.ALGORITHM_NAME
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.util.sha1
@@ -11,7 +10,7 @@ abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<
     init {
         var containsAlgorithm = false
         for (map in formats.values) {
-            if (map["algorithm"] == ALGORITHM_NAME) {
+            if (map["algorithm"] == idFormat) {
                 containsAlgorithm = true
             }
         }
@@ -26,11 +25,9 @@ abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<
 
     abstract fun loadPublicKey(serializedKey: ByteArray): PublicKey
 
-    abstract fun getAttestationClass(): Class<WalletAttestation>
+    abstract fun attest(publicKey: PublicKey, value: ByteArray): ByteArray
 
-    abstract fun attest(publicKey: PublicKey, value: String): ByteArray
-
-    abstract fun certainty(value: Int, aggregate: Map<String, WalletAttestation>): Float
+    abstract fun certainty(value: ByteArray, aggregate: HashMap<Int, Int>): Float
 
     abstract fun createChallenges(publicKey: PublicKey, attestation: WalletAttestation): ArrayList<ByteArray>
 
@@ -41,12 +38,12 @@ abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<
     ): ByteArray
 
     abstract fun processChallengeResponse(
-        aggregate: MutableMap<String, WalletAttestation>,
+        aggregate: HashMap<Int, Int>,
         challenge: ByteArray?,
         response: ByteArray,
-    ): String
+    ): Unit
 
-    abstract fun createCertaintyAggregate(attestation: WalletAttestation?): MutableMap<String, WalletAttestation>
+    abstract fun createCertaintyAggregate(attestation: WalletAttestation?): MutableMap<Int, Int>
 
     abstract fun createHonestyChallenge(publicKey: PublicKey, value: Int): ByteArray
 
@@ -57,9 +54,12 @@ abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<
 
 abstract class WalletAttestation {
 
-    abstract val idFormat: String
+//    abstract val idFormat: String
+//    abstract val publicKey: PublicKey
+//    abstract val relativityMap: HashMap<Int, WalletAttestation>
+
     abstract val publicKey: PublicKey
-    abstract val relativityMap: HashMap<Int, WalletAttestation>
+    abstract val idFormat: String?
 
     abstract fun serialize(): ByteArray
     abstract fun deserialize(
@@ -67,7 +67,7 @@ abstract class WalletAttestation {
         idFormat: String,
     ): WalletAttestation
 
-    abstract fun serializePrivate(): ByteArray
+    abstract fun serializePrivate(publicKey: PublicKey): ByteArray
     abstract fun deserializePrivate(
         privateKey: PrivateKey,
         string: ByteArray,

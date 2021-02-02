@@ -1,6 +1,5 @@
-package nl.tudelft.ipv8.attestation.attestation
+package nl.tudelft.ipv8.attestation
 
-import com.goterl.lazycode.lazysodium.interfaces.Sign
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
