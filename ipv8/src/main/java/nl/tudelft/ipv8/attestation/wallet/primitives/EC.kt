@@ -43,7 +43,7 @@ fun h(mod: BigInteger, p: Pair<FP2Value, FP2Value>, q: Pair<FP2Value, FP2Value>,
     if (x1 == x2 && y1 == FP2Value(mod, -BigInteger.ONE) * y2)
         return (x - x1).normalize()
     if (x1 == x2 && y1 == y2) {
-        l = (FP2Value(mod, BigInteger("3")) * x1 * x1) / (FP2Value(mod, BigInteger.TWO) * y1)
+        l = (FP2Value(mod, BigInteger("3")) * x1 * x1) / (FP2Value(mod, BigInteger("2")) * y1)
         return ((y - y1 - l * (x - x1)) / (x + (x1 + x2) - l * l)).normalize()
     }
     l = (y2 - y1) / (x2 - x1)
@@ -68,7 +68,7 @@ fun eSum(mod: BigInteger, p: Any, q: Any): Any {
 
     var l = if (x1 == x2) {
         ((FP2Value(mod, BigInteger("3")) * x1 * x1) / ((FP2Value(mod,
-            BigInteger.TWO) * y1).normalize()))
+            BigInteger("2")) * y1).normalize()))
     } else {
         ((y1 - y2) / (x1 - x2)).normalize()
     }

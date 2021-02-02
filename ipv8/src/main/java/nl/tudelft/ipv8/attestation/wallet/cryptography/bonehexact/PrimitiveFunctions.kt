@@ -94,7 +94,7 @@ fun generatePrime(n: BigInteger): BigInteger {
     var p = BigInteger.ONE
     val m = BigInteger("3")
     var l = BigInteger.ZERO
-    while ((p % BigInteger("3") != BigInteger.TWO) || !p.isProbablePrime(100)) {
+    while ((p % BigInteger("3") != BigInteger("TWO")) || !p.isProbablePrime(100)) {
         l += BigInteger.ONE
         p = l * n - BigInteger.ONE
     }

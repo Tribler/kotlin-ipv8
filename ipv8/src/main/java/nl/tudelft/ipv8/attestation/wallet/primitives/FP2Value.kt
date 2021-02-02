@@ -43,10 +43,10 @@ class FP2Value(
         var r = FP2Value(this.mod, BigInteger.ONE)
         var u = this
         while (n > BigInteger.ZERO) {
-            if (n % BigInteger.TWO == BigInteger.ONE)
+            if (n % BigInteger("2") == BigInteger.ONE)
                 r *= u
             u *= u
-            n /= BigInteger.TWO
+            n /= BigInteger("2")
         }
         return if (e < BigInteger.ZERO) r.inverse().normalize() else r
     }
