@@ -19,6 +19,11 @@ abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<
         }
     }
 
+    abstract fun deserialize(
+        string: ByteArray,
+        idFormat: String,
+    ): WalletAttestation
+
     abstract fun generateSecretKey(): PrivateKey
 
     abstract fun loadSecretKey(serializedKey: ByteArray): PrivateKey
@@ -43,12 +48,11 @@ abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<
         response: ByteArray,
     ): Unit
 
-    abstract fun createCertaintyAggregate(attestation: WalletAttestation?): MutableMap<Int, Int>
+    abstract fun createCertaintyAggregate(attestation: WalletAttestation?): HashMap<Int, Int>
 
     abstract fun createHonestyChallenge(publicKey: PublicKey, value: Int): ByteArray
 
     abstract fun processHonestyChallenge(value: Int, response: ByteArray): Boolean
-
 
 }
 
@@ -62,15 +66,17 @@ abstract class WalletAttestation {
     abstract val idFormat: String?
 
     abstract fun serialize(): ByteArray
+
     abstract fun deserialize(
         string: ByteArray,
         idFormat: String,
     ): WalletAttestation
 
     abstract fun serializePrivate(publicKey: PublicKey): ByteArray
+
     abstract fun deserializePrivate(
         privateKey: PrivateKey,
-        string: ByteArray,
+        serialized: ByteArray,
         idFormat: String,
     ): WalletAttestation
 

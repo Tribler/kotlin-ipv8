@@ -110,7 +110,7 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
         val publicKey = idAlgorithm.loadPublicKey(pubkeyEncoded.hexToBytes())
         val attestationBlob = idAlgorithm.attest(publicKey, value)
         val attestation =
-            (idAlgorithm.getAttestationClass() as WalletAttestation).deserialize(attestationBlob, idFormat)
+            idAlgorithm.deserialize(attestationBlob, idFormat)
 
         this.attestationRequestCompleteCallback(peer,
             attribute,
@@ -166,10 +166,8 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
                 serialized += chunk
             }
 
-            val attestationClass =
-                (this.getIdAlgorithm(cache.idFormat).getAttestationClass() as WalletAttestation)
             if (sha1(serialized) == payload.hash) {
-                val deserialized = attestationClass.deserialize(serialized, cache.idFormat)
+                val deserialized = schemaManager.deserialize(serialized, cache.idFormat)
                 this.attestationRequestCache.remove(hashId)
                 this.onReceivedAttestation(peer, deserialized, payload.hash)
             }
@@ -187,11 +185,9 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
                         serialized += chunk
                     }
 
-                    val attestationClass =
-                        (this.getIdAlgorithm(cache.idFormat).getAttestationClass() as WalletAttestation)
                     if (sha1(serialized) == payload.hash) {
                         val deserialized =
-                            attestationClass.deserializePrivate(cache.privateKey, serialized, cache.idFormat)
+                            schemaManager.deserializePrivate(cache.privateKey, serialized, cache.idFormat)
                         val cache = this.attestationRequestCache.remove(peerId.second)
                         var globTimes = arrayListOf<ByteArray>()
                         this.allowedAttestations[peer.mid]!!.forEach {
@@ -227,7 +223,8 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
     }
 
     fun onReceivedAttestation(peer: Peer, attestation: WalletAttestation, attestationHash: ByteArray) {
-        val algorithm = this.getIdAlgorithm(attestation.idFormat)
+        // TODO remove force
+        val algorithm = this.getIdAlgorithm(attestation.idFormat!!)
 
         val relativityMap = algorithm.createCertaintyAggregate(attestation)
         val hashedChallenges = arrayListOf<ByteArray>()
@@ -312,15 +309,15 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
     fun verifyAttestationValues(
         socketAddress: IPv4Address,
         attestationHash: ByteArray,
-        values: ArrayList<Int>,
+        values: ArrayList<ByteArray>,
         callback: ((ByteArray, List<Float>) -> Unit),
         idFormat: String,
     ) {
         val algorithm = this.getIdAlgorithm(idFormat)
 
 
-        val onComplete: ((ByteArray, HashMap<Int, HashMap<Int, Int>>) -> Unit) =
-            { attestationHash: ByteArray, relativityMap: MutableMap<String, WalletAttestation> ->
+        val onComplete: ((ByteArray, HashMap<Int, Int>) -> Unit) =
+            { attestationHash: ByteArray, relativityMap: HashMap<Int, Int> ->
                 callback(attestationHash, values.map { algorithm.certainty(it, relativityMap) })
             }
 
@@ -429,7 +426,7 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
         return this.schemaManager.getAlgorithmInstance(idFormat)
     }
 
-    fun setAttestationRequestCallback(f: (peer: Peer, attributeName: String, metaData: String) -> String) {
+    fun setAttestationRequestCallback(f: (peer: Peer, attributeName: String, metaData: String) -> ByteArray) {
         this.attestationRequestCallback = f
     }
 
@@ -462,12 +459,12 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
     class ProvingAttestationRequest(
         val cacheHash: ByteArray,
         val idFormat: String,
-        var relativityMap: MutableMap<String, WalletAttestation> = mutableMapOf(),
+        var relativityMap: HashMap<Int, Int> = hashMapOf(),
         var hashedChallenges: ArrayList<ByteArray> = arrayListOf(),
         var challenges: ArrayList<ByteArray> = arrayListOf(),
         val publicKey: PublicKey? = null,
         // TODO: Add function types
-        val onComplete: (ByteArray, MutableMap<String, WalletAttestation>) -> Unit = TODO(),
+        val onComplete: (ByteArray, HashMap<Int, Int>) -> Unit = TODO(),
     )
 
     class PendingChallenge(
