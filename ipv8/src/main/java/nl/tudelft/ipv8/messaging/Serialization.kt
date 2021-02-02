@@ -82,8 +82,7 @@ fun serializeLong(value: Long): ByteArray {
     buffer.putInt(value.toInt())
     return buffer.array()
 }
-
-fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
+ fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
     val buffer = ByteBuffer.allocate(SERIALIZED_LONG_SIZE)
     buffer.put(bytes.copyOfRange(offset, offset + SERIALIZED_LONG_SIZE))
     buffer.flip()
@@ -107,6 +106,16 @@ fun deserializeVarLen(buffer: ByteArray, offset: Int = 0): Pair<ByteArray, Int> 
     return Pair(payload, SERIALIZED_UINT_SIZE + len)
 }
 
+fun deserializeRecursively(buffer: ByteArray, offset: Int = 0): Array<ByteArray> {
+    if (buffer.isEmpty()) {
+        return arrayOf()
+    }
+    val len = deserializeUInt(buffer, offset).toInt()
+    val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
+        offset + SERIALIZED_UINT_SIZE + len)
+    return arrayOf(payload) + deserializeRecursively(buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE + len,
+        buffer.size), offset)
+}
 
 /**
  * Can only be used as the last element in a payload as it will consume the remainder of the
