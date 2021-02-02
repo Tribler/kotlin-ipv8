@@ -1,13 +1,11 @@
 package nl.tudelft.ipv8.attestation.wallet
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.attestation.attestation.WalletAttestation
-import nl.tudelft.ipv8.attestation.attestation.IdentityAlgorithm
+import nl.tudelft.ipv8.attestation.WalletAttestation
+import nl.tudelft.ipv8.attestation.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.schema.SchemaManager
 import nl.tudelft.ipv8.attestation.wallet.caches.HashCache
 import nl.tudelft.ipv8.attestation.wallet.caches.PeerCache
@@ -33,7 +31,7 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
     private val schemaManager = SchemaManager()
 
 
-    private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> String
+    private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> ByteArray
     private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attributeHash: ByteArray, idFormat: String, fromPeer: Peer?) -> Unit
     private lateinit var verifyRequestCallback: (attributeName: Peer, attributeHash: ByteArray) -> Boolean
 
@@ -151,11 +149,11 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
 
     fun onAttestationChunk(peer: Peer, dist: GlobalTimeDistributionPayload, payload: AttestationChunkPayload) {
         val hashId = HashCache.idFromHash("receive-verify-attestation", payload.hash).second.toString()
-        val peerIds = arrayListOf<Pair<ByteArray, Int>>()
+        val peerIds = arrayListOf<Pair<String, Int>>()
         val allowedGlobs = this.allowedAttestations.get(peer.mid) ?: arrayOf()
         allowedGlobs.forEach {
             if (it == dist.globalTime.toString().toByteArray()) {
-                peerIds.add(PeerCache.idFromAddress("receive-request-attestation".toByteArray(Charsets.UTF_8),
+                peerIds.add(PeerCache.idFromAddress("receive-request-attestation",
                     peer.mid + it))
             }
         }
@@ -321,7 +319,7 @@ class AttestationCommunity(private val database: AttestationStore) : Community()
         val algorithm = this.getIdAlgorithm(idFormat)
 
 
-        val onComplete: ((ByteArray, MutableMap<String, WalletAttestation>) -> Unit) =
+        val onComplete: ((ByteArray, HashMap<Int, HashMap<Int, Int>>) -> Unit) =
             { attestationHash: ByteArray, relativityMap: MutableMap<String, WalletAttestation> ->
                 callback(attestationHash, values.map { algorithm.certainty(it, relativityMap) })
             }

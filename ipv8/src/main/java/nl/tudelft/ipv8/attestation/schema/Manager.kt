@@ -1,12 +1,8 @@
 package nl.tudelft.ipv8.attestation.schema
 
-import nl.tudelft.ipv8.attestation.attestation.IdentityAlgorithm
-import nl.tudelft.ipv8.attestation.attestation.WalletAttestation
-import nl.tudelft.ipv8.attestation.wallet.bonehexact.attestations.BitPairAttestation
-import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
+import nl.tudelft.ipv8.attestation.IdentityAlgorithm
+import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.keyvault.PublicKey
-import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 
 class SchemaManager {
 

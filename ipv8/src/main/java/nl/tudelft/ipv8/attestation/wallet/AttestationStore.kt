@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet
 
-import nl.tudelft.ipv8.attestation.attestation.WalletAttestation
+import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.keyvault.PrivateKey
 
 interface AttestationStore {

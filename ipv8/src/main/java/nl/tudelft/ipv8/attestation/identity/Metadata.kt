@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.identity
 
-import nl.tudelft.ipv8.attestation.attestation.SignedObject
+import nl.tudelft.ipv8.attestation.SignedObject
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.util.toHex

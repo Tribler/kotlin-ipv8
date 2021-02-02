@@ -4,7 +4,7 @@ import kotlinx.coroutines.Deferred
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.FutureTask
 
-open class NumberCache(val requestCache: RequestCache, val prefix: ByteArray, val number: Int) {
+open class NumberCache(val requestCache: RequestCache, val prefix: String, val number: Int) {
 
     val managedFutures = arrayListOf<Pair<Deferred<Object>, Object>>()
     val timeoutDelay = 10.0
