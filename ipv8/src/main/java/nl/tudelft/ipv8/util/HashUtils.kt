@@ -21,3 +21,18 @@ fun sha256(input: ByteArray): ByteArray {
 fun sha3_256(input: ByteArray): ByteArray {
     return MessageDigest.getInstance(SHA3_256).digest(input)
 }
+
+fun toASCII(value: String): ByteArray {
+    return value.toByteArray(Charsets.US_ASCII)
+}
+
+fun sha256AsInt(input: ByteArray): Int {
+    var out = 0
+    val hash = sha256(input)
+    for (i in 0..hash.size) {
+        out = out shl 8
+        out = out or hash[i].toInt()
+    }
+    return out
+
+}
