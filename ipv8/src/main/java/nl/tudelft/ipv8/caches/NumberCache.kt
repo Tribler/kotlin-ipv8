@@ -1,10 +1,11 @@
 package nl.tudelft.ipv8.caches
 
 import kotlinx.coroutines.Deferred
+import java.math.BigInteger
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.FutureTask
 
-open class NumberCache(val requestCache: RequestCache, val prefix: String, val number: Int) {
+open class NumberCache(val requestCache: RequestCache, val prefix: String, val number: BigInteger) {
 
     val managedFutures = arrayListOf<Pair<Deferred<Object>, Object>>()
     val timeoutDelay = 10.0
