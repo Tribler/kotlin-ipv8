@@ -3,6 +3,7 @@ package nl.tudelft.ipv8.attestation
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
+import nl.tudelft.ipv8.messaging.deserializeULong
 import nl.tudelft.ipv8.util.sha3_256
 
 abstract class SignedObject(val privateKey: PrivateKey? = null, signature: ByteArray? = null) {
@@ -41,5 +42,15 @@ abstract class SignedObject(val privateKey: PrivateKey? = null, signature: ByteA
 
     abstract fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int = 0): SignedObject
 
-    // TODO: override `equals` and `hashcode`.
+    override fun equals(other: Any?): Boolean {
+        if (other !is SignedObject){
+            return false
+        }
+        return this.getPlaintextSigned().contentEquals(other.getPlaintextSigned())
+    }
+
+    override fun hashCode(): Int {
+        // TODO: verify that this is correct.
+        return deserializeULong(this.hash).toInt()
+    }
 }
