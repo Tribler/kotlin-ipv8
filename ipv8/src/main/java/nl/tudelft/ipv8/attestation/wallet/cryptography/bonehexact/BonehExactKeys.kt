@@ -10,7 +10,7 @@ import java.math.BigInteger
 const val PUBLIC_KEY_FIELDS = 5
 const val PRIVATE_KEY_FIELDS = 7
 
-open class BonehPublicKey(val p: BigInteger, val g: FP2Value, val h: FP2Value) : PublicKey {
+open class BonehPublicKey(val p: BigInteger, val g: FP2Value, val h: FP2Value) {
 
 
     open fun serialize(): ByteArray {
@@ -41,25 +41,10 @@ open class BonehPublicKey(val p: BigInteger, val g: FP2Value, val h: FP2Value) :
         return Companion.deserialize(serialized)
     }
 
-    override fun verify(signature: ByteArray, msg: ByteArray): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun getSignatureLength(): Int {
-        TODO("Not yet implemented")
-    }
-
-    override fun encrypt(msg: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
-
-    override fun keyToBin(): ByteArray {
-        TODO("Not yet implemented")
-    }
 }
 
 class BonehPrivateKey(p: BigInteger, g: FP2Value, h: FP2Value, val n: BigInteger, val t1: BigInteger) :
-    BonehPublicKey(p, g, h), PrivateKey {
+    BonehPublicKey(p, g, h) {
 
 
     override fun serialize(): ByteArray {
@@ -94,22 +79,5 @@ class BonehPrivateKey(p: BigInteger, g: FP2Value, h: FP2Value, val n: BigInteger
                 nums[6])
         }
     }
-
-    override fun sign(msg: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
-
-    override fun decrypt(msg: ByteArray): ByteArray {
-        TODO("Not yet implemented")
-    }
-
-    override fun pub(): PublicKey {
-        TODO("Not yet implemented")
-    }
-
-    override fun keyToBin(): ByteArray {
-        TODO("Not yet implemented")
-    }
-
 
 }

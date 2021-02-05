@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations
 
 import nl.tudelft.ipv8.attestation.WalletAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
@@ -35,7 +36,7 @@ class BonehAttestation(
         }
 
         fun deserializePrivate(
-            privateKey: PrivateKey,
+            privateKey: BonehPrivateKey,
             serialized: ByteArray,
             idFormat: String,
         ): WalletAttestation {
@@ -43,12 +44,12 @@ class BonehAttestation(
         }
     }
 
-    override fun serializePrivate(publicKey: PublicKey): ByteArray {
+    override fun serializePrivate(publicKey: BonehPublicKey): ByteArray {
         return this.serialize()
     }
 
     override fun deserializePrivate(
-        privateKey: PrivateKey,
+        privateKey: BonehPrivateKey,
         serialized: ByteArray,
         idFormat: String,
     ): WalletAttestation {

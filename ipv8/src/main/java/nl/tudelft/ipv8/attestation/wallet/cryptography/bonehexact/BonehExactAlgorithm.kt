@@ -49,27 +49,27 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
         return this.attestationClass.deserialize(serialized, idFormat)
     }
 
-    override fun generateSecretKey(): PrivateKey {
+    override fun generateSecretKey(): BonehPrivateKey {
         return generateKeypair(this.keySize).second
     }
 
-    override fun loadSecretKey(serializedKey: ByteArray): PrivateKey {
+    override fun loadSecretKey(serializedKey: ByteArray): BonehPrivateKey {
         return BonehPrivateKey.deserialize(serializedKey)!!
     }
 
-    override fun loadPublicKey(serializedKey: ByteArray): PublicKey {
+    override fun loadPublicKey(serializedKey: ByteArray): BonehPublicKey {
         return BonehPublicKey.deserialize(serializedKey)!!
     }
 
-    override fun attest(publicKey: PublicKey, value: ByteArray): ByteArray {
-        return this.attestationFunction(publicKey as BonehPublicKey, value).serialize()
+    override fun attest(publicKey: BonehPublicKey, value: ByteArray): ByteArray {
+        return this.attestationFunction(publicKey, value).serialize()
     }
 
     override fun certainty(value: ByteArray, aggregate: HashMap<Int, Int>): Float {
         return binaryRelativityCertainty(this.aggregateReference(value), aggregate)
     }
 
-    override fun createChallenges(publicKey: PublicKey, attestation: WalletAttestation): ArrayList<ByteArray> {
+    override fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray> {
         val attestation = attestation as BonehAttestation
         val challenges = arrayListOf<ByteArray>()
         for (bitpair in attestation.bitpairs) {
@@ -82,13 +82,13 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
     }
 
     override fun createChallengeResponse(
-        privateKey: PrivateKey,
+        privateKey: BonehPrivateKey,
         attestation: WalletAttestation,
         challenge: ByteArray,
     ): ByteArray {
         val deserialized = deserializeRecursively(challenge)
         val pair = Pair(BigInteger(deserialized[0]), BigInteger(deserialized[1]))
-        return serializeUInt(createChallengeResponseFromPair(privateKey as BonehPrivateKey, pair).toUInt())
+        return serializeUInt(createChallengeResponseFromPair(privateKey, pair).toUInt())
     }
 
     override fun processChallengeResponse(
@@ -104,8 +104,8 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
         return createEmptyRelativityMap()
     }
 
-    override fun createHonestyChallenge(publicKey: PublicKey, value: Int): ByteArray {
-        val rawChallenge = createHonestyCheck(publicKey as BonehPublicKey, value)
+    override fun createHonestyChallenge(publicKey: BonehPublicKey, value: Int): ByteArray {
+        val rawChallenge = createHonestyCheck(publicKey, value)
         return serializeVarLen(rawChallenge.a.toByteArray()) + serializeVarLen(rawChallenge.b.toByteArray())
     }
 
