@@ -115,14 +115,14 @@ fun binaryRelativityCertainty(expected: HashMap<Int, Int>, value: HashMap<Int, I
 
 fun binaryRelativityMatch(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): Float {
     var match = 1F
-    for (k in expected) {
-        // TODO Verify this is correct
-        if (expected.get(k) == null || value.get(k) == null)
-            continue
+    for (k in expected.keys) {
         if (expected[k]!! < value[k]!!) {
             return 0F
         }
-        match *= value[k]!!.toFloat() / expected[k]!!.toFloat()
+        if (!expected.containsKey(k) || !value.containsKey(k) || expected[k] == 0 || value[k] == 0) {
+            continue
+        }
+        match *= value[k]!!.toFloat() / expected[k]!!
     }
 
     return match
