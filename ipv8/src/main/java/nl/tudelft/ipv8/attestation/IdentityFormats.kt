@@ -1,5 +1,7 @@
 package nl.tudelft.ipv8.attestation
 
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.util.sha1
@@ -24,20 +26,20 @@ abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<
         idFormat: String,
     ): WalletAttestation
 
-    abstract fun generateSecretKey(): PrivateKey
+    abstract fun generateSecretKey(): BonehPrivateKey
 
-    abstract fun loadSecretKey(serializedKey: ByteArray): PrivateKey
+    abstract fun loadSecretKey(serializedKey: ByteArray): BonehPrivateKey
 
-    abstract fun loadPublicKey(serializedKey: ByteArray): PublicKey
+    abstract fun loadPublicKey(serializedKey: ByteArray): BonehPublicKey
 
-    abstract fun attest(publicKey: PublicKey, value: ByteArray): ByteArray
+    abstract fun attest(publicKey: BonehPublicKey, value: ByteArray): ByteArray
 
     abstract fun certainty(value: ByteArray, aggregate: HashMap<Int, Int>): Float
 
-    abstract fun createChallenges(publicKey: PublicKey, attestation: WalletAttestation): ArrayList<ByteArray>
+    abstract fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray>
 
     abstract fun createChallengeResponse(
-        privateKey: PrivateKey,
+        privateKey: BonehPrivateKey,
         attestation: WalletAttestation,
         challenge: ByteArray,
     ): ByteArray
@@ -50,19 +52,20 @@ abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<
 
     abstract fun createCertaintyAggregate(attestation: WalletAttestation?): HashMap<Int, Int>
 
-    abstract fun createHonestyChallenge(publicKey: PublicKey, value: Int): ByteArray
+    abstract fun createHonestyChallenge(publicKey: BonehPublicKey, value: Int): ByteArray
 
     abstract fun processHonestyChallenge(value: Int, response: ByteArray): Boolean
 
 }
 
+// TODO: Create WalletAttestationKey superclass
 abstract class WalletAttestation {
 
 //    abstract val idFormat: String
 //    abstract val publicKey: PublicKey
 //    abstract val relativityMap: HashMap<Int, WalletAttestation>
 
-    abstract val publicKey: PublicKey
+    abstract val publicKey: BonehPublicKey
     abstract val idFormat: String?
 
     abstract fun serialize(): ByteArray
@@ -72,10 +75,10 @@ abstract class WalletAttestation {
         idFormat: String,
     ): WalletAttestation
 
-    abstract fun serializePrivate(publicKey: PublicKey): ByteArray
+    abstract fun serializePrivate(publicKey: BonehPublicKey): ByteArray
 
     abstract fun deserializePrivate(
-        privateKey: PrivateKey,
+        privateKey: BonehPrivateKey,
         serialized: ByteArray,
         idFormat: String,
     ): WalletAttestation
@@ -93,7 +96,7 @@ abstract class WalletAttestation {
         }
 
         fun deserializePrivate(
-            privateKey: PrivateKey,
+            privateKey: BonehPrivateKey,
             string: ByteArray,
             idFormat: String,
         ): WalletAttestation {

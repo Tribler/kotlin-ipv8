@@ -3,6 +3,7 @@ package nl.tudelft.ipv8.attestation.schema
 import nl.tudelft.ipv8.attestation.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehExactAlgorithm
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
 import nl.tudelft.ipv8.keyvault.PrivateKey
 
@@ -29,7 +30,7 @@ class SchemaManager {
         }
     }
 
-    fun deserializePrivate(privateKey: PrivateKey, serialized: ByteArray, idFormat: String): WalletAttestation {
+    fun deserializePrivate(privateKey: BonehPrivateKey, serialized: ByteArray, idFormat: String): WalletAttestation {
         return when (val algorithmName = getAlgorithmName(idFormat)) {
             "bonehexact" -> {
                 BonehAttestation.deserializePrivate(privateKey, serialized, idFormat)
