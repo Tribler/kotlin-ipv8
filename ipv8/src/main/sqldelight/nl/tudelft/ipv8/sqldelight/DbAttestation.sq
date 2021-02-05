@@ -1,11 +1,12 @@
 CREATE TABLE attestations (
     hash BLOB NOT NULL,
     blob BLOB NOT NULL,
-    key  BLOB NOT NULL
+    key  BLOB NOT NULL,
+    id_format TEXT NOT NULL
 );
 
-getAttestation:
-INSERT INTO attestations (hash, blob, key) VALUES(?, ?, ?);
+insertAttestation:
+INSERT INTO attestations (hash, blob, key, id_format) VALUES(?, ?, ?, ?);
 
 getAttestationByHash:
 SELECT blob FROM attestations WHERE hash = ?;
