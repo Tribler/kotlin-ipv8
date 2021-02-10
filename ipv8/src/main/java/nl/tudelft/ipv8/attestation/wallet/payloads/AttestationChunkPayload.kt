@@ -10,7 +10,7 @@ class AttestationChunkPayload(
     private val msgId = 2
 
     override fun serialize(): ByteArray {
-        return hash + serializeUInt(sequenceNumber as UInt) + serializeVarLen(data)
+        return hash + serializeUInt(sequenceNumber.toUInt()) + serializeVarLen(data)
     }
 
     companion object Deserializer : Deserializable<AttestationChunkPayload> {
