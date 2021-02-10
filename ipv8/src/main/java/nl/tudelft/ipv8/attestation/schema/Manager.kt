@@ -9,6 +9,8 @@ import nl.tudelft.ipv8.keyvault.PrivateKey
 
 const val CRYPTO_BASE_PACKAGE = "nl.tudelft.ipv8.attestation.wallet.cryptography."
 
+class AlgorithmScheme(val schemaName: String, val algorithmName: String, val keySize: Int, val hashAlgorithm: String)
+
 class SchemaManager {
 
     private val formats = HashMap<String, HashMap<String, Any>>()
@@ -59,7 +61,16 @@ class SchemaManager {
     }
 
     fun registerDefaultSchemas() {
-        TODO()
+        val defaultSchemas = arrayListOf<AlgorithmScheme>()
+        defaultSchemas.add(AlgorithmScheme("id_metadata", "bonehexact", 32, "sha256_4"))
+        defaultSchemas.add(AlgorithmScheme("id_metadata_big", "bonehexact", 64, "sha256"))
+        defaultSchemas.add(AlgorithmScheme("id_metadata_huge", "bonehexact", 96, "sha512"))
+
+        defaultSchemas.forEach {
+            this.registerSchema(it.schemaName,
+                it.algorithmName,
+                hashMapOf("key_size" to it.keySize, "hash" to it.hashAlgorithm))
+        }
     }
 
     fun getAlgorithmInstance(idFormat: String): IdentityAlgorithm {

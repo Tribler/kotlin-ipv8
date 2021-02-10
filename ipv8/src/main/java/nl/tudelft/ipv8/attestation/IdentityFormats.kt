@@ -6,18 +6,13 @@ import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.util.sha1
 
-abstract class IdentityAlgorithm(private val idFormat: String, formats: HashMap<String, HashMap<String, Any>>) {
+abstract class IdentityAlgorithm(idFormat: String, formats: HashMap<String, HashMap<String, Any>>) {
     var honestCheck = false;
 
     init {
-        var containsAlgorithm = false
-        for (map in formats.values) {
-            if (map["algorithm"] == idFormat) {
-                containsAlgorithm = true
-            }
-        }
+        var containsAlgorithm = formats.containsKey(idFormat)
         if (!containsAlgorithm) {
-            throw RuntimeException("Attempted to initialize with illegal identity format!")
+            throw RuntimeException("Attempted to initialize with illegal identity format $idFormat!")
         }
     }
 
