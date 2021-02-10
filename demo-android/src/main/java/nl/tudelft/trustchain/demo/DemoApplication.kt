@@ -18,6 +18,7 @@ import nl.tudelft.ipv8.attestation.trustchain.*
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainSQLiteStore
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainStore
 import nl.tudelft.ipv8.attestation.trustchain.validation.TransactionValidator
+import nl.tudelft.ipv8.attestation.trustchain.validation.ValidationResult
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
@@ -63,8 +64,12 @@ class DemoApplication : Application() {
             override fun validate(
                 block: TrustChainBlock,
                 database: TrustChainStore
-            ): Boolean {
-                return block.transaction["message"] != null || block.isAgreement
+            ): ValidationResult {
+                if (block.transaction["message"] != null || block.isAgreement) {
+                    return ValidationResult.Valid
+                } else {
+                    return ValidationResult.Invalid(listOf(""))
+                }
             }
         })
 
