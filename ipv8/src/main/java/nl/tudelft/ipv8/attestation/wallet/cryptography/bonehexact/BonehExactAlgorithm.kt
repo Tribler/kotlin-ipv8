@@ -2,9 +2,8 @@ package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact
 
 import nl.tudelft.ipv8.attestation.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.WalletAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.*
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
-import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.messaging.*
 import java.math.BigInteger
 
@@ -21,7 +20,7 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
     init {
         this.honestCheck = true
 
-        if (formats.containsKey(idFormat)) {
+        if (!formats.containsKey(idFormat)) {
             throw RuntimeException("Identity format $idFormat not found!")
         }
 
@@ -37,11 +36,21 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
 
         val hashMode = format.get("hash")
 
-        if (hashMode == "sha256") {
-            this.attestationFunction = ::attestSHA256
-            this.aggregateReference = ::binaryRelativitySHA256
+        when (hashMode) {
+            "sha256" -> {
+                this.attestationFunction = ::attestSHA256
+                this.aggregateReference = ::binaryRelativitySHA256
+            }
+            "sha256_4" -> {
+                this.attestationFunction = ::attestSHA256_4
+                this.aggregateReference = ::binaryRelativitySHA256_4
+            }
+            "sha512" -> {
+                this.attestationFunction = ::attestSHA512
+                this.aggregateReference = ::binaryRelativitySHA512
+            }
+            else -> throw RuntimeException("Unknown hashing mode $hashMode")
         }
-        // TODO add other hash functions.
 
     }
 

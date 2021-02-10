@@ -1,9 +1,15 @@
-package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact
+package nl.tudelft.ipv8.attestation.wallet.cryptography
 
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BitPairAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.decode
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.encode
 import nl.tudelft.ipv8.attestation.wallet.primitives.FP2Value
 import nl.tudelft.ipv8.util.sha256AsInt
+import nl.tudelft.ipv8.util.sha256_4_AsInt
+import nl.tudelft.ipv8.util.sha512AsInt
 import java.math.BigInteger
 import java.security.SecureRandom
 import java.util.*
@@ -16,13 +22,29 @@ fun attestSHA256(publicKey: BonehPublicKey, value: ByteArray): BonehAttestation 
     return attest(publicKey, sha256AsInt(value), 256)
 }
 
+fun attestSHA512(publicKey: BonehPublicKey, value: ByteArray): BonehAttestation {
+    return attest(publicKey, sha512AsInt(value), 512)
+}
+
+fun attestSHA256_4(publicKey: BonehPublicKey, value: ByteArray): BonehAttestation {
+    return attest(publicKey, sha256_4_AsInt(value), 32)
+}
+
 fun binaryRelativitySHA256(value: ByteArray): HashMap<Int, Int> {
     return binaryRelativity(sha256AsInt(value), 256)
 }
 
-fun binaryRelativity(value: Int, bitSpace: Int): HashMap<Int, Int> {
+fun binaryRelativitySHA256_4(value: ByteArray): HashMap<Int, Int> {
+    return binaryRelativity(sha256_4_AsInt(value), 256)
+}
+
+fun binaryRelativitySHA512(value: ByteArray): HashMap<Int, Int> {
+    return binaryRelativity(sha512AsInt(value), 256)
+}
+
+fun binaryRelativity(value: BigInteger, bitSpace: Int): HashMap<Int, Int> {
     val out: HashMap<Int, Int> = hashMapOf(0 to 0, 1 to 0, 2 to 0)
-    val a = LinkedList(Integer.toBinaryString(value).map { it.toString().toInt() })
+    val a = LinkedList((value.toString(2)).map { it.toString().toInt() })
     while (a.size < bitSpace)
         a.push(0)
     for (i in 0 until bitSpace - 1 step 2) {
@@ -38,21 +60,21 @@ fun createHonestyCheck(publicKey: BonehPublicKey, value: Int): FP2Value {
     return encode(publicKey, BigInteger(value.toString()))
 }
 
-fun attest(publicKey: BonehPublicKey, value: Int, bitSpace: Int): BonehAttestation {
-    val a = LinkedList(Integer.toBinaryString(value).toList() as List<Int>)
+fun attest(publicKey: BonehPublicKey, value: BigInteger, bitSpace: Int): BonehAttestation {
+    val a = LinkedList(value.toString(2).toList().map { it.toString().toInt() })
     while (a.size < bitSpace) {
         a.push(0)
     }
     val r = generateModularAdditiveInverse(publicKey.p, bitSpace)
-    val tOutPublic = a.zip(r).map { encode(publicKey, BigInteger(it.first.toString()) + it.second) }
+    var tOutPublic = a.zip(r).map { encode(publicKey, BigInteger(it.first.toString()) + it.second) }
     val tOutPrivate = arrayListOf<Pair<Int, FP2Value>>()
-    for (i in 0 until a.size step 2) {
+    for (i in 0 until a.size - 1 step 2) {
         tOutPrivate.add(Pair(i,
             encode(publicKey, publicKey.p - ((r[i] + r[i + 1]) % (publicKey.p + BigInteger.ONE)) + BigInteger.ONE)))
     }
 
     val tOutPublicShuffled = arrayListOf<Triple<Int, FP2Value, FP2Value>>()
-    for (i in 0..tOutPublic.size step 2) {
+    for (i in tOutPublic.indices step 2) {
         tOutPublicShuffled.add(Triple(i, tOutPublic[i], tOutPublic[i + 1]))
     }
     val random = SecureRandom()
@@ -71,6 +93,7 @@ fun attest(publicKey: BonehPublicKey, value: Int, bitSpace: Int): BonehAttestati
     tOutPrivate.forEach {
         outPrivate.add(Pair(shuffleMap[it.first]!!, it.second))
     }
+
     outPrivate.shuffle(random)
 
     val bitPairs = arrayListOf<BitPairAttestation>()
@@ -85,7 +108,7 @@ fun generateModularAdditiveInverse(p: BigInteger, n: Int): ArrayList<BigInteger>
     val randoms = arrayListOf<BigInteger>()
     val random = SecureRandom()
     lateinit var randomElement: BigInteger
-    for (i in 0..n) {
+    for (i in 0 until n - 1) {
         do {
             randomElement = BigInteger(p.bitLength(), random)
         } while (randomElement >= p)

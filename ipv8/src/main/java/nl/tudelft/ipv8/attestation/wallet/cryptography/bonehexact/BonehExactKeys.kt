@@ -3,6 +3,8 @@ package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact
 import nl.tudelft.ipv8.attestation.wallet.primitives.FP2Value
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
+import nl.tudelft.ipv8.messaging.SERIALIZED_UINT_SIZE
+import nl.tudelft.ipv8.messaging.deserializeUInt
 import nl.tudelft.ipv8.messaging.deserializeVarLen
 import nl.tudelft.ipv8.messaging.serializeVarLen
 import java.math.BigInteger
@@ -32,7 +34,7 @@ open class BonehPublicKey(val p: BigInteger, val g: FP2Value, val h: FP2Value) {
                 return null
             }
 
-            return BonehPublicKey(nums[0], FP2Value(nums[0], nums[1], nums[2]), FP2Value(nums[0], nums[3], nums[5]))
+            return BonehPublicKey(nums[0], FP2Value(nums[0], nums[1], nums[2]), FP2Value(nums[0], nums[3], nums[4]))
             // TODO Python implementation has unreachable code.
         }
     }
@@ -64,9 +66,9 @@ class BonehPrivateKey(p: BigInteger, g: FP2Value, h: FP2Value, val n: BigInteger
             var localOffset = 0
             val nums = arrayListOf<BigInteger>()
             while (serialized.isNotEmpty() && nums.size < PRIVATE_KEY_FIELDS) {
-                val unpacked = deserializeVarLen(serialized, localOffset)
-                nums.add(BigInteger(unpacked.first))
-                localOffset += unpacked.second
+                val unpacked = deserializeUInt(serialized, localOffset)
+                nums.add(BigInteger(unpacked.toString()))
+                localOffset += SERIALIZED_UINT_SIZE
             }
             if (nums.size < PRIVATE_KEY_FIELDS) {
                 return null
