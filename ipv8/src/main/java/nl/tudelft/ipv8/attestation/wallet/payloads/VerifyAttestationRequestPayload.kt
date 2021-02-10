@@ -10,7 +10,7 @@ class VerifyAttestationRequestPayload(val hash: ByteArray) : Serializable {
         return hash
     }
 
-    companion object : Deserializable<VerifyAttestationRequestPayload> {
+    companion object Deserializer : Deserializable<VerifyAttestationRequestPayload> {
         override fun deserialize(
             buffer: ByteArray,
             offset: Int,
