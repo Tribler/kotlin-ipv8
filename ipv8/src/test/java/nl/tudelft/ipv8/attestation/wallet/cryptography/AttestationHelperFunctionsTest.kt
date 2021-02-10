@@ -1,6 +1,5 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography
 
-import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.binaryRelativityMatch
 import org.junit.Assert
 import org.junit.Test
 

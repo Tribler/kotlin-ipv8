@@ -82,7 +82,8 @@ fun serializeLong(value: Long): ByteArray {
     buffer.putInt(value.toInt())
     return buffer.array()
 }
- fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
+
+fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
     val buffer = ByteBuffer.allocate(SERIALIZED_LONG_SIZE)
     buffer.put(bytes.copyOfRange(offset, offset + SERIALIZED_LONG_SIZE))
     buffer.flip()
@@ -91,7 +92,7 @@ fun serializeLong(value: Long): ByteArray {
 
 fun deserializeUChar(buffer: ByteArray, offset: Int = 0): UByte {
     val ubuffer = buffer.toUByteArray()
-    return  ubuffer[offset]
+    return ubuffer[offset]
 
 }
 
