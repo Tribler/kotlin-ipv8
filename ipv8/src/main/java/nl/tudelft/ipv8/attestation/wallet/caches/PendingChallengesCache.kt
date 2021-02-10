@@ -1,13 +1,15 @@
 package nl.tudelft.ipv8.attestation.wallet.caches
 
+import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
 import java.math.BigInteger
 
-class PendingChallengesCache(prefix: String, cacheHash: ByteArray, idFormat: String) :
-    HashCache(prefix, cacheHash, idFormat) {
+const val PENDING_CHALLENGES_PREFIX = "proving-hash"
 
-    companion object {
-        fun idFromHash(prefix: String, cacheHash: ByteArray): Pair<String, BigInteger> {
-            return HashCache.idFromHash(prefix, cacheHash)
-        }
-    }
-}
+class PendingChallengesCache(
+    community: AttestationCommunity,
+    val cacheHash: ByteArray,
+    val provingCache: ProvingAttestationCache,
+    idFormat: String,
+    val honestyCheck: Int = -1,
+) :
+    HashCache(community.requestCache, PENDING_CHALLENGES_PREFIX, cacheHash, idFormat)

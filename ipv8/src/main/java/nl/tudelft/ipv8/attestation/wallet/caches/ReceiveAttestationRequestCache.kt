@@ -1,15 +1,18 @@
 package nl.tudelft.ipv8.attestation.wallet.caches
 
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
-import nl.tudelft.ipv8.keyvault.PrivateKey
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 
-const val PREFIX = "receive-verify-attestation".toByteArray()
+const val ATTESTATION_REQUEST_PREFIX = "receive-request-attestation"
 
 class ReceiveAttestationRequestCache(
     val community: AttestationCommunity,
-    val mid: String,
-    val privateKey: PrivateKey,
+    mid: String,
+    val privateKey: BonehPrivateKey,
     val name: String,
-    val idFormat: String) : PeerCache(community.attestationRequestCache, PREFIX, idFormat)
-) {
+    idFormat: String,
+) : PeerCache(community.requestCache, ATTESTATION_REQUEST_PREFIX, mid, idFormat) {
+
+    val attestationMap: MutableSet<Pair<Int, ByteArray>> = mutableSetOf()
+
 }
