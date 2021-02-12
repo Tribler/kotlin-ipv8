@@ -13,8 +13,8 @@ class BonehAttestation(
 ) : WalletAttestation() {
 
     override fun serialize(): ByteArray {
-        val out = byteArrayOf()
-        this.bitpairs.forEach { out.plus(it.serialize()) }
+        var out = byteArrayOf()
+        this.bitpairs.forEach { out += (it.serialize()) }
         return this.publicKey.serialize() + out
     }
 
@@ -24,9 +24,10 @@ class BonehAttestation(
 
     companion object {
         fun deserialize(serialized: ByteArray, idFormat: String): BonehAttestation {
-            val publicKey = BonehPublicKey.deserialize(serialized)
+            val publicKey = BonehPublicKey.deserialize(serialized)!!
             val bitPairs = arrayListOf<BitPairAttestation>()
-            var rem = serialized.copyOfRange(publicKey!!.serialize().size, serialized.size)
+            val pkSerialized = publicKey.serialize()
+            var rem = serialized.copyOfRange(pkSerialized.size, serialized.size)
             while (rem.isNotEmpty()) {
                 val attest = BitPairAttestation.deserialize(rem, publicKey.p)
                 bitPairs.add(attest)

@@ -1,5 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet
 
+import mu.KotlinLogging
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.sqldelight.Database
@@ -16,6 +17,7 @@ private val attestationMapper: (
     )
 }
 
+private val logger = KotlinLogging.logger {}
 
 class AttestationSQLiteStore(database: Database) : AttestationStore {
     private val dao = database.dbAttestationQueries
@@ -31,10 +33,11 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
     override fun insertAttestation(
         attestation: WalletAttestation,
         attestationHash: ByteArray,
-        secretKey: BonehPrivateKey,
+        privateKey: BonehPrivateKey,
         idFormat: String,
     ) {
-        val blob = attestation.serializePrivate(secretKey.publicKey())
-        dao.insertAttestation(attestationHash, blob, secretKey.serialize(), idFormat)
+        val blob = attestation.serializePrivate(privateKey.publicKey())
+        logger.info(" *** Inserting to DB: $attestation: [${String(attestationHash)}, ${String(blob)}, ${privateKey.serialize()}, $idFormat]")
+        dao.insertAttestation(attestationHash, blob, privateKey.serialize(), idFormat)
     }
 }
