@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8.attestation.wallet.primitives
 
 
+import java.lang.RuntimeException
 import java.math.BigInteger
 
 
@@ -82,7 +83,9 @@ class FP2Value(
     }
 
     operator fun div(other: FP2Value): FP2Value {
-        assert(this.mod == other.mod)
+        if (this.mod != other.mod) {
+            throw RuntimeException("Moduli of FP2Values must be equal")
+        }
 
         val a = (this.a * other.aC - this.c * other.aC - this.b * other.bC
             + this.c * other.bC - this.a * other.cC + this.b * other.cC)
@@ -97,7 +100,9 @@ class FP2Value(
     }
 
     operator fun minus(other: FP2Value): FP2Value {
-        assert(this.mod == other.mod)
+        if (this.mod != other.mod) {
+            throw RuntimeException("Moduli of FP2Values must be equal")
+        }
 
         val a = (-this.aC * other.a + this.cC * other.a + this.a * other.aC - this.c * other.aC + this.bC * other.b
             - this.cC * other.b - this.b * other.bC + this.c * other.bC + this.aC * other.c - this.bC * other.c
@@ -114,7 +119,9 @@ class FP2Value(
     }
 
     operator fun plus(other: FP2Value): FP2Value {
-        assert(this.mod == other.mod)
+        if (this.mod != other.mod) {
+            throw RuntimeException("Moduli of FP2Values must be equal")
+        }
 
         val a = (this.aC * other.a - this.cC * other.a + this.a * other.aC - this.c * other.aC - this.bC * other.b
             + this.cC * other.b - this.aC * other.c + this.bC * other.c - this.a * other.cC + this.b * other.cC)

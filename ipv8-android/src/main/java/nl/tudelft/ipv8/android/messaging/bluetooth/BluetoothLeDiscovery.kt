@@ -25,7 +25,7 @@ class BluetoothLeDiscovery(
         logger.debug { "Found ${candidates.size} Bluetooth peer candidates" }
 
         if (candidates.isNotEmpty()) {
-            val selectedCandidate = candidates.maxBy { it.rssi }
+            val selectedCandidate = candidates.maxByOrNull { it.rssi }
             if (selectedCandidate != null) {
                 logger.debug {
                     "Connecting to ${selectedCandidate.address} with RSSI ${selectedCandidate.rssi}"

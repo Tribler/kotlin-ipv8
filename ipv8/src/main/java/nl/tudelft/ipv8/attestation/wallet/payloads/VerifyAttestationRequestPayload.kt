@@ -1,7 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.payloads
 
 import nl.tudelft.ipv8.messaging.*
-import nl.tudelft.ipv8.messaging.payload.BinMemberAuthenticationPayload
 
 class VerifyAttestationRequestPayload(val hash: ByteArray) : Serializable {
     val messageId = 1

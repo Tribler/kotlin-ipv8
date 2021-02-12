@@ -34,9 +34,7 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
             throw RuntimeException("Illegal key size specified!")
         }
 
-        val hashMode = format.get("hash")
-
-        when (hashMode) {
+        when (val hashMode = format.get("hash")) {
             "sha256" -> {
                 this.attestationFunction = ::attestSHA256
                 this.aggregateReference = ::binaryRelativitySHA256

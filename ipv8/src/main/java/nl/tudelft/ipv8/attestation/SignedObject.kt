@@ -9,19 +9,19 @@ import nl.tudelft.ipv8.util.sha3_256
 abstract class SignedObject(val privateKey: PrivateKey? = null, signature: ByteArray? = null) {
 
     var hash = byteArrayOf()
-    open lateinit var signature: ByteArray;
+    open lateinit var signature: ByteArray
     private val crypto = defaultCryptoProvider
 
 
     init {
-        this._sign(privateKey, signature)
+        this.sign(privateKey, signature)
     }
 
     fun verify(publicKey: PublicKey): Boolean {
         return publicKey.verify(signature, this.getPlaintext())
     }
 
-    private fun _sign(privateKey: PrivateKey? = null, signature: ByteArray? = null) {
+    private fun sign(privateKey: PrivateKey? = null, signature: ByteArray? = null) {
         if (privateKey != null && signature == null) {
             privateKey.sign(this.getPlaintext())
         } else if (privateKey == null && signature != null) {

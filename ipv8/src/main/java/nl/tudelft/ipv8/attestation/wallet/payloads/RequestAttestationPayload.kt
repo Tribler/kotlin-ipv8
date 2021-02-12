@@ -4,7 +4,6 @@ import nl.tudelft.ipv8.messaging.Deserializable
 import nl.tudelft.ipv8.messaging.Serializable
 import nl.tudelft.ipv8.messaging.deserializeVarLen
 import nl.tudelft.ipv8.messaging.serializeVarLen
-import nl.tudelft.ipv8.util.hexToBytes
 
 
 // TODO: Add default payload class

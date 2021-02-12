@@ -9,7 +9,7 @@ class ProvingAttestationCache(
     community: AttestationCommunity,
     val cacheHash: ByteArray,
     idFormat: String,
-    val publicKey: BonehPublicKey? = null,
+    var publicKey: BonehPublicKey? = null,
     private val onComplete: (ByteArray, HashMap<Int, Int>) -> Unit = { _: ByteArray, _: HashMap<Int, Int> -> null },
 ) : HashCache(community.requestCache, PROVING_ATTESTATION_PREFIX, cacheHash, idFormat) {
 

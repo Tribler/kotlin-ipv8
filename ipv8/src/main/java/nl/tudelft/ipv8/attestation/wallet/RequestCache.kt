@@ -1,7 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.attestation.wallet.caches.HashCache
 import nl.tudelft.ipv8.attestation.wallet.caches.NumberCache
 import java.math.BigInteger
 
