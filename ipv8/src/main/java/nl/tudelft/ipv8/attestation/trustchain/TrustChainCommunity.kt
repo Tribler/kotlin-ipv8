@@ -552,10 +552,9 @@ open class TrustChainCommunity(
 
         if (validationResult !is ValidationResult.Invalid) {
             val validator = getTransactionValidator(block.type)
+
             if (validator != null) {
-                if (!validator.validate(block, database)) {
-                    validationResult = ValidationResult.Invalid(listOf(ValidationErrors.INVALID_TRANSACTION))
-                }
+                validationResult = validator.validate(block, database)
             }
         }
 
