@@ -5,11 +5,13 @@ import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehExactAlgorithm
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
-import nl.tudelft.ipv8.keyvault.PrivateKey
 
-const val CRYPTO_BASE_PACKAGE = "nl.tudelft.ipv8.attestation.wallet.cryptography."
-
-class AlgorithmScheme(val schemaName: String, val algorithmName: String, val keySize: Int, val hashAlgorithm: String)
+class AlgorithmScheme(
+    val schemaName: String,
+    val algorithmName: String,
+    val keySize: Int,
+    val hashAlgorithm: String,
+)
 
 class SchemaManager {
 
@@ -32,7 +34,11 @@ class SchemaManager {
         }
     }
 
-    fun deserializePrivate(privateKey: BonehPrivateKey, serialized: ByteArray, idFormat: String): WalletAttestation {
+    fun deserializePrivate(
+        privateKey: BonehPrivateKey,
+        serialized: ByteArray,
+        idFormat: String,
+    ): WalletAttestation {
         return when (val algorithmName = getAlgorithmName(idFormat)) {
             "bonehexact" -> {
                 BonehAttestation.deserializePrivate(privateKey, serialized, idFormat)
