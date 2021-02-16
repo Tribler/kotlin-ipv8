@@ -9,6 +9,7 @@ import nl.tudelft.ipv8.BaseCommunityTest
 import nl.tudelft.ipv8.attestation.trustchain.payload.HalfBlockPayload
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainStore
 import nl.tudelft.ipv8.attestation.trustchain.validation.TransactionValidator
+import nl.tudelft.ipv8.attestation.trustchain.validation.ValidationResult
 import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
 import nl.tudelft.ipv8.peerdiscovery.Network
 import org.junit.Assert
@@ -79,7 +80,7 @@ class TrustChainCommunityTest : BaseCommunityTest() {
         community.addListener("custom", customListener)
 
         val validator = mockk<TransactionValidator>()
-        every { validator.validate(any(), any()) } returns true
+        every { validator.validate(any(), any()) } returns ValidationResult.Valid
         community.registerTransactionValidator("custom", validator)
 
         val block = TrustChainBlock(
