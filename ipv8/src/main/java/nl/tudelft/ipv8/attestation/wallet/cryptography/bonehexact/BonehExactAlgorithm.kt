@@ -14,8 +14,8 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
 
     val keySize = formats[idFormat]?.get("key_size") as Int
     val attestationClass = BonehAttestation
-    lateinit var attestationFunction: (BonehPublicKey, ByteArray) -> BonehAttestation
-    lateinit var aggregateReference: (ByteArray) -> HashMap<Int, Int>
+    var attestationFunction: (BonehPublicKey, ByteArray) -> BonehAttestation
+    var aggregateReference: (ByteArray) -> HashMap<Int, Int>
 
     init {
         this.honestCheck = true
