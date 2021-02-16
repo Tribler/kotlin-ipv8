@@ -32,7 +32,9 @@ open class BonehPublicKey(val p: BigInteger, val g: FP2Value, val h: FP2Value) {
                 return null
             }
 
-            return BonehPublicKey(nums[0], FP2Value(nums[0], nums[1], nums[2]), FP2Value(nums[0], nums[3], nums[4]))
+            return BonehPublicKey(nums[0],
+                FP2Value(nums[0], nums[1], nums[2]),
+                FP2Value(nums[0], nums[3], nums[4]))
             // TODO Python implementation has unreachable code.
         }
     }
@@ -41,12 +43,30 @@ open class BonehPublicKey(val p: BigInteger, val g: FP2Value, val h: FP2Value) {
         return Companion.deserialize(serialized)
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as BonehPublicKey
+
+        if (p != other.p) return false
+        if (g != other.g) return false
+        if (h != other.h) return false
+
+        return true
+    }
+
 }
 
-class BonehPrivateKey(p: BigInteger, g: FP2Value, h: FP2Value, val n: BigInteger, val t1: BigInteger) :
+class BonehPrivateKey(
+    p: BigInteger,
+    g: FP2Value,
+    h: FP2Value,
+    val n: BigInteger,
+    val t1: BigInteger,
+) :
     BonehPublicKey(p, g, h) {
-
-
+    
     override fun serialize(): ByteArray {
         return super.serialize() + serializeVarLen(this.n.toByteArray()) + serializeVarLen(this.t1.toByteArray())
     }
@@ -59,25 +79,39 @@ class BonehPrivateKey(p: BigInteger, g: FP2Value, h: FP2Value, val n: BigInteger
         return BonehPrivateKey.deserialize(serialized)
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as BonehPrivateKey
+
+        if (n != other.n) return false
+        if (t1 != other.t1) return false
+
+        return super.equals(other)
+    }
+
     companion object {
         fun deserialize(serialized: ByteArray): BonehPrivateKey? {
             var localOffset = 0
             val nums = arrayListOf<BigInteger>()
             while (serialized.isNotEmpty() && nums.size < PRIVATE_KEY_FIELDS) {
-                val unpacked = deserializeUInt(serialized, localOffset)
-                nums.add(BigInteger(unpacked.toString()))
-                localOffset += SERIALIZED_UINT_SIZE
+                val unpacked = deserializeVarLen(serialized, localOffset)
+                nums.add(BigInteger(unpacked.first))
+                localOffset += unpacked.second
             }
+
             if (nums.size < PRIVATE_KEY_FIELDS) {
                 return null
             }
 
             return BonehPrivateKey(nums[0],
                 FP2Value(nums[0], nums[1], nums[2]),
-                FP2Value(nums[0], nums[3], nums[5]),
+                FP2Value(nums[0], nums[3], nums[4]),
                 nums[5],
                 nums[6])
         }
     }
+
 
 }
