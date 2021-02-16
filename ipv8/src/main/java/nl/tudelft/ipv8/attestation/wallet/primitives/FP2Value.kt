@@ -1,6 +1,7 @@
 package nl.tudelft.ipv8.attestation.wallet.primitives
 
 
+import org.bouncycastle.pqc.math.linearalgebra.IntegerFunctions.modInverse
 import java.lang.RuntimeException
 import java.math.BigInteger
 
@@ -14,29 +15,27 @@ class FP2Value(
     bC: BigInteger = BigInteger.ZERO,
     cC: BigInteger = BigInteger.ZERO,
 ) {
-    var a = a % mod
-    var b = b % mod
-    var c = c % mod
-    var aC = aC % mod
-    var bC = bC % mod
-    var cC = cC % mod
+    val a = a.mod(mod)
+    val b = b.mod(mod)
+    val c = c.mod(mod)
+    val aC = aC.mod(mod)
+    val bC = bC.mod(mod)
+    val cC = cC.mod(mod)
 
 
     operator fun times(other: FP2Value): FP2Value {
         if (this.mod != other.mod)
             throw AssertionError("Modulo must be equal!")
 
-        val a = (this.aC * other.a - this.cC * other.a + this.a * other.aC - this.c * other.aC - this.bC * other.b
-            + this.cC * other.b - this.aC * other.c + this.bC * other.c - this.a * other.cC + this.b * other.cC)
-        val b = (this.bC * other.a - this.cC * other.a + this.b * other.aC - this.c * other.aC + this.aC * other.b
-            - this.bC * other.b + this.a * other.bC - this.b * other.bC - this.aC * other.c + this.cC * other.c
-            - this.a * other.cC + this.c * other.cC)
+        val a = (this.a * other.a - this.c * other.a - this.b * other.b
+            + this.c * other.b - this.a * other.c + this.b * other.c)
+        val b = (this.b * other.a - this.c * other.a + this.a * other.b
+            - this.b * other.b - this.a * other.c + this.c * other.c)
         val aC = (this.aC * other.aC - this.cC * other.aC - this.bC * other.bC
             + this.cC * other.bC - this.aC * other.cC + this.bC * other.cC)
         val bC = (this.bC * other.aC - this.cC * other.aC + this.aC * other.bC
             - this.bC * other.bC - this.aC * other.cC + this.cC * other.cC)
-
-        return FP2Value(this.mod, a = a, b = b, aC = aC, bC = bC)
+        return FP2Value(this.mod, a=a, b=b, aC=aC, bC=bC)
     }
 
     fun bigIntPow(e: BigInteger): FP2Value {
@@ -44,8 +43,9 @@ class FP2Value(
         var r = FP2Value(this.mod, BigInteger.ONE)
         var u = this
         while (n > BigInteger.ZERO) {
-            if (n % BigInteger("2") == BigInteger.ONE)
+            if (n.mod(BigInteger("2")) == BigInteger.ONE) {
                 r *= u
+            }
             u *= u
             n /= BigInteger("2")
         }
@@ -54,14 +54,20 @@ class FP2Value(
 
     fun normalize(): FP2Value {
         // TODO: Verify that this is correct
-        val mp = (this.aC % this.mod).modInverse(this.mod)
+        val mp: BigInteger = if (this.aC == BigInteger.ZERO && this.mod > BigInteger.ZERO) {
+            BigInteger.ZERO
+        } else if (this.mod < BigInteger.ZERO) {
+            this.mod
+        } else {
+            (this.aC.mod(this.mod).modInverse(this.mod))
+        }
         if (mp > BigInteger.ZERO) {
-            val a = (this.a * mp) % this.mod
-            val b = (this.b * mp) % this.mod
-            val c = (this.c * mp) % this.mod
+            val a = (this.a * mp).mod(this.mod)
+            val b = (this.b * mp).mod(this.mod)
+            val c = (this.c * mp).mod(this.mod)
             val aC = BigInteger.ONE
-            val bC = (this.bC * mp) % this.mod
-            val cC = (this.cC * mp) % this.mod
+            val bC = (this.bC * mp).mod(this.mod)
+            val cC = (this.cC * mp).mod(this.mod)
             return FP2Value(this.mod, a, b, c, aC, bC, cC)
         }
         return FP2Value(this.mod, this.a, this.b, this.c, this.aC, this.bC, this.cC)
@@ -77,8 +83,8 @@ class FP2Value(
 
     fun wpDenomInverse(): FP2Value {
         val iq = FP2Value(this.mod, this.aC * this.aC - this.aC * this.bC + this.bC * this.bC)
-        val a = FP2Value(this.mod, this.aC - this.bC) // iq
-        val b = FP2Value(this.mod, -this.bC) // iq
+        val a = FP2Value(this.mod, this.aC - this.bC) / iq
+        val b = FP2Value(this.mod, -this.bC) / iq
         return FP2Value(this.mod, a.normalize().a, b.normalize().a)
     }
 
@@ -133,6 +139,14 @@ class FP2Value(
         val bC = (this.bC * other.aC - this.cC * other.aC + this.aC * other.bC
             - this.bC * other.bC - this.aC * other.cC + this.cC * other.cC)
         return FP2Value(this.mod, a = a, b = b, aC = aC, bC = bC)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other !is FP2Value) {
+            return false
+        }
+        val divd = (this.div(other)).normalize()
+        return divd.a == divd.aC && divd.b == divd.bC && divd.c == divd.cC
     }
 
 }

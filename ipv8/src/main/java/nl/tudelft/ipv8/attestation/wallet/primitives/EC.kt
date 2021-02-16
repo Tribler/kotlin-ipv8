@@ -19,17 +19,18 @@ fun weilParing(
 }
 
 fun millerCalc(mod: BigInteger, m: BigInteger, p: Pair<FP2Value, FP2Value>, r: Pair<FP2Value, FP2Value>): FP2Value {
-    val mList = m.toString(2).toList().reversed().map { it.toInt() }
-    var t = p
+    val mList = m.toString(2).toList().reversed().map { it.toString().toInt() }
+    var t: Any = p
     var f = FP2Value(mod, BigInteger.ONE)
 
     // -2 as we do not want to include size - 1
     for (i in (mList.size - 2) downTo 0) {
-        f = (f * f * h(mod, t, t, r.first, r.second)).normalize()
-        t = eSum(mod, t, t) as Pair<FP2Value, FP2Value>
+        val hmodval = h(mod, t as Pair<FP2Value, FP2Value>, t, r.first, r.second)
+        f = (f * f * hmodval).normalize()
+        t = eSum(mod, t, t)
         if (mList[i] == 1) {
-            f = (f * h(mod, t, p, r.first, r.second)).normalize()
-            t = eSum(mod, t, p) as Pair<FP2Value, FP2Value>
+            f = (f * h(mod, t as Pair<FP2Value, FP2Value>, p, r.first, r.second)).normalize()
+            t = eSum(mod, t, p)
         }
     }
     return f
@@ -67,8 +68,8 @@ fun eSum(mod: BigInteger, p: Any, q: Any): Any {
         return "O"
 
     var l = if (x1 == x2) {
-        ((FP2Value(mod, BigInteger("3")) * x1 * x1) / ((FP2Value(mod,
-            BigInteger("2")) * y1).normalize()))
+        (FP2Value(mod, BigInteger("3")) * x1 * x1) / ((FP2Value(mod,
+            BigInteger("2")) * y1).normalize())
     } else {
         ((y1 - y2) / (x1 - x2)).normalize()
     }

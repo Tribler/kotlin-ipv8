@@ -70,7 +70,7 @@ fun attest(publicKey: BonehPublicKey, value: BigInteger, bitSpace: Int): BonehAt
     val tOutPrivate = arrayListOf<Pair<Int, FP2Value>>()
     for (i in 0 until a.size - 1 step 2) {
         tOutPrivate.add(Pair(i,
-            encode(publicKey, publicKey.p - ((r[i] + r[i + 1]) % (publicKey.p + BigInteger.ONE)) + BigInteger.ONE)))
+            encode(publicKey, publicKey.p - ((r[i] + r[i + 1]).mod(publicKey.p + BigInteger.ONE)) + BigInteger.ONE)))
     }
 
     val tOutPublicShuffled = arrayListOf<Triple<Int, FP2Value, FP2Value>>()
@@ -119,7 +119,7 @@ fun generateModularAdditiveInverse(p: BigInteger, n: Int): ArrayList<BigInteger>
         rSum += r
     }
 
-    randoms.add(p - (rSum % (p + BigInteger.ONE)) + BigInteger.ONE)
+    randoms.add(p - (rSum.mod(p + BigInteger.ONE)) + BigInteger.ONE)
     randoms.shuffle(random)
 
     return randoms
