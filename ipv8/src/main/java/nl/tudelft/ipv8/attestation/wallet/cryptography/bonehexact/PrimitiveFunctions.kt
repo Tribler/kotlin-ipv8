@@ -7,6 +7,8 @@ import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.security.interfaces.RSAPrivateCrtKey
 import java.security.spec.RSAKeyGenParameterSpec
+import org.bouncycastle.math.ec.WNafUtil
+import org.bouncycastle.util.BigIntegers
 
 fun encode(publicKey: BonehPublicKey, m: BigInteger): FP2Value {
     return publicKey.g.bigIntPow(m) * getRandomExponentiation(publicKey.h, publicKey.p)
@@ -36,7 +38,7 @@ fun generateKeypair(keySize: Int = 32): Pair<BonehPublicKey, BonehPrivateKey> {
     val n = t1 * t2
     val (p, g) = getGoodWp(n)
     var u: FP2Value? = null
-    while (u == null || (u!!.bigIntPow(t2) == FP2Value(p, BigInteger.ONE)))
+    while (u == null || (u.bigIntPow(t2) == FP2Value(p, BigInteger.ONE)))
         u = getGoodWp(n, p).second
 
     val h = u.bigIntPow(t2)
@@ -46,7 +48,7 @@ fun generateKeypair(keySize: Int = 32): Pair<BonehPublicKey, BonehPrivateKey> {
 fun getGoodWp(n: BigInteger, p: BigInteger = generatePrime(n)): Pair<BigInteger, FP2Value> {
     var wp: FP2Value? = null
 
-    while (wp == null || !isGoodWp(n, wp!!)) {
+    while (wp == null || !isGoodWp(n, wp)) {
         val (g1x, g1y) = getRandomBase(n)
         wp = bilinearGroup(n, p, g1x, g1y, g1x, g1y)
         if (!isGoodWp(n, wp))
@@ -86,7 +88,7 @@ fun getRandomBase(n: BigInteger): Pair<BigInteger, BigInteger> {
 fun isGoodWp(n: BigInteger, wp: FP2Value): Boolean {
     val isOne = wp == FP2Value(wp.mod, BigInteger.ONE)
     val isZero = wp == FP2Value(wp.mod)
-    val goodOrder = wp.bigIntPow(n.plus(BigInteger.ONE)) == wp
+    val goodOrder = wp.bigIntPow(n + BigInteger.ONE) == wp
     return goodOrder && !isZero && !isOne
 }
 
@@ -101,14 +103,54 @@ fun generatePrime(n: BigInteger): BigInteger {
     return p
 }
 
-fun generatePrimes(keySize: Int): Pair<BigInteger, BigInteger> {
-    val rsa = KeyPairGenerator.getInstance("RSA")
-    rsa.initialize(RSAKeyGenParameterSpec(keySize, BigInteger("65537")))
-    val privateKey = rsa.genKeyPair().private as RSAPrivateCrtKey
-    val p = privateKey.primeP
-    val q = privateKey.primeQ
+fun generatePrimes(keySize: Int = 128): Pair<BigInteger, BigInteger> {
+    val p: BigInteger
+    val q: BigInteger
+    if (keySize >= 512) {
+        val rsa = KeyPairGenerator.getInstance("RSA")
+        rsa.initialize(RSAKeyGenParameterSpec(keySize, BigInteger("65537")))
+        val privateKey = rsa.genKeyPair().private as RSAPrivateCrtKey
+        p = privateKey.primeP
+        q = privateKey.primeQ
+    } else {
+        val primes = generateSafePrimes(keySize, 2, SecureRandom())
+        p = primes!![0]
+        q = primes!![1]
+    }
 
     return Pair(p.min(q), p.max(q))
+}
+
+// Src: https://github.com/bcgit/bc-java/blob/bc3b92f1f0e78b82e2584c5fb4b226a13e7f8b3b/core/src/main/java/org/bouncycastle/crypto/generators/DHParametersHelper.java
+fun generateSafePrimes(size: Int, certainty: Int, random: SecureRandom?): Array<BigInteger>? {
+    var p: BigInteger
+    var q: BigInteger
+    val qLength = size - 1
+    val minWeight = size ushr 2
+    while (true) {
+        q = BigIntegers.createRandomPrime(qLength, 2, random)
+
+        // p <- 2q + 1
+        p = q.shiftLeft(1).add(BigInteger.valueOf(1))
+        if (!p.isProbablePrime(certainty)) {
+            continue
+        }
+        if (certainty > 2 && !q.isProbablePrime(certainty - 2)) {
+            continue
+        }
+
+        /*
+         * Require a minimum weight of the NAF representation, since low-weight primes may be
+         * weak against a version of the number-field-sieve for the discrete-logarithm-problem.
+         *
+         * See "The number field sieve for integers of low weight", Oliver Schirokauer.
+         */
+        if (WNafUtil.getNafWeight(p) < minWeight) {
+            continue
+        }
+        break
+    }
+    return arrayOf(p, q)
 }
 
 fun generateRandomBigInteger(
@@ -122,4 +164,3 @@ fun generateRandomBigInteger(
     } while (randomElement >= upperBound || randomElement <= lowerBound)
     return randomElement
 }
-
