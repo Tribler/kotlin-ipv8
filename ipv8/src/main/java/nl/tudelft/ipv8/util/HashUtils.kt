@@ -35,7 +35,7 @@ fun toASCII(value: String): ByteArray {
     return value.toByteArray(Charsets.US_ASCII)
 }
 
-fun sha256AsInt(input: ByteArray): BigInteger {
+fun sha256AsBigInt(input: ByteArray): BigInteger {
     var out = BigInteger.ZERO
     val hash = sha256(input)
     for (i in 0..hash.lastIndex) {
@@ -45,7 +45,7 @@ fun sha256AsInt(input: ByteArray): BigInteger {
     return out
 }
 
-fun sha256_4_AsInt(input: ByteArray): BigInteger {
+fun sha256_4_AsBigInt(input: ByteArray): BigInteger {
     var out = BigInteger.ZERO
     val hash = sha256(input).copyOfRange(0, 4)
     for (i in 0..hash.lastIndex) {
@@ -55,7 +55,7 @@ fun sha256_4_AsInt(input: ByteArray): BigInteger {
     return out
 }
 
-fun sha512AsInt(input: ByteArray): BigInteger {
+fun sha512AsBigInt(input: ByteArray): BigInteger {
     var out = BigInteger.ZERO
     val hash = sha512(input).copyOfRange(0, 4)
     for (i in 0..hash.lastIndex) {
