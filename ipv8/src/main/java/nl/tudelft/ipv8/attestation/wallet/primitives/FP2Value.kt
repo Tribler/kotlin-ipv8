@@ -45,7 +45,7 @@ class FP2Value(
             + this.cC * other.bC - this.aC * other.cC + this.bC * other.cC)
         val bC = (this.bC * other.aC - this.cC * other.aC + this.aC * other.bC
             - this.bC * other.bC - this.aC * other.cC + this.cC * other.cC)
-        return FP2Value(this.mod, a=a, b=b, aC=aC, bC=bC)
+        return FP2Value(this.mod, a = a, b = b, aC = aC, bC = bC)
     }
 
     fun bigIntPow(e: BigInteger): FP2Value {
@@ -62,41 +62,6 @@ class FP2Value(
         return if (e < BigInteger.ZERO) r.inverse().normalize() else r
     }
 
-    fun normalize(): FP2Value {
-        // TODO: Verify that this is correct
-        val mp: BigInteger = if (this.aC == BigInteger.ZERO && this.mod > BigInteger.ZERO) {
-            BigInteger.ZERO
-        } else if (this.mod < BigInteger.ZERO) {
-            this.mod
-        } else {
-            (this.aC.mod(this.mod).modInverse(this.mod))
-        }
-        if (mp > BigInteger.ZERO) {
-            val a = (this.a * mp).mod(this.mod)
-            val b = (this.b * mp).mod(this.mod)
-            val c = (this.c * mp).mod(this.mod)
-            val aC = BigInteger.ONE
-            val bC = (this.bC * mp).mod(this.mod)
-            val cC = (this.cC * mp).mod(this.mod)
-            return FP2Value(this.mod, a, b, c, aC, bC, cC)
-        }
-        return FP2Value(this.mod, this.a, this.b, this.c, this.aC, this.bC, this.cC)
-    }
-
-    fun inverse(): FP2Value {
-        return FP2Value(this.mod, a = this.aC, b = this.bC, c = this.cC, aC = this.a, bC = this.b, cC = this.c)
-    }
-
-    fun wpNominator(): FP2Value {
-        return FP2Value(this.mod, this.a, this.b)
-    }
-
-    fun wpDenomInverse(): FP2Value {
-        val iq = FP2Value(this.mod, this.aC * this.aC - this.aC * this.bC + this.bC * this.bC)
-        val a = FP2Value(this.mod, this.aC - this.bC) / iq
-        val b = FP2Value(this.mod, -this.bC) / iq
-        return FP2Value(this.mod, a.normalize().a, b.normalize().a)
-    }
 
     operator fun div(other: FP2Value): FP2Value {
         if (this.mod != other.mod) {
@@ -157,6 +122,65 @@ class FP2Value(
         }
         val divd = (this.div(other)).normalize()
         return divd.a == divd.aC && divd.b == divd.bC && divd.c == divd.cC
+    }
+
+    override fun hashCode(): Int {
+        return 0
+    }
+
+    override fun toString(): String {
+        val num = formatPolynomial(this.a, this.b, this.c)
+        val denom = formatPolynomial(this.aC, this.bC, this.cC)
+
+        return if (denom == "1")
+            num
+        else
+            "($num)/($denom)"
+    }
+
+    fun normalize(): FP2Value {
+        // TODO: Verify that this is correct
+        val mp: BigInteger = if (this.aC == BigInteger.ZERO && this.mod > BigInteger.ZERO) {
+            BigInteger.ZERO
+        } else if (this.mod < BigInteger.ZERO) {
+            this.mod
+        } else {
+            (this.aC.mod(this.mod).modInverse(this.mod))
+        }
+        if (mp > BigInteger.ZERO) {
+            val a = (this.a * mp).mod(this.mod)
+            val b = (this.b * mp).mod(this.mod)
+            val c = (this.c * mp).mod(this.mod)
+            val aC = BigInteger.ONE
+            val bC = (this.bC * mp).mod(this.mod)
+            val cC = (this.cC * mp).mod(this.mod)
+            return FP2Value(this.mod, a, b, c, aC, bC, cC)
+        }
+        return FP2Value(this.mod, this.a, this.b, this.c, this.aC, this.bC, this.cC)
+    }
+
+
+    fun inverse(): FP2Value {
+        return FP2Value(this.mod, a = this.aC, b = this.bC, c = this.cC, aC = this.a, bC = this.b, cC = this.c)
+    }
+
+    fun wpNominator(): FP2Value {
+        return FP2Value(this.mod, this.a, this.b)
+    }
+
+    fun wpDenomInverse(): FP2Value {
+        val iq = FP2Value(this.mod, this.aC * this.aC - this.aC * this.bC + this.bC * this.bC)
+        val a = FP2Value(this.mod, this.aC - this.bC) / iq
+        val b = FP2Value(this.mod, -this.bC) / iq
+        return FP2Value(this.mod, a.normalize().a, b.normalize().a)
+    }
+
+    fun wpCompress(): FP2Value {
+        if (this.c != BigInteger.ZERO || this.cC != BigInteger.ZERO) {
+            throw RuntimeException("FP2Value: c and cC must be zero to compress.")
+        }
+        val normalized = this.normalize()
+        return normalized.wpNominator() * normalized.wpDenomInverse()
     }
 
 }
