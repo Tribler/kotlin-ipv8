@@ -7,10 +7,12 @@ import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.B
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.decode
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.encode
 import nl.tudelft.ipv8.attestation.wallet.primitives.FP2Value
-import nl.tudelft.ipv8.util.sha256AsInt
-import nl.tudelft.ipv8.util.sha256_4_AsInt
-import nl.tudelft.ipv8.util.sha512AsInt
+import nl.tudelft.ipv8.util.sha256AsBigInt
+import nl.tudelft.ipv8.util.sha256_4_AsBigInt
+import nl.tudelft.ipv8.util.sha512AsBigInt
+import java.math.BigDecimal
 import java.math.BigInteger
+import java.math.RoundingMode
 import java.security.SecureRandom
 import java.util.*
 import kotlin.collections.ArrayList
@@ -19,27 +21,27 @@ import kotlin.collections.HashMap
 val lock = Object()
 
 fun attestSHA256(publicKey: BonehPublicKey, value: ByteArray): BonehAttestation {
-    return attest(publicKey, sha256AsInt(value), 256)
-}
-
-fun attestSHA512(publicKey: BonehPublicKey, value: ByteArray): BonehAttestation {
-    return attest(publicKey, sha512AsInt(value), 512)
+    return attest(publicKey, sha256AsBigInt(value), 256)
 }
 
 fun attestSHA256_4(publicKey: BonehPublicKey, value: ByteArray): BonehAttestation {
-    return attest(publicKey, sha256_4_AsInt(value), 32)
+    return attest(publicKey, sha256_4_AsBigInt(value), 32)
+}
+
+fun attestSHA512(publicKey: BonehPublicKey, value: ByteArray): BonehAttestation {
+    return attest(publicKey, sha512AsBigInt(value), 512)
 }
 
 fun binaryRelativitySHA256(value: ByteArray): HashMap<Int, Int> {
-    return binaryRelativity(sha256AsInt(value), 256)
+    return binaryRelativity(sha256AsBigInt(value), 256)
 }
 
 fun binaryRelativitySHA256_4(value: ByteArray): HashMap<Int, Int> {
-    return binaryRelativity(sha256_4_AsInt(value), 256)
+    return binaryRelativity(sha256_4_AsBigInt(value), 32)
 }
 
 fun binaryRelativitySHA512(value: ByteArray): HashMap<Int, Int> {
-    return binaryRelativity(sha512AsInt(value), 256)
+    return binaryRelativity(sha512AsBigInt(value), 512)
 }
 
 fun binaryRelativity(value: BigInteger, bitSpace: Int): HashMap<Int, Int> {
