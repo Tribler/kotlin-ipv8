@@ -10,12 +10,13 @@ class ProvingAttestationCache(
     val cacheHash: ByteArray,
     idFormat: String,
     var publicKey: BonehPublicKey? = null,
-    private val onComplete: (ByteArray, HashMap<Int, Int>) -> Unit = { _: ByteArray, _: HashMap<Int, Int> -> null },
+    private val onComplete: (ByteArray, HashMap<Any, Any>) -> Unit = { _: ByteArray, _: HashMap<Any, Any> -> null },
 ) : HashCache(community.requestCache, PROVING_ATTESTATION_PREFIX, cacheHash, idFormat) {
 
-    var relativityMap: HashMap<Int, Int> = hashMapOf()
+    var relativityMap: HashMap<Any, Any> = hashMapOf()
     var hashedChallenges: ArrayList<ByteArray> = arrayListOf()
     var challenges: ArrayList<ByteArray> = arrayListOf()
 
-    fun attestationCallbacks(cacheHash: ByteArray, relativityMap: HashMap<Int, Int>) = ::onComplete
+    fun attestationCallbacks(cacheHash: ByteArray, relativityMap: HashMap<Any, Any>) =
+        onComplete(cacheHash, relativityMap)
 }
