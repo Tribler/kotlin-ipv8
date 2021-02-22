@@ -5,12 +5,16 @@ import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehExactAlgorithm
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.PengBaoAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.Pengbaorange
 
 class AlgorithmScheme(
     val schemaName: String,
     val algorithmName: String,
     val keySize: Int,
-    val hashAlgorithm: String,
+    val hashAlgorithm: String? = null,
+    val min: Int? = null,
+    val max: Int? = null,
 )
 
 class SchemaManager {
@@ -23,7 +27,7 @@ class SchemaManager {
                 BonehAttestation.deserialize(serialized, idFormat)
             }
             "pengbaorange" -> {
-                TODO("Not yet implemented.")
+                PengBaoAttestation.deserialize(serialized, idFormat)
             }
             "irmaexact" -> {
                 TODO("Not yet implemented.")
@@ -44,7 +48,7 @@ class SchemaManager {
                 BonehAttestation.deserializePrivate(privateKey, serialized, idFormat)
             }
             "pengbaorange" -> {
-                TODO("Not yet implemented.")
+                PengBaoAttestation.deserializePrivate(privateKey, serialized, idFormat)
             }
             "irmaexact" -> {
                 TODO("Not yet implemented.")
@@ -71,11 +75,23 @@ class SchemaManager {
         defaultSchemas.add(AlgorithmScheme("id_metadata", "bonehexact", 32, "sha256_4"))
         defaultSchemas.add(AlgorithmScheme("id_metadata_big", "bonehexact", 64, "sha256"))
         defaultSchemas.add(AlgorithmScheme("id_metadata_huge", "bonehexact", 96, "sha512"))
+        defaultSchemas.add(AlgorithmScheme("id_metadata_range_18plus", "pengbaorange", 32, min = 18, max = 200))
+        defaultSchemas.add(AlgorithmScheme("id_metadata_range_underage", "pengbaorange", 32, min = 0, max = 17))
 
         defaultSchemas.forEach {
+            val params = hashMapOf<String, Any>("key_size" to it.keySize)
+            if (it.hashAlgorithm != null) {
+                params["hash"] = it.hashAlgorithm
+            }
+            if (it.min != null && it.max != null) {
+                params["min"] = it.min
+                params["max"] = it.max
+            }
+
             this.registerSchema(it.schemaName,
                 it.algorithmName,
-                hashMapOf("key_size" to it.keySize, "hash" to it.hashAlgorithm))
+                params
+            )
         }
     }
 
@@ -85,7 +101,7 @@ class SchemaManager {
                 BonehExactAlgorithm(idFormat, this.formats)
             }
             "pengbaorange" -> {
-                TODO("Not yet implemented.")
+                Pengbaorange(idFormat, this.formats)
             }
             "irmaexact" -> {
                 TODO("Not yet implemented.")
