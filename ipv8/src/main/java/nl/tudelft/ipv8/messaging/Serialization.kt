@@ -90,10 +90,13 @@ fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
     return buffer.int.toLong()
 }
 
+fun serializeUChar(char: UByte): ByteArray {
+    return byteArrayOf(char.toByte())
+}
+
 fun deserializeUChar(buffer: ByteArray, offset: Int = 0): UByte {
     val ubuffer = buffer.toUByteArray()
     return ubuffer[offset]
-
 }
 
 fun serializeVarLen(bytes: ByteArray): ByteArray {
@@ -116,6 +119,19 @@ fun deserializeRecursively(buffer: ByteArray, offset: Int = 0): Array<ByteArray>
         offset + SERIALIZED_UINT_SIZE + len)
     return arrayOf(payload) + deserializeRecursively(buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE + len,
         buffer.size), offset)
+}
+
+fun deserializeAmount(buffer: ByteArray, amount: Int, offset: Int = 0): Pair<Array<ByteArray>, ByteArray> {
+    val returnValues = arrayListOf<ByteArray>()
+    var offset = offset
+    for (i in 0 until amount) {
+        val len = deserializeUInt(buffer, offset).toInt()
+        val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
+            offset + SERIALIZED_UINT_SIZE + len)
+        offset += SERIALIZED_UINT_SIZE + len
+        returnValues.add(payload)
+    }
+    return Pair(returnValues.toTypedArray(), buffer.copyOfRange(offset, buffer.size))
 }
 
 /**
