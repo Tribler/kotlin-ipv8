@@ -507,6 +507,8 @@ open class TrustChainCommunity(
 
         // TODO: Check if we are waiting for this signature response
 
+        if (result is ValidationResult.Invalid) return
+
         // We can create an agreement block if this is a proposal block targeted to us and we
         // have not created a linked agreement block yet
         val canSign = block.isProposal &&
