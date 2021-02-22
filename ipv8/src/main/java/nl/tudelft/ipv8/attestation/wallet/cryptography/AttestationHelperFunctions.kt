@@ -130,22 +130,22 @@ fun createChallenge(publicKey: BonehPublicKey, bitpair: BitPairAttestation): FP2
 
 }
 
-fun binaryRelativityCertainty(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): Float {
+fun binaryRelativityCertainty(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): BigDecimal {
     val exp = value.values.sumOf { it }
-    val cert = BigInteger.ONE - (BigInteger("0.5").pow(exp))
-    return binaryRelativityMatch(expected, value) * cert.toFloat()
+    val cert = BigDecimal.ONE - (BigDecimal("0.5").pow(exp))
+    return binaryRelativityMatch(expected, value) * cert
 }
 
-fun binaryRelativityMatch(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): Float {
-    var match = 1F
+fun binaryRelativityMatch(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): BigDecimal {
+    var match = BigDecimal.ONE
     for (k in expected.keys) {
         if (expected[k]!! < value[k]!!) {
-            return 0F
+            return BigDecimal.ZERO
         }
         if (!expected.containsKey(k) || !value.containsKey(k) || expected[k] == 0 || value[k] == 0) {
             continue
         }
-        match *= value[k]!!.toFloat() / expected[k]!!
+        match *= value[k]!!.toBigDecimal().divide(expected[k]!!.toBigDecimal(), 25, RoundingMode.HALF_UP)
     }
 
     return match
