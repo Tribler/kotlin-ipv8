@@ -1,11 +1,11 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography
 
-import junit.framework.Assert.assertEquals
-import junit.framework.Assert.assertTrue
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.decode
 import nl.tudelft.ipv8.util.hexToBytes
 import org.junit.Assert
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
 import java.math.BigInteger
