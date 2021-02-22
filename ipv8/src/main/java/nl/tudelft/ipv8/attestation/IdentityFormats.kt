@@ -3,6 +3,7 @@ package nl.tudelft.ipv8.attestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
 import nl.tudelft.ipv8.util.sha1
+import java.math.BigDecimal
 
 abstract class IdentityAlgorithm(idFormat: String, formats: HashMap<String, HashMap<String, Any>>) {
     var honestCheck = false
@@ -27,7 +28,8 @@ abstract class IdentityAlgorithm(idFormat: String, formats: HashMap<String, Hash
 
     abstract fun attest(publicKey: BonehPublicKey, value: ByteArray): ByteArray
 
-    abstract fun certainty(value: ByteArray, aggregate: HashMap<Int, Int>): Float
+    // Any type as aggregates can contain numerous types.
+    abstract fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): BigDecimal
 
     abstract fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray>
 
@@ -38,12 +40,12 @@ abstract class IdentityAlgorithm(idFormat: String, formats: HashMap<String, Hash
     ): ByteArray
 
     abstract fun processChallengeResponse(
-        aggregate: HashMap<Int, Int>,
+        aggregate: HashMap<Any, Any>,
         challenge: ByteArray?,
         response: ByteArray,
-    )
+    ): Any
 
-    abstract fun createCertaintyAggregate(attestation: WalletAttestation?): HashMap<Int, Int>
+    abstract fun createCertaintyAggregate(attestation: WalletAttestation?): HashMap<Any, Any>
 
     abstract fun createHonestyChallenge(publicKey: BonehPublicKey, value: Int): ByteArray
 
@@ -69,7 +71,7 @@ abstract class WalletAttestation {
     abstract fun deserializePrivate(
         privateKey: BonehPrivateKey,
         serialized: ByteArray,
-        idFormat: String,
+        idFormat: String?,
     ): WalletAttestation
 
     fun getHash(): ByteArray {
@@ -79,23 +81,5 @@ abstract class WalletAttestation {
     override fun toString(): String {
         return "WalletAttestation(publicKey=$publicKey, idFormat=$idFormat)"
     }
-
-    companion object {
-        fun deserialize(
-            string: ByteArray,
-            idFormat: String,
-        ): WalletAttestation {
-            throw NotImplementedError()
-        }
-
-        fun deserializePrivate(
-            privateKey: BonehPrivateKey,
-            string: ByteArray,
-            idFormat: String,
-        ): WalletAttestation {
-            throw NotImplementedError()
-        }
-    }
-
 
 }

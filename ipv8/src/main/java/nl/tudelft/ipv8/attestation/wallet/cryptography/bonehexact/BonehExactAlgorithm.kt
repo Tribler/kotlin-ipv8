@@ -5,6 +5,7 @@ import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.*
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
 import nl.tudelft.ipv8.messaging.*
+import java.math.BigDecimal
 import java.math.BigInteger
 
 const val ALGORITHM_NAME = "bonehexact"
@@ -12,10 +13,9 @@ const val ALGORITHM_NAME = "bonehexact"
 class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, HashMap<String, Any>>) :
     IdentityAlgorithm(idFormat, formats) {
 
-    val keySize = formats[idFormat]?.get("key_size") as Int
-    val attestationClass = BonehAttestation
-    var attestationFunction: (BonehPublicKey, ByteArray) -> BonehAttestation
-    var aggregateReference: (ByteArray) -> HashMap<Int, Int>
+    private val keySize = formats[idFormat]?.get("key_size") as Int
+    private var attestationFunction: (BonehPublicKey, ByteArray) -> BonehAttestation
+    private var aggregateReference: (ByteArray) -> HashMap<Int, Int>
 
     init {
         this.honestCheck = true
@@ -53,7 +53,7 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
     }
 
     override fun deserialize(serialized: ByteArray, idFormat: String): WalletAttestation {
-        return this.attestationClass.deserialize(serialized, idFormat)
+        return BonehAttestation.deserialize(serialized, idFormat)
     }
 
     override fun generateSecretKey(): BonehPrivateKey {
@@ -72,15 +72,16 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
         return this.attestationFunction(publicKey, value).serialize()
     }
 
-    override fun certainty(value: ByteArray, aggregate: HashMap<Int, Int>): Float {
-        return binaryRelativityCertainty(this.aggregateReference(value), aggregate)
+    override fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): BigDecimal {
+        @Suppress("UNCHECKED_CAST")
+        return binaryRelativityCertainty(this.aggregateReference(value), aggregate as HashMap<Int, Int>)
     }
 
     override fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray> {
         val attestation = attestation as BonehAttestation
         val challenges = arrayListOf<ByteArray>()
-        for (bitpair in attestation.bitpairs) {
-            val challenge = createChallenge(attestation.publicKey, bitpair)
+        for (bitPair in attestation.bitPairs) {
+            val challenge = createChallenge(attestation.publicKey, bitPair)
             val serialized = serializeVarLen(challenge.a.toByteArray()) + serializeVarLen(challenge.b.toByteArray())
             challenges.add(serialized)
         }
@@ -93,22 +94,25 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
         attestation: WalletAttestation,
         challenge: ByteArray,
     ): ByteArray {
-        val deserialized = deserializeRecursively(challenge)
-        val pair = Pair(BigInteger(deserialized[0]), BigInteger(deserialized[1]))
-        return serializeUInt(createChallengeResponseFromPair(privateKey, pair).toUInt())
+        val (a, b) = deserializeRecursively(challenge)
+        val pair = Pair(BigInteger(a), BigInteger(b))
+        val response = createChallengeResponseFromPair(privateKey, pair)
+        return serializeUInt(response.toUInt())
     }
 
     override fun processChallengeResponse(
-        aggregate: HashMap<Int, Int>,
+        aggregate: HashMap<Any, Any>,
         challenge: ByteArray?,
         response: ByteArray,
     ) {
         val deserialized = deserializeUInt(response)
-        return internalProcessChallengeResponse(aggregate, deserialized.toInt())
+        @Suppress("UNCHECKED_CAST")
+        return internalProcessChallengeResponse(aggregate as HashMap<Int, Int>, deserialized.toInt())
     }
 
-    override fun createCertaintyAggregate(attestation: WalletAttestation?): HashMap<Int, Int> {
-        return createEmptyRelativityMap()
+    override fun createCertaintyAggregate(attestation: WalletAttestation?): HashMap<Any, Any> {
+        @Suppress("UNCHECKED_CAST")
+        return createEmptyRelativityMap() as HashMap<Any, Any>
     }
 
     override fun createHonestyChallenge(publicKey: BonehPublicKey, value: Int): ByteArray {
