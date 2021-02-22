@@ -3,18 +3,16 @@ package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
-import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.keyvault.PublicKey
 
 class BonehAttestation(
     override val publicKey: BonehPublicKey,
-    val bitpairs: ArrayList<BitPairAttestation>,
+    val bitPairs: ArrayList<BitPairAttestation>,
     override val idFormat: String? = null,
 ) : WalletAttestation() {
 
     override fun serialize(): ByteArray {
         var out = byteArrayOf()
-        this.bitpairs.forEach { out += (it.serialize()) }
+        this.bitPairs.forEach { out += (it.serialize()) }
         return this.publicKey.serialize() + out
     }
 
@@ -23,7 +21,7 @@ class BonehAttestation(
     }
 
     companion object {
-        fun deserialize(serialized: ByteArray, idFormat: String): BonehAttestation {
+        fun deserialize(serialized: ByteArray, idFormat: String?): BonehAttestation {
             val publicKey = BonehPublicKey.deserialize(serialized)!!
             val bitPairs = arrayListOf<BitPairAttestation>()
             val pkSerialized = publicKey.serialize()
@@ -39,7 +37,7 @@ class BonehAttestation(
         fun deserializePrivate(
             privateKey: BonehPrivateKey,
             serialized: ByteArray,
-            idFormat: String,
+            idFormat: String?,
         ): WalletAttestation {
             return this.deserialize(serialized, idFormat)
         }
@@ -52,7 +50,7 @@ class BonehAttestation(
     override fun deserializePrivate(
         privateKey: BonehPrivateKey,
         serialized: ByteArray,
-        idFormat: String,
+        idFormat: String?,
     ): WalletAttestation {
         return BonehAttestation.deserializePrivate(privateKey, serialized, idFormat)
     }
