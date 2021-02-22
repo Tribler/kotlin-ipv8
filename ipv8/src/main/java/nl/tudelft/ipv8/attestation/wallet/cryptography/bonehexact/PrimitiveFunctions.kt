@@ -18,7 +18,7 @@ fun decode(privateKey: BonehPrivateKey, messageSpace: Array<Int>, c: FP2Value): 
     val d = c.bigIntPow(privateKey.t1)
     val t = privateKey.g.bigIntPow(privateKey.t1)
     for (m in messageSpace) {
-        if (d == t.bigIntPow(BigInteger(m.toString())))
+        if (d == t.bigIntPow(m.toBigInteger()))
             return m
     }
     return null
