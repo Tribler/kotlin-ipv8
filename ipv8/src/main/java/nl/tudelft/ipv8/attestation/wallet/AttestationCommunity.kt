@@ -21,6 +21,7 @@ import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
 import nl.tudelft.ipv8.util.ByteArrayKey
 import nl.tudelft.ipv8.util.sha1
 import org.json.JSONObject
+import java.math.BigDecimal
 import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
@@ -34,7 +35,7 @@ private val logger = KotlinLogging.logger {}
 private const val CHUNK_SIZE = 800
 
 class AttestationCommunity(val database: AttestationStore) : Community() {
-    override val serviceId = "b42c93d167a0fc4a0843f917d4bf1e9ebb340ec4"
+    override val serviceId = "e5d116f803a916a84850b9057cc0f662163f71f5"
 
     private val receiveBlockLock = ReentrantLock()
     private val schemaManager = SchemaManager()
@@ -43,8 +44,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attributeHash: ByteArray, idFormat: String, fromPeer: Peer?) -> Unit
     private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Boolean
 
-
-    private val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
+    val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
 
     private val cachedAttestationBlobs = mutableMapOf<ByteArrayKey, WalletAttestation>()
     private val allowedAttestations = mutableMapOf<String, Array<ByteArray>>()
@@ -130,7 +130,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         peer: Peer,
         attributeName: String,
         privateKey: BonehPrivateKey,
-        metadata: String = "{}",
+        metadata: HashMap<String, String> = hashMapOf(),
     ) {
         logger.info("Sending attestation request $attributeName to peer ${peer.mid}.")
         val publicKey = privateKey.publicKey()
@@ -213,17 +213,16 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         socketAddress: IPv4Address,
         attestationHash: ByteArray,
         values: ArrayList<ByteArray>,
-        callback: ((ByteArray, List<Float>) -> Unit),
+        callback: ((ByteArray, List<BigDecimal>) -> Unit),
         idFormat: String,
     ) {
         val algorithm = this.getIdAlgorithm(idFormat)
 
-        val onComplete: ((ByteArray, HashMap<Int, Int>) -> Unit) =
-            { attestationHash: ByteArray, relativityMap: HashMap<Int, Int> ->
-                callback(attestationHash, values.map { algorithm.certainty(it, relativityMap) })
-            }
+        fun onComplete(attestationHash: ByteArray, relativityMap: HashMap<Any, Any>) {
+            callback(attestationHash, values.map { algorithm.certainty(it, relativityMap) })
+        }
 
-        this.requestCache.add(ProvingAttestationCache(this, attestationHash, idFormat, onComplete = onComplete))
+        this.requestCache.add(ProvingAttestationCache(this, attestationHash, idFormat, onComplete = ::onComplete))
         this.createVerifyAttestationRequest(socketAddress, attestationHash, idFormat)
     }
 
@@ -269,10 +268,10 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
 
     private fun sendAttestation(sockedAddress: IPv4Address, blob: ByteArray, globalTime: ULong? = null) {
         var sequenceNumber = 0
+        for (i in blob.indices step CHUNK_SIZE) {
+            val endIndex = if (i + CHUNK_SIZE > blob.size) blob.size else i + CHUNK_SIZE
 
-        val chunkSize = if (CHUNK_SIZE > blob.size) blob.size else CHUNK_SIZE
-        for (i in blob.indices step chunkSize) {
-            val blobChunk = blob.copyOfRange(i, i + chunkSize)
+            val blobChunk = blob.copyOfRange(i, endIndex)
             logger.info("Sending attestation chunk $sequenceNumber to $sockedAddress")
 
             val payload = AttestationChunkPayload(sha1(blob), sequenceNumber, blobChunk)
@@ -463,7 +462,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
                     provingCache.attestationCallbacks(provingCache.cacheHash, provingCache.relativityMap)
                 } else {
                     // TODO: add secure random.
-                    val honestyCheck = algorithm.honestCheck and (Random.nextUBytes(1)[0] < 38u)
+                    val honestyCheck = algorithm.honestCheck && (Random.nextUBytes(1)[0].toInt() < 38)
                     var honestyCheckByte = if (honestyCheck) arrayOf(0, 1, 2).random() else -1
                     challenge = null
                     if (honestyCheck) {
