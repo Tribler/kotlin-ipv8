@@ -1,11 +1,16 @@
 package nl.tudelft.ipv8
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import mu.KotlinLogging
 import nl.tudelft.ipv8.keyvault.PrivateKey
-import nl.tudelft.ipv8.messaging.*
+import nl.tudelft.ipv8.messaging.Address
+import nl.tudelft.ipv8.messaging.EndpointAggregator
+import nl.tudelft.ipv8.messaging.Packet
+import nl.tudelft.ipv8.messaging.Serializable
 import nl.tudelft.ipv8.messaging.payload.*
-import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.WanEstimationLog
 import nl.tudelft.ipv8.util.addressIsLan
@@ -502,7 +507,8 @@ abstract class Community : Overlay {
             // py-ipv8 + LibNaCL
             IPv4Address("131.180.27.161", 6427),
             // kotlin-ipv8
-            IPv4Address("131.180.27.188", 1337)
+            IPv4Address("131.180.27.188", 1337),
+            IPv4Address("131.180.27.187", 1337)
         )
 
         // Timeout before we bootstrap again (bootstrap kills performance)
