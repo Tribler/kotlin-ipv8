@@ -1,9 +1,19 @@
 package nl.tudelft.ipv8.attestation.wallet.primitives
 
-
-import org.bouncycastle.pqc.math.linearalgebra.IntegerFunctions.modInverse
-import java.lang.RuntimeException
 import java.math.BigInteger
+import kotlin.RuntimeException
+
+fun formatPolynomial(a: BigInteger, b: BigInteger, c: BigInteger): String {
+    var out = ""
+    for ((v, s) in arrayOf(Pair(a, ""), Pair(b, "x"), Pair(c, "x^2"))) {
+        val fmtV = if (v.abs() == BigInteger.ONE && s != "") "" else (v.abs().toString())
+        out += (if (out != "") " + " else "") + fmtV + s
+    }
+    if (out == "") {
+        out = "0"
+    }
+    return out
+}
 
 
 class FP2Value(
