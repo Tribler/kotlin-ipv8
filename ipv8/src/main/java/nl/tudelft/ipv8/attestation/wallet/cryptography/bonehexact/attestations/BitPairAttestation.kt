@@ -12,8 +12,11 @@ class BitPairAttestation(private val a: FP2Value, private val b: FP2Value, priva
     }
 
     fun serialize(): ByteArray {
-        return serializeVarLen(this.a.a.toByteArray()) + serializeVarLen(this.a.b.toByteArray()) + serializeVarLen(this.b.a.toByteArray()) + serializeVarLen(
-            this.b.b.toByteArray()) + serializeVarLen(this.complement.a.toByteArray()) + serializeVarLen(this.complement.b.toByteArray())
+        return (
+            serializeVarLen(this.a.a.toByteArray()) + serializeVarLen(this.a.b.toByteArray())
+                + serializeVarLen(this.b.a.toByteArray()) + serializeVarLen(this.b.b.toByteArray())
+                + serializeVarLen(this.complement.a.toByteArray()) + serializeVarLen(this.complement.b.toByteArray())
+            )
     }
 
     companion object {
