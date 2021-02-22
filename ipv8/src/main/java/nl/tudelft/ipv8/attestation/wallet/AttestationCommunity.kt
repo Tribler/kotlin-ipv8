@@ -39,24 +39,10 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     private val receiveBlockLock = ReentrantLock()
     private val schemaManager = SchemaManager()
 
-    private var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> ByteArray =
-        { peer: Peer, attributeName: String, metaData: String ->
-            // TODO: this output appears to be ignored.
-            logger.info("***** Attestation Request ${peer.mid}, $attributeName, $metaData")
-            "lorem ipsum".toByteArray()
+    private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> ByteArray
+    private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attributeHash: ByteArray, idFormat: String, fromPeer: Peer?) -> Unit
+    private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Boolean
 
-        }
-    private var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attributeHash: ByteArray, idFormat: String, fromPeer: Peer?) -> Unit =
-        { forPeer: Peer, attributeName: String, attributeHash: ByteArray, idFormat: String, fromPeer: Peer? ->
-            logger.info("***** Attestation Request Complete ${forPeer.mid}, $attributeName, $attributeHash, $idFormat, ${fromPeer?.mid}")
-
-        }
-
-    private var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Boolean =
-        { peer: Peer, attributeHash: ByteArray ->
-            logger.info("***** Verify Request $peer, $attributeHash")
-            true
-        }
 
     private val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
 
