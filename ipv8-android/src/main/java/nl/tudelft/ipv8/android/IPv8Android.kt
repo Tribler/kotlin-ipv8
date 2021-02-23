@@ -65,18 +65,23 @@ object IPv8Android {
             return this
         }
 
-        fun setAttestationKeySmall(key: BonehPrivateKey): Factory {
+        fun setIdentityKeySmall(key: BonehPrivateKey): Factory {
             identityKeySmall = key
             return this
         }
 
-        fun setAttestationKeyBig(key: BonehPrivateKey): Factory {
+        fun setIdentityKeyBig(key: BonehPrivateKey): Factory {
             identityKeyBig = key
             return this
         }
 
-        fun setAttestationKeyHuge(key: BonehPrivateKey): Factory {
+        fun setIdentityKeyHuge(key: BonehPrivateKey): Factory {
             identityKeyHuge = key
+            return this
+        }
+
+        fun setIdentityKeyRange18Plus(key: BonehPrivateKey): Factory {
+            identityKeyRange18Plus = key
             return this
         }
 
