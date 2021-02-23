@@ -11,6 +11,9 @@ import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainStore
 import nl.tudelft.ipv8.attestation.trustchain.validation.TransactionValidator
 import nl.tudelft.ipv8.attestation.trustchain.validation.ValidationResult
 import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
+import nl.tudelft.ipv8.keyvault.LibNaClPK
+import nl.tudelft.ipv8.keyvault.PublicKey
+import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.peerdiscovery.Network
 import org.junit.Assert
 import org.junit.Test
@@ -168,7 +171,7 @@ class TrustChainCommunityTest : BaseCommunityTest() {
         Assert.assertNotEquals(EMPTY_SIG, block2.signature)
     }
 
-//    @Test
+    @Test
     fun processHalfBlock_signatureRequest() {
         val community = getCommunity()
 
@@ -178,18 +181,25 @@ class TrustChainCommunityTest : BaseCommunityTest() {
         val address = IPv4Address("1.2.3.4", 1234)
         val senderKey = JavaCryptoProvider.generateKey()
         val myKey = getPrivateKey()
-        val payload = HalfBlockPayload(
+        val block = TrustChainBlock(
+            "test",
+            ByteArray(10),
             senderKey.pub().keyToBin(),
             GENESIS_SEQ,
             myKey.pub().keyToBin(),
             UNKNOWN_SEQ,
             GENESIS_HASH,
             EMPTY_SIG,
-            "test",
-            ByteArray(10),
-            1581459001000u
+            Date()
         )
+        block.sign(senderKey)
+        val payload = HalfBlockPayload.fromHalfBlock(
+            block
+        )
+
         every { community.database.getLinked(any()) } returns null
+        every { community.database.getBlockBefore(any()) } returns null
+        every { community.database.getBlockAfter(any()) } returns null
         community.onHalfBlock(address, payload)
 
         verify(exactly = 1) { blockSigner.onSignatureRequest(any()) }
@@ -204,18 +214,24 @@ class TrustChainCommunityTest : BaseCommunityTest() {
 
         val address = IPv4Address("1.2.3.4", 1234)
         val senderKey = JavaCryptoProvider.generateKey()
-        val payload = HalfBlockPayload(
+        val block = TrustChainBlock(
+            "test",
+            ByteArray(10),
             senderKey.pub().keyToBin(),
             GENESIS_SEQ,
             senderKey.pub().keyToBin(),
             UNKNOWN_SEQ,
             GENESIS_HASH,
             EMPTY_SIG,
-            "test",
-            ByteArray(10),
-            1581459001000u
+            Date()
+        )
+        block.sign(senderKey)
+        val payload = HalfBlockPayload.fromHalfBlock(
+            block
         )
         every { community.database.getLinked(any()) } returns null
+        every { community.database.getBlockBefore(any()) } returns null
+        every { community.database.getBlockAfter(any()) } returns null
         community.onHalfBlock(address, payload)
 
         verify { blockSigner wasNot Called }
