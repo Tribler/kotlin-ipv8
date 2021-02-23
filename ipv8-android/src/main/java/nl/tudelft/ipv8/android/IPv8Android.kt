@@ -17,6 +17,7 @@ import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeAdvertiser
 import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeScanner
 import nl.tudelft.ipv8.android.messaging.udp.AndroidUdpEndpoint
 import nl.tudelft.ipv8.android.service.IPv8Service
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.EndpointAggregator
@@ -26,20 +27,56 @@ import java.net.InetAddress
 object IPv8Android {
     private var ipv8: IPv8? = null
     internal var serviceClass: Class<out IPv8Service>? = null
+    private var identityKeySmall: BonehPrivateKey? = null
+    private var identityKeyBig: BonehPrivateKey? = null
+    private var identityKeyHuge: BonehPrivateKey? = null
+    private var identityKeyRange18Plus: BonehPrivateKey? = null
 
     fun getInstance(): IPv8 {
         return ipv8 ?: throw IllegalStateException("IPv8 is not initialized")
     }
 
+    fun getIdentityKeySmall(): BonehPrivateKey {
+        return identityKeySmall!!
+    }
+
+    fun getIdentityKeyBig(): BonehPrivateKey {
+        return identityKeyBig!!
+    }
+
+    fun getIdentityKeyHuge(): BonehPrivateKey {
+        return identityKeyHuge!!
+    }
+
+    fun getIdentityKeyRange18Plus(): BonehPrivateKey {
+        return identityKeyRange18Plus!!
+    }
+
     class Factory(
-        private val application: Application
+        private val application: Application,
     ) {
+
         private var privateKey: PrivateKey? = null
         private var configuration: IPv8Configuration? = null
         private var serviceClass: Class<out IPv8Service> = IPv8Service::class.java
 
         fun setPrivateKey(key: PrivateKey): Factory {
             this.privateKey = key
+            return this
+        }
+
+        fun setAttestationKeySmall(key: BonehPrivateKey): Factory {
+            identityKeySmall = key
+            return this
+        }
+
+        fun setAttestationKeyBig(key: BonehPrivateKey): Factory {
+            identityKeyBig = key
+            return this
+        }
+
+        fun setAttestationKeyHuge(key: BonehPrivateKey): Factory {
+            identityKeyHuge = key
             return this
         }
 
@@ -72,6 +109,7 @@ object IPv8Android {
         private fun create(): IPv8 {
             val privateKey = privateKey
                 ?: throw IllegalStateException("Private key is not set")
+
             val configuration = configuration
                 ?: throw IllegalStateException("Configuration is not set")
 
@@ -90,10 +128,14 @@ object IPv8Android {
             val gattServer = GattServerManager(application, myPeer)
             val bleAdvertiser = IPv8BluetoothLeAdvertiser(bluetoothManager)
             val bleScanner = IPv8BluetoothLeScanner(bluetoothManager, network)
-            val bluetoothEndpoint = if (bluetoothManager.adapter != null &&
-                Build.VERSION.SDK_INT >= 24)
-                BluetoothLeEndpoint(application, bluetoothManager, gattServer, bleAdvertiser,
-                    bleScanner, network, myPeer) else null
+            val bluetoothEndpoint =
+                if (
+                    bluetoothManager.adapter != null &&
+                    Build.VERSION.SDK_INT >= 24
+                )
+                    BluetoothLeEndpoint(application, bluetoothManager, gattServer, bleAdvertiser,
+                        bleScanner, network, myPeer)
+                else null
 
             val endpointAggregator = EndpointAggregator(
                 udpEndpoint,
