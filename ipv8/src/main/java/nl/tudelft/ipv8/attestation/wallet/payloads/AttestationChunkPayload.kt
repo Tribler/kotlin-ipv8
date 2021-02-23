@@ -5,18 +5,26 @@ import nl.tudelft.ipv8.messaging.*
 class AttestationChunkPayload(
     val hash: ByteArray,
     val sequenceNumber: Int,
-    val data: ByteArray
+    val data: ByteArray,
+    val metadata: ByteArray? = null,
+    val signature: ByteArray? = null,
 ) : Serializable {
     private val msgId = 2
 
     override fun serialize(): ByteArray {
-        return hash + serializeUInt(sequenceNumber.toUInt()) + serializeVarLen(data)
+        return (
+            hash + serializeUInt(sequenceNumber.toUInt()) + serializeVarLen(data) +
+                (
+                    if (metadata != null && signature != null) serializeVarLen(metadata) + serializeVarLen(signature)
+                    else byteArrayOf()
+                    )
+            )
     }
 
     companion object Deserializer : Deserializable<AttestationChunkPayload> {
         override fun deserialize(
             buffer: ByteArray,
-            offset: Int
+            offset: Int,
         ): Pair<AttestationChunkPayload, Int> {
             var localoffset = 0
 
@@ -30,8 +38,20 @@ class AttestationChunkPayload(
             val (data, dataSize) = deserializeVarLen(buffer, offset + localoffset)
             localoffset += dataSize
 
-            val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data)
-            return Pair(payload, localoffset)
+            return if (buffer.lastIndex > offset + localoffset) {
+                val (metadata, metadataSize) = deserializeVarLen(buffer, offset + localoffset)
+                localoffset += metadataSize
+
+                val (signature, signatureSize) = deserializeVarLen(buffer, offset + localoffset)
+                localoffset += signatureSize
+
+                val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data, metadata, signature)
+                Pair(payload, localoffset)
+            } else {
+                val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data)
+                Pair(payload, localoffset)
+            }
+
         }
 
     }

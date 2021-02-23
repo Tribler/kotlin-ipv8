@@ -16,7 +16,7 @@ abstract class IdentityAlgorithm(idFormat: String, formats: HashMap<String, Hash
     }
 
     abstract fun deserialize(
-        string: ByteArray,
+        serialized: ByteArray,
         idFormat: String,
     ): WalletAttestation
 
