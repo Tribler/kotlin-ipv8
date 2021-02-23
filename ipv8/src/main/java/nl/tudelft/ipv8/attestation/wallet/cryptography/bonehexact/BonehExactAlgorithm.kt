@@ -72,7 +72,7 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
         return this.attestationFunction(publicKey, value).serialize()
     }
 
-    override fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): BigDecimal {
+    override fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): Double {
         @Suppress("UNCHECKED_CAST")
         return binaryRelativityCertainty(this.aggregateReference(value), aggregate as HashMap<Int, Int>)
     }

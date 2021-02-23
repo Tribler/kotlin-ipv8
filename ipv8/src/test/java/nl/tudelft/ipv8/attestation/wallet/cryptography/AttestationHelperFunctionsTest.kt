@@ -3,11 +3,9 @@ package nl.tudelft.ipv8.attestation.wallet.cryptography
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.decode
 import nl.tudelft.ipv8.util.hexToBytes
-import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.math.BigDecimal
 import java.math.BigInteger
 
 class AttestationHelperFunctionsTest {
@@ -82,14 +80,14 @@ class AttestationHelperFunctionsTest {
         val b = hashMapOf(0 to 0, 1 to 1, 2 to 2, 3 to 0)
         val c = hashMapOf(0 to 1, 1 to 1, 2 to 1, 3 to 0)
 
-        Assert.assertTrue(BigDecimal.ZERO < binaryRelativityMatch(b, a))
-        Assert.assertEquals(BigDecimal.ZERO, binaryRelativityMatch(a, b))
+        assertTrue(0 < binaryRelativityMatch(b, a))
+        assertEquals(0.0, binaryRelativityMatch(a, b), 0.0)
 
-        Assert.assertTrue(BigDecimal.ZERO < binaryRelativityMatch(c, a))
-        Assert.assertEquals(BigDecimal.ZERO, binaryRelativityMatch(a, c))
+        assertTrue(0 < binaryRelativityMatch(c, a))
+        assertEquals(0.0, binaryRelativityMatch(a, c), 0.0)
 
-        Assert.assertEquals(BigDecimal.ZERO, binaryRelativityMatch(b, c))
-        Assert.assertEquals(BigDecimal.ZERO, binaryRelativityMatch(c, b))
+        assertEquals(0.0, binaryRelativityMatch(b, c), 0.0)
+        assertEquals(0.0, binaryRelativityMatch(c, b), 0.0)
     }
 
     @Test

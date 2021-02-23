@@ -17,6 +17,7 @@ import java.security.SecureRandom
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import kotlin.math.pow
 
 val lock = Object()
 
@@ -132,22 +133,22 @@ fun createChallenge(publicKey: BonehPublicKey, bitpair: BitPairAttestation): FP2
 
 }
 
-fun binaryRelativityCertainty(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): BigDecimal {
+fun binaryRelativityCertainty(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): Double {
     val exp = value.values.sumOf { it }
-    val cert = BigDecimal.ONE - (BigDecimal("0.5").pow(exp))
+    val cert = 1.0 - 0.5.pow(exp)
     return binaryRelativityMatch(expected, value) * cert
 }
 
-fun binaryRelativityMatch(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): BigDecimal {
-    var match = BigDecimal.ONE
+fun binaryRelativityMatch(expected: HashMap<Int, Int>, value: HashMap<Int, Int>): Double {
+    var match = 1.0
     for (k in expected.keys) {
         if (expected[k]!! < value[k]!!) {
-            return BigDecimal.ZERO
+            return 0.0
         }
         if (!expected.containsKey(k) || !value.containsKey(k) || expected[k] == 0 || value[k] == 0) {
             continue
         }
-        match *= value[k]!!.toBigDecimal().divide(expected[k]!!.toBigDecimal(), 25, RoundingMode.HALF_UP)
+        match *= (value[k]!!.toDouble() / expected[k]!!.toDouble())
     }
 
     return match

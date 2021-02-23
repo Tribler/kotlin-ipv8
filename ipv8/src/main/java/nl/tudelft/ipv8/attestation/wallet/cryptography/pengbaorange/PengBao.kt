@@ -73,15 +73,15 @@ class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, An
         return createAttestationPair(publicKey, value, this.a, this.b, this.keySize).serializePrivate(publicKey)
     }
 
-    override fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): BigDecimal {
+    override fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): Double {
         var inRange = aggregate.size > 1
         for ((k, v) in aggregate.entries) {
             if (k != "attestation") {
                 inRange = inRange && (v as Boolean)
             }
         }
-        val match = if (inRange) BigDecimal.ONE else BigDecimal.ZERO
-        return if (deserializeBool(value)) match else BigDecimal.ONE - match
+        val match = if (inRange) 1.0 else 0.0
+        return if (deserializeBool(value)) match else 1.0 - match
     }
 
     override fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray> {

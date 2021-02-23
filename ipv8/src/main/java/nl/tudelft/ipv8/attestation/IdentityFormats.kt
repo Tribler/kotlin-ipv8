@@ -29,7 +29,7 @@ abstract class IdentityAlgorithm(idFormat: String, formats: HashMap<String, Hash
     abstract fun attest(publicKey: BonehPublicKey, value: ByteArray): ByteArray
 
     // Any type as aggregates can contain numerous types.
-    abstract fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): BigDecimal
+    abstract fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): Double
 
     abstract fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray>
 
