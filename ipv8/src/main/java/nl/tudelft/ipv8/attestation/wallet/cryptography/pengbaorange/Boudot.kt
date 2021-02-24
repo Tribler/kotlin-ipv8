@@ -58,9 +58,9 @@ class EL(val c: BigInteger, val d: BigInteger, val d1: BigInteger, val d2: BigIn
         cW1 = (cW1.wpNominator() * cW1.wpDenomInverse()).normalize()
         cW2 = (cW2.wpNominator() * cW2.wpDenomInverse()).normalize()
 
-        return this.c == (sha256AsBigInt(cW1.a.toString().toByteArray() + cW1.b.toString().toByteArray() + cW2.a.toString().toByteArray() + cW2.b.toString().toByteArray()))
+        return this.c == (sha256AsBigInt(cW1.a.toString().toByteArray() + cW1.b.toString()
+            .toByteArray() + cW2.a.toString().toByteArray() + cW2.b.toString().toByteArray()))
     }
-
 
     fun serialize(): ByteArray {
         return pack(this.c, this.d, this.d1, this.d2)
@@ -81,7 +81,7 @@ class EL(val c: BigInteger, val d: BigInteger, val d1: BigInteger, val d2: BigIn
             l: Int = 40,
         ): EL {
             val maxRangeW = 2 xor (l + t) * b - 1
-            val maxRangeN = BigInteger.TWO xor (l + t + bitSpace).toBigInteger() * g1.mod - BigInteger.ONE
+            val maxRangeN = BigInteger("2") xor (l + t + bitSpace).toBigInteger() * g1.mod - BigInteger.ONE
             val w = secureRandomNumber(BigInteger.ONE, maxRangeW.toBigInteger())
             val n1 = secureRandomNumber(BigInteger.ONE, maxRangeN)
             val n2 = secureRandomNumber(BigInteger.ONE, maxRangeN)
@@ -91,7 +91,8 @@ class EL(val c: BigInteger, val d: BigInteger, val d1: BigInteger, val d2: BigIn
             val cW2 = (w2.wpNominator() * w2.wpDenomInverse()).normalize()
 
             val c =
-                sha256AsBigInt(cW1.a.toString().toByteArray() + cW1.b.toString().toByteArray() + cW2.a.toString().toByteArray() + cW2.b.toString().toByteArray())
+                sha256AsBigInt(cW1.a.toString().toByteArray() + cW1.b.toString().toByteArray() + cW2.a.toString()
+                    .toByteArray() + cW2.b.toString().toByteArray())
 
             val d = w + c * x
             val d1 = n1 + c * r1
@@ -135,8 +136,8 @@ class SQR(val f: FP2Value, val el: EL) {
 
     companion object {
         fun create(x: BigInteger, r1: BigInteger, g: FP2Value, h: FP2Value, b: Int, bitSpace: Int): SQR {
-            val r2 = secureRandomNumber(-BigInteger.TWO xor bitSpace.toBigInteger() * g.mod + BigInteger.ONE,
-                BigInteger.TWO xor bitSpace.toBigInteger() * g.mod - BigInteger.ONE)
+            val r2 = secureRandomNumber(-BigInteger("2") xor bitSpace.toBigInteger() * g.mod + BigInteger.ONE,
+                BigInteger("2") xor bitSpace.toBigInteger() * g.mod - BigInteger.ONE)
             val f = g.bigIntPow(x) * h.bigIntPow(r2)
             val r3 = r1 - r2 * x
             return SQR(f, EL.create(x, r2, r3, g, h, f, h, b, bitSpace))

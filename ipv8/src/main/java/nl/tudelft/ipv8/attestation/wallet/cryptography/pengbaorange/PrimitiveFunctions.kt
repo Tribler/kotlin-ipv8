@@ -1,7 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange
 
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
-import nl.tudelft.ipv8.util.toHex
 import java.math.BigInteger
 import java.security.SecureRandom
 
@@ -10,7 +9,13 @@ private fun randomNumber(bitLength: Int): BigInteger {
     return BigInteger(bitLength, SecureRandom())
 }
 
-fun createAttestationPair(publicKey: BonehPublicKey, value: BigInteger, a: Int, b: Int, bitSpace: Int): PengBaoAttestation {
+fun createAttestationPair(
+    publicKey: BonehPublicKey,
+    value: BigInteger,
+    a: Int,
+    b: Int,
+    bitSpace: Int,
+): PengBaoAttestation {
 
     val byteSpace = bitSpace / 8
     val r = randomNumber(bitSpace)
@@ -43,11 +48,11 @@ fun createAttestationPair(publicKey: BonehPublicKey, value: BigInteger, a: Int, 
     val rst = w2 * ((b.toBigInteger() - value + BigInteger.ONE) * r + ra) + raa
     var r1 = BigInteger.ZERO
     while (r1 == BigInteger.ZERO) {
-        r1 = randomNumber(byteSpace * byteSpace * 8).mod(rst / BigInteger.TWO - BigInteger.ONE)
+        r1 = randomNumber(byteSpace * byteSpace * 8).mod(rst / BigInteger("2") - BigInteger.ONE)
     }
     var r2 = BigInteger.ZERO
     while (r2 == BigInteger.ZERO) {
-        r2 = randomNumber(byteSpace * byteSpace * 8).mod(rst / BigInteger.TWO - BigInteger.ONE)
+        r2 = randomNumber(byteSpace * byteSpace * 8).mod(rst / BigInteger("2") - BigInteger.ONE)
     }
     val r3 = rst - r1 - r2
 

@@ -39,7 +39,7 @@ class AttestationHelperFunctionsTest {
         val attestations = arrayOf(
             attest(privateKey.publicKey(), BigInteger.ZERO, 2),
             attest(privateKey.publicKey(), BigInteger.ONE, 2),
-            attest(privateKey.publicKey(), BigInteger.TWO, 2),
+            attest(privateKey.publicKey(), BigInteger("2"), 2),
             attest(privateKey.publicKey(), BigInteger.valueOf(3), 2),
         )
 
@@ -104,7 +104,7 @@ class AttestationHelperFunctionsTest {
         val challenges = arrayOf(
             createChallenge(pk, attest(pk, BigInteger.ZERO, 2).bitPairs[0]),
             createChallenge(pk, attest(pk, BigInteger.ONE, 2).bitPairs[0]),
-            createChallenge(pk, attest(pk, BigInteger.TWO, 2).bitPairs[0]),
+            createChallenge(pk, attest(pk, BigInteger("2"), 2).bitPairs[0]),
             createChallenge(pk, attest(pk, BigInteger.valueOf(3), 2).bitPairs[0])
         )
 

@@ -63,7 +63,7 @@ class TestEC {
         /*
          *Check if EC sum of the point of infinity with another point equals the other point.
          */
-        val p = Pair(FP2Value(BigInteger("11"), BigInteger.ONE), FP2Value(BigInteger("11"), BigInteger.TWO))
+        val p = Pair(FP2Value(BigInteger("11"), BigInteger.ONE), FP2Value(BigInteger("11"), BigInteger("2")))
 
         assertEquals(eSum(BigInteger("11"), p, "O"), p)
         assertEquals(eSum(BigInteger("11"), "O", p), p)
