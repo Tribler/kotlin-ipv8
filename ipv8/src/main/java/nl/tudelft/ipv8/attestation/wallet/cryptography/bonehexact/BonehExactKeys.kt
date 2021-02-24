@@ -20,6 +20,7 @@ open class BonehPublicKey(val p: BigInteger, val g: FP2Value, val h: FP2Value) {
     }
 
     companion object {
+        // TODO: Abstract this code so that it can be used by the PrivateKey deserialization.
         fun deserialize(serialized: ByteArray): BonehPublicKey? {
             var localOffset = 0
             val nums = arrayListOf<BigInteger>()
@@ -35,7 +36,6 @@ open class BonehPublicKey(val p: BigInteger, val g: FP2Value, val h: FP2Value) {
             return BonehPublicKey(nums[0],
                 FP2Value(nums[0], nums[1], nums[2]),
                 FP2Value(nums[0], nums[3], nums[4]))
-            // TODO Python implementation has unreachable code.
         }
     }
 
@@ -66,7 +66,7 @@ class BonehPrivateKey(
     val t1: BigInteger,
 ) :
     BonehPublicKey(p, g, h) {
-    
+
     override fun serialize(): ByteArray {
         return super.serialize() + serializeVarLen(this.n.toByteArray()) + serializeVarLen(this.t1.toByteArray())
     }

@@ -70,6 +70,7 @@ class SchemaManager {
         this.formats[schemaName] = schema
     }
 
+    // TODO: Read in default schemas.
     fun registerDefaultSchemas() {
         val defaultSchemas = arrayListOf<AlgorithmScheme>()
         defaultSchemas.add(AlgorithmScheme("id_metadata", "bonehexact", 32, "sha256_4"))

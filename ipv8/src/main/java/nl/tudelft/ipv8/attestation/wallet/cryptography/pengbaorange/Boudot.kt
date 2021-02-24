@@ -135,7 +135,6 @@ class SQR(val f: FP2Value, val el: EL) {
 
     companion object {
         fun create(x: BigInteger, r1: BigInteger, g: FP2Value, h: FP2Value, b: Int, bitSpace: Int): SQR {
-            // TODO: Ensure this does not overflow.
             val r2 = secureRandomNumber(-BigInteger.TWO xor bitSpace.toBigInteger() * g.mod + BigInteger.ONE,
                 BigInteger.TWO xor bitSpace.toBigInteger() * g.mod - BigInteger.ONE)
             val f = g.bigIntPow(x) * h.bigIntPow(r2)

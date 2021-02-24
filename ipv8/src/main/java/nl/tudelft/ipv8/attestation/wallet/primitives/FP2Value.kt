@@ -139,7 +139,6 @@ class FP2Value(
     }
 
     fun normalize(): FP2Value {
-        // TODO: Verify that this is correct
         val mp: BigInteger = if (this.aC == BigInteger.ZERO && this.mod > BigInteger.ZERO) {
             BigInteger.ZERO
         } else if (this.mod < BigInteger.ZERO) {

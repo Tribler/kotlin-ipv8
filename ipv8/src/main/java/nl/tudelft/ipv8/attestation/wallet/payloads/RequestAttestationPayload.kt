@@ -10,7 +10,6 @@ import nl.tudelft.ipv8.messaging.serializeVarLen
 class RequestAttestationPayload(val metadata: String) : Serializable {
     private val msgId = 5
 
-
     override fun serialize(): ByteArray {
         return serializeVarLen(metadata.toByteArray(Charsets.US_ASCII))
     }

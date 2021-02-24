@@ -127,7 +127,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
 
     @Suppress("UNUSED_PARAMETER")
     fun dumbBlob(attributeName: String, idFormat: String, blob: ByteArray, metaData: String = "") {
-        // TODO: 20/01/2021
+        // TODO: Implement this method.
         throw NotImplementedError()
     }
 
@@ -194,7 +194,6 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         endpoint.send(peer, packet)
     }
 
-    // TODO: suspend?
     private fun onRequestAttestation(
         peer: Peer,
         dist: GlobalTimeDistributionPayload,
@@ -208,7 +207,6 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         val idAlgorithm = this.getIdAlgorithm(idFormat)
         val shouldSign = metadata.optBoolean("signature", false)
 
-        // TODO: maybe_coroutine
         if (value.isEmpty()) {
             value = this.attestationRequestCallback(peer, attribute, payload.metadata)
         }
@@ -308,7 +306,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
             logger.warn("Dropping verification request of unknown hash ${payload.hash}!")
             return
         }
-        // TODO: Verify whether `attestationBlob` requires to be unpacked.
+
         if (attestationBlob.isEmpty()) {
             logger.warn("Attestation blob for verification is empty: ${payload.hash}!")
         }
@@ -428,7 +426,6 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         attestation: WalletAttestation,
         attestationHash: ByteArray,
     ) {
-        // TODO remove force
         val algorithm = this.getIdAlgorithm(attestation.idFormat!!)
 
         val relativityMap = algorithm.createCertaintyAggregate(attestation)
@@ -500,7 +497,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
                     provingCache.cacheHash)
                 var challenge: ByteArray? = null
 
-                // TODO: come up with more elegant solution for ByteArray checking.
+                // TODO: Come up with more elegant solution for ByteArray checking.
                 val hashElement = provingCache.hashedChallenges.find { x -> x.contentEquals(payload.challengeHash) }
                 if (hashElement != null) {
                     provingCache.hashedChallenges.remove(hashElement)
@@ -522,7 +519,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
                     }
                     provingCache.attestationCallbacks(provingCache.cacheHash, algorithm.createCertaintyAggregate(null))
                 }
-                // TODO: Verify that null entries not occur.
+
                 if (provingCache.hashedChallenges.isEmpty()) {
                     logger.info("Completed attestation verification")
                     // TODO: We can most likely directly call pop.
@@ -531,7 +528,8 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
                     }
                     provingCache.attestationCallbacks(provingCache.cacheHash, provingCache.relativityMap)
                 } else {
-                    // TODO: add secure random.
+
+                    // TODO: Add secure random.
                     val honestyCheck = algorithm.honestCheck && (Random.nextUBytes(1)[0].toInt() < 38)
                     var honestyCheckByte = if (honestyCheck) arrayOf(0, 1, 2).random() else -1
                     challenge = null

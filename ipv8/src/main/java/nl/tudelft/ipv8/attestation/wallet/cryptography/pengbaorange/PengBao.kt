@@ -134,11 +134,11 @@ class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, An
 
 
     override fun createHonestyChallenge(publicKey: BonehPublicKey, value: Int): ByteArray {
-        TODO("Not yet implemented")
+        throw NotImplementedError("This method has not been implemented for this algorithm.")
     }
 
     override fun processHonestyChallenge(value: Int, response: ByteArray): Boolean {
-        TODO("Not yet implemented")
+        throw NotImplementedError("This method has not been implemented for this algorithm.")
     }
 
     override fun deserialize(serialized: ByteArray, idFormat: String): WalletAttestation {
