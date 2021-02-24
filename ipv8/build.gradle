@@ -30,7 +30,7 @@ ktlint {
     ignoreFailures = true
     filter {
         // https://github.com/JLLeitschuh/ktlint-gradle/issues/97
-        exclude {"**/generated/**"}
+        exclude { "**/generated/**" }
         // https://github.com/JLLeitschuh/ktlint-gradle/issues/266
         exclude { element -> element.file.path.contains("generated/") }
     }
@@ -58,6 +58,7 @@ dependencies {
     // Kotlin
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     // Network utils
     implementation 'commons-net:commons-net:3.6'
@@ -71,8 +72,6 @@ dependencies {
     // JSON
     implementation 'org.json:json:20201115'
 
-    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-
     // Testing
     testImplementation 'junit:junit:4.12'
     testImplementation "io.mockk:mockk:1.9.3"
@@ -82,7 +81,6 @@ dependencies {
 
     // https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.65'
-
 
 
 }
