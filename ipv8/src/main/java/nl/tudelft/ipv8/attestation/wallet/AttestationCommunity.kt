@@ -210,7 +210,14 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         if (value.isEmpty()) {
             value = this.attestationRequestCallback(peer, attribute, payload.metadata)
         }
-        metadata.put("value", String(value))
+
+        val stringifiedValue = when (idFormat) {
+            "id_format_range_18plus" -> value[0].toString()
+            "id_format_range_underage" -> value[0].toString()
+            else -> String(value)
+        }
+
+        metadata.put("value", stringifiedValue)
         metadata.put("TrustChainAddressHash", peer.publicKey.keyToHash().toHex())
 
         // Decode as UTF-8 ByteArray
