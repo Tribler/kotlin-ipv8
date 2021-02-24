@@ -8,6 +8,8 @@ import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.TrustedAuthorityManager
+import nl.tudelft.ipv8.attestation.schema.ID_METADATA_RANGE_18PLUS
+import nl.tudelft.ipv8.attestation.schema.ID_METADATA_RANGE_UNDERAGE
 import nl.tudelft.ipv8.attestation.schema.SchemaManager
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION_REQUEST
@@ -139,7 +141,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         attestorKey: PublicKey,
     ): Boolean {
         val parsedMetadata = JSONObject(metaData)
-        val attesteeKeyHash = parsedMetadata.optString("TrustChainAddressHash")
+        val attesteeKeyHash = parsedMetadata.optString("trustchain_address_hash")
         attesteeKeyHash ?: return false
 
         val isTrusted = this.trustedAuthorityManager.contains(attestorKey.keyToHash().toHex())
@@ -212,13 +214,13 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         }
 
         val stringifiedValue = when (idFormat) {
-            "id_format_range_18plus" -> value[0].toString()
-            "id_format_range_underage" -> value[0].toString()
+            ID_METADATA_RANGE_18PLUS -> value[0].toString()
+            ID_METADATA_RANGE_UNDERAGE -> value[0].toString()
             else -> String(value)
         }
 
         metadata.put("value", stringifiedValue)
-        metadata.put("TrustChainAddressHash", peer.publicKey.keyToHash().toHex())
+        metadata.put("trustchain_address_hash", peer.publicKey.keyToHash().toHex())
 
         // Decode as UTF-8 ByteArray
         val publicKey = idAlgorithm.loadPublicKey(Base64.getDecoder().decode(pubkeyEncoded))

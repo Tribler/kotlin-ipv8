@@ -17,6 +17,12 @@ class AlgorithmScheme(
     val max: Int? = null,
 )
 
+const val ID_METADATA = "id_metadata"
+const val ID_METADATA_BIG = "id_metadata_big"
+const val ID_METADATA_HUGE = "id_metadata_huge"
+const val ID_METADATA_RANGE_18PLUS = "id_metadata_range_18plus"
+const val ID_METADATA_RANGE_UNDERAGE = "id_metadata_range_underage"
+
 class SchemaManager {
 
     private val formats = HashMap<String, HashMap<String, Any>>()
@@ -73,11 +79,11 @@ class SchemaManager {
     // TODO: Read in default schemas.
     fun registerDefaultSchemas() {
         val defaultSchemas = arrayListOf<AlgorithmScheme>()
-        defaultSchemas.add(AlgorithmScheme("id_metadata", "bonehexact", 32, "sha256_4"))
-        defaultSchemas.add(AlgorithmScheme("id_metadata_big", "bonehexact", 64, "sha256"))
-        defaultSchemas.add(AlgorithmScheme("id_metadata_huge", "bonehexact", 96, "sha512"))
-        defaultSchemas.add(AlgorithmScheme("id_metadata_range_18plus", "pengbaorange", 32, min = 18, max = 200))
-        defaultSchemas.add(AlgorithmScheme("id_metadata_range_underage", "pengbaorange", 32, min = 0, max = 17))
+        defaultSchemas.add(AlgorithmScheme(ID_METADATA, "bonehexact", 32, "sha256_4"))
+        defaultSchemas.add(AlgorithmScheme(ID_METADATA_BIG, "bonehexact", 64, "sha256"))
+        defaultSchemas.add(AlgorithmScheme(ID_METADATA_HUGE, "bonehexact", 96, "sha512"))
+        defaultSchemas.add(AlgorithmScheme(ID_METADATA_RANGE_18PLUS, "pengbaorange", 32, min = 18, max = 200))
+        defaultSchemas.add(AlgorithmScheme(ID_METADATA_RANGE_UNDERAGE, "pengbaorange", 32, min = 0, max = 17))
 
         defaultSchemas.forEach {
             val params = hashMapOf<String, Any>("key_size" to it.keySize)
