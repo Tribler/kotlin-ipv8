@@ -31,7 +31,7 @@ fun createAttestationPair(publicKey: BonehPublicKey, value: BigInteger, a: Int, 
     val mst = w2 * (value - a.toBigInteger() + BigInteger.ONE) * (b.toBigInteger() - value + BigInteger.ONE)
     var m4 = BigInteger.ZERO
     while (m4 == BigInteger.ZERO) {
-        m4 = randomNumber(bitSpace).mod(mst.sqrt() - BigInteger.ONE)
+        m4 = randomNumber(bitSpace).mod(sqrt(mst)!! - BigInteger.ONE)
     }
     val m3 = m4 * m4
     var m1 = BigInteger.ZERO
@@ -72,4 +72,21 @@ fun createAttestationPair(publicKey: BonehPublicKey, value: BigInteger, a: Int, 
     val privateData = PengBaoCommitmentPrivate(m1, m2, m3, r1, r2, r3)
 
     return PengBaoAttestation(publicData, privateData)
+}
+
+/*
+ * From: https://gist.github.com/JochemKuijpers/cd1ad9ec23d6d90959c549de5892d6cb.
+ */
+fun sqrt(n: BigInteger): BigInteger? {
+    var a = BigInteger.ONE
+    var b = n.shiftRight(5).add(BigInteger.valueOf(8))
+    while (b.compareTo(a) >= 0) {
+        val mid = a.add(b).shiftRight(1)
+        if (mid.multiply(mid).compareTo(n) > 0) {
+            b = mid.subtract(BigInteger.ONE)
+        } else {
+            a = mid.add(BigInteger.ONE)
+        }
+    }
+    return a.subtract(BigInteger.ONE)
 }
