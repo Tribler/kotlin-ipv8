@@ -123,15 +123,15 @@ fun deserializeRecursively(buffer: ByteArray, offset: Int = 0): Array<ByteArray>
 
 fun deserializeAmount(buffer: ByteArray, amount: Int, offset: Int = 0): Pair<Array<ByteArray>, ByteArray> {
     val returnValues = arrayListOf<ByteArray>()
-    var offset = offset
+    var localOffset = offset
     for (i in 0 until amount) {
-        val len = deserializeUInt(buffer, offset).toInt()
-        val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
-            offset + SERIALIZED_UINT_SIZE + len)
-        offset += SERIALIZED_UINT_SIZE + len
+        val len = deserializeUInt(buffer, localOffset).toInt()
+        val payload = buffer.copyOfRange(localOffset + SERIALIZED_UINT_SIZE,
+            localOffset + SERIALIZED_UINT_SIZE + len)
+        localOffset += SERIALIZED_UINT_SIZE + len
         returnValues.add(payload)
     }
-    return Pair(returnValues.toTypedArray(), buffer.copyOfRange(offset, buffer.size))
+    return Pair(returnValues.toTypedArray(), buffer.copyOfRange(localOffset, buffer.size))
 }
 
 /**

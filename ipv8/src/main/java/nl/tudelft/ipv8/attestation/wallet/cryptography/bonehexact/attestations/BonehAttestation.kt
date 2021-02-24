@@ -34,6 +34,8 @@ class BonehAttestation(
             return BonehAttestation(publicKey, bitPairs, idFormat)
         }
 
+        // We want to preserve the superclass definitions.
+        @Suppress("UNUSED_PARAMETER")
         fun deserializePrivate(
             privateKey: BonehPrivateKey,
             serialized: ByteArray,

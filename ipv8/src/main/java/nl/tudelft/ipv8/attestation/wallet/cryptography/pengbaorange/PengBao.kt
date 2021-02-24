@@ -10,7 +10,6 @@ import nl.tudelft.ipv8.messaging.deserializeRecursively
 import nl.tudelft.ipv8.messaging.serializeVarLen
 import nl.tudelft.ipv8.util.ByteArrayKey
 import nl.tudelft.ipv8.util.toHex
-import java.math.BigDecimal
 import java.math.BigInteger
 import java.security.SecureRandom
 
@@ -69,8 +68,8 @@ class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, An
     }
 
     override fun attest(publicKey: BonehPublicKey, value: ByteArray): ByteArray {
-        val value = BigInteger(value.toHex(), 16)
-        return createAttestationPair(publicKey, value, this.a, this.b, this.keySize).serializePrivate(publicKey)
+        val parsedValue = BigInteger(value.toHex(), 16)
+        return createAttestationPair(publicKey, parsedValue, this.a, this.b, this.keySize).serializePrivate(publicKey)
     }
 
     override fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): Double {

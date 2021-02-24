@@ -19,7 +19,6 @@ import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKe
 import nl.tudelft.ipv8.attestation.wallet.payloads.*
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
-import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
 import nl.tudelft.ipv8.util.ByteArrayKey
@@ -80,19 +79,19 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     }
 
     private fun onChallengeResponseWrapper(packet: Packet) {
-        val (peer, dist, payload) = packet.getAuthPayloadWithDist(ChallengeResponsePayload.Deserializer)
+        val (peer, _, payload) = packet.getAuthPayloadWithDist(ChallengeResponsePayload.Deserializer)
         logger.info("Received ChallengeResponse from ${peer.mid} for hash ${String(payload.challengeHash)} with response ${
             String(payload.response)
         }.")
-        this.onChallengeResponse(peer, dist, payload)
+        this.onChallengeResponse(peer, payload)
     }
 
     private fun onChallengeWrapper(packet: Packet) {
-        val (peer, dist, payload) = packet.getAuthPayloadWithDist(ChallengePayload.Deserializer)
+        val (peer, _, payload) = packet.getAuthPayloadWithDist(ChallengePayload.Deserializer)
         logger.info("Received Challenge from ${peer.mid} for hash ${String(payload.attestationHash)} with challenge ${
             String(payload.challenge)
         }.")
-        this.onChallenge(peer, dist, payload)
+        this.onChallenge(peer, payload)
     }
 
     private fun onAttestationChunkWrapper(packet: Packet) {
@@ -104,9 +103,9 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     }
 
     private fun onVerifyAttestationRequestWrapper(packet: Packet) {
-        val (peer, dist, payload) = packet.getAuthPayloadWithDist(VerifyAttestationRequestPayload.Deserializer)
+        val (peer, _, payload) = packet.getAuthPayloadWithDist(VerifyAttestationRequestPayload.Deserializer)
         logger.info("Received VerifyAttestationRequest from ${peer.mid} for hash ${String(payload.hash)}.")
-        this.onVerifyAttestationRequest(peer, dist, payload)
+        this.onVerifyAttestationRequest(peer, payload)
 
     }
 
@@ -126,8 +125,8 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         this.verifyRequestCallback = f
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun dumbBlob(attributeName: String, idFormat: String, blob: ByteArray, metaData: String = "") {
-        val idAlgorithm = this.getIdAlgorithm(idFormat)
         // TODO: 20/01/2021
         throw NotImplementedError()
     }
@@ -302,7 +301,6 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
 
     private fun onVerifyAttestationRequest(
         peer: Peer,
-        dist: GlobalTimeDistributionPayload,
         payload: VerifyAttestationRequestPayload,
     ) {
         val attestationBlob = this.database.getAttestationByHash(payload.hash)
@@ -429,8 +427,6 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         peer: Peer,
         attestation: WalletAttestation,
         attestationHash: ByteArray,
-        metaData: String? = null,
-        signature: ByteArray? = null,
     ) {
         // TODO remove force
         val algorithm = this.getIdAlgorithm(attestation.idFormat!!)
@@ -441,11 +437,6 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         val cache =
             this.requestCache.get(id.first, id.second) as ProvingAttestationCache
         cache.publicKey = attestation.publicKey
-
-        if (cache == null) {
-            logger.error("Received attestation $attestation from $peer for non-existing cache entry.")
-            return
-        }
 
         val challenges = algorithm.createChallenges(attestation.publicKey, attestation)
         for (challenge in challenges) {
@@ -478,7 +469,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     }
 
 
-    private fun onChallenge(peer: Peer, dist: GlobalTimeDistributionPayload, payload: ChallengePayload) {
+    private fun onChallenge(peer: Peer, payload: ChallengePayload) {
         if (!this.attestationKeys.containsKey(ByteArrayKey(payload.attestationHash))) {
             logger.error("Received ChallengePayload $payload for unknown attestation hash ${payload.attestationHash}.")
             return
@@ -489,16 +480,15 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         val algorithm = this.getIdAlgorithm(idFormat)
         val attestation = this.cachedAttestationBlobs[ByteArrayKey(payload.attestationHash)]!!
 
-        val payload = ChallengeResponsePayload(challengeHash,
+        val outGoingPayload = ChallengeResponsePayload(challengeHash,
             algorithm.createChallengeResponse(privateKey, attestation, payload.challenge))
-        val packet = serializePacket(CHALLENGE_RESPONSE, payload, prefix = this.prefix)
+        val packet = serializePacket(CHALLENGE_RESPONSE, outGoingPayload, prefix = this.prefix)
         this.endpoint.send(peer.address, packet)
 
     }
 
     private fun onChallengeResponse(
         peer: Peer,
-        dist: GlobalTimeDistributionPayload,
         payload: ChallengeResponsePayload,
     ) {
         synchronized(receiveBlockLock) {
@@ -578,8 +568,8 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
                         cache.idFormat,
                         honestyCheckByte))
 
-                    val payload = ChallengePayload(provingCache.cacheHash, challenge)
-                    val packet = serializePacket(CHALLENGE, payload, prefix = this.prefix)
+                    val outGoingPayload = ChallengePayload(provingCache.cacheHash, challenge)
+                    val packet = serializePacket(CHALLENGE, outGoingPayload, prefix = this.prefix)
                     this.endpoint.send(peer.address, packet)
                 }
 

@@ -78,7 +78,7 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
     }
 
     override fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray> {
-        val attestation = attestation as BonehAttestation
+        attestation as BonehAttestation
         val challenges = arrayListOf<ByteArray>()
         for (bitPair in attestation.bitPairs) {
             val challenge = createChallenge(attestation.publicKey, bitPair)

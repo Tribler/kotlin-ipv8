@@ -10,7 +10,7 @@ class ProvingAttestationCache(
     val cacheHash: ByteArray,
     idFormat: String,
     var publicKey: BonehPublicKey? = null,
-    private val onComplete: (ByteArray, HashMap<Any, Any>) -> Unit = { _: ByteArray, _: HashMap<Any, Any> -> null },
+    private val onComplete: (ByteArray, HashMap<Any, Any>) -> Unit = { _: ByteArray, _: HashMap<Any, Any> -> },
 ) : HashCache(community.requestCache, PROVING_ATTESTATION_PREFIX, cacheHash, idFormat) {
 
     var relativityMap: HashMap<Any, Any> = hashMapOf()

@@ -94,7 +94,6 @@ fun isGoodWp(n: BigInteger, wp: FP2Value): Boolean {
 
 fun generatePrime(n: BigInteger): BigInteger {
     var p = BigInteger.ONE
-    val m = BigInteger("3")
     var l = BigInteger.ZERO
     while ((p.mod(BigInteger("3")) != BigInteger("2")) || !p.isProbablePrime(100)) {
         l += BigInteger.ONE
@@ -113,9 +112,9 @@ fun generatePrimes(keySize: Int = 128): Pair<BigInteger, BigInteger> {
         p = privateKey.primeP
         q = privateKey.primeQ
     } else {
-        val primes = generateSafePrimes(keySize, 2, SecureRandom())
-        p = primes!![0]
-        q = primes!![1]
+        val primes = generateSafePrimes(keySize, 2, SecureRandom())!!
+        p = primes[0]
+        q = primes[1]
     }
 
     return Pair(p.min(q), p.max(q))

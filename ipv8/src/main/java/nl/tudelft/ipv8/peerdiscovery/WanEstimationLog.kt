@@ -77,7 +77,7 @@ class WanEstimationLog {
         for (item in items) {
             counts[item] = (counts[item] ?: 0) + 1
         }
-        return counts.maxBy { it.value }?.key
+        return counts.maxByOrNull { it.value }?.key
     }
 
     class WanLogItem(
