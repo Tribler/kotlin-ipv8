@@ -233,16 +233,18 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         val signableData = attestation.getHash() + metadata.toString().toByteArray()
         val signature = (myPeer.key as PrivateKey).sign(sha1(signableData))
 
-        this.attestationRequestCompleteCallback(
-            peer,
-            attribute,
-            attestation,
-            attestation.getHash(),
-            idFormat,
-            null,
-            metadata.toString(),
-            signature,
-        )
+        if (this::attestationRequestCompleteCallback.isInitialized) {
+            this.attestationRequestCompleteCallback(
+                peer,
+                attribute,
+                attestation,
+                attestation.getHash(),
+                idFormat,
+                null,
+                metadata.toString(),
+                signature,
+            )
+        }
 
         this.sendAttestation(peer.address,
             attestationBlob,
@@ -269,14 +271,17 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
             metaData,
             signature,
             peer.publicKey)
-        this.attestationRequestCompleteCallback(this.myPeer,
-            name,
-            deserialized,
-            attestationHash,
-            idFormat,
-            peer,
-            metaData,
-            signature)
+
+        if (this::attestationRequestCompleteCallback.isInitialized) {
+            this.attestationRequestCompleteCallback(this.myPeer,
+                name,
+                deserialized,
+                attestationHash,
+                idFormat,
+                peer,
+                metaData,
+                signature)
+        }
     }
 
     fun verifyAttestationValues(
