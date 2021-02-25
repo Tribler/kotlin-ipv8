@@ -21,7 +21,10 @@ const val ID_METADATA = "id_metadata"
 const val ID_METADATA_BIG = "id_metadata_big"
 const val ID_METADATA_HUGE = "id_metadata_huge"
 const val ID_METADATA_RANGE_18PLUS = "id_metadata_range_18plus"
+const val ID_METADATA_RANGE_18PLUS_PUBLIC_VALUE = "18+"
 const val ID_METADATA_RANGE_UNDERAGE = "id_metadata_range_underage"
+const val ID_METADATA_RANGE_UNDERAGE_PUBLIC_VALUE = "underage"
+
 
 class SchemaManager {
 

@@ -8,9 +8,7 @@ import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.TrustedAuthorityManager
-import nl.tudelft.ipv8.attestation.schema.ID_METADATA_RANGE_18PLUS
-import nl.tudelft.ipv8.attestation.schema.ID_METADATA_RANGE_UNDERAGE
-import nl.tudelft.ipv8.attestation.schema.SchemaManager
+import nl.tudelft.ipv8.attestation.schema.*
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION_REQUEST
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.CHALLENGE
@@ -212,8 +210,8 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         }
 
         val stringifiedValue = when (idFormat) {
-            ID_METADATA_RANGE_18PLUS -> value[0].toString()
-            ID_METADATA_RANGE_UNDERAGE -> value[0].toString()
+            ID_METADATA_RANGE_18PLUS -> ID_METADATA_RANGE_18PLUS_PUBLIC_VALUE
+            ID_METADATA_RANGE_UNDERAGE -> ID_METADATA_RANGE_UNDERAGE_PUBLIC_VALUE
             else -> String(value)
         }
 
