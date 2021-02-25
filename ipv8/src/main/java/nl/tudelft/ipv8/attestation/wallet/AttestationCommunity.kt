@@ -43,6 +43,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> ByteArray
     private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attestationHash: ByteArray, idFormat: String, fromPeer: Peer?, metaData: String?, signature: ByteArray?) -> Unit
     private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Boolean
+    private lateinit var attestationChunkCallback: (peer: Peer, sequenceNumber: Int) -> Unit
 
     val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
 
@@ -121,6 +122,10 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
 
     fun setVerifyRequestCallback(f: (attributeName: Peer, attributeHash: ByteArray) -> Boolean) {
         this.verifyRequestCallback = f
+    }
+
+    fun setAttestationChunkCallback(f: (peer: Peer, sequenceNumber: Int) -> Unit) {
+        this.attestationChunkCallback = f
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -352,6 +357,9 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     }
 
     private fun onAttestationChunk(peer: Peer, dist: GlobalTimeDistributionPayload, payload: AttestationChunkPayload) {
+        if (this::attestationChunkCallback.isInitialized) {
+            this.attestationChunkCallback(peer, payload.sequenceNumber)
+        }
         val hashId = HashCache.idFromHash(ATTESTATION_VERIFY_PREFIX, payload.hash)
         val (prefix, number) = hashId
         val peerIds = arrayListOf<Pair<String, BigInteger>>()
