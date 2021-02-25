@@ -14,6 +14,14 @@ class TrustedAuthorityManager(private val database: AttestationStore) {
     private val trustedAuthorities = hashMapOf<String, Authority>()
     private val lock = Object()
 
+    fun loadAuthorities() {
+        val authorities = database.getAllAuthorities()
+        synchronized(lock) {
+            authorities.forEach {
+                trustedAuthorities[it.hash] = Authority(it.publicKey, it.hash)
+            }
+        }
+    }
 
     fun loadDefaultAuthorities() {
         TODO("Preinstalled Authorities yet to be designed.")
@@ -21,9 +29,11 @@ class TrustedAuthorityManager(private val database: AttestationStore) {
 
     fun addTrustedAuthority(publicKey: PublicKey) {
         val hash = publicKey.keyToHash().toHex()
-        database.insertAuthority(publicKey, hash)
-        synchronized(lock) {
-            this.trustedAuthorities[hash] = Authority(publicKey, hash)
+        if (!this.contains(hash)) {
+            database.insertAuthority(publicKey, hash)
+            synchronized(lock) {
+                this.trustedAuthorities[hash] = Authority(publicKey, hash)
+            }
         }
     }
 

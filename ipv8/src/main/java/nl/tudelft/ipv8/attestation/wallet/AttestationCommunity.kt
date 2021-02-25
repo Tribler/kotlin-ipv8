@@ -54,6 +54,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     val requestCache = RequestCache()
 
     init {
+        trustedAuthorityManager.loadAuthorities()
         schemaManager.registerDefaultSchemas()
         for (att in this.database.getAllAttestations()) {
             val hash = att.attestationHash
