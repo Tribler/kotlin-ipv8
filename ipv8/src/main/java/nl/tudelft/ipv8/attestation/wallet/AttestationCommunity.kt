@@ -354,7 +354,12 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
             val blobChunk = blob.copyOfRange(i, endIndex)
             logger.info("Sending attestation chunk $sequenceNumber to $sockedAddress")
 
-            val payload = AttestationChunkPayload(sha1(blob), sequenceNumber, blobChunk, metaData, signature)
+            // Only send metadata and signature on final package to reduce overhead.
+            val payload =
+                if (i + CHUNK_SIZE > blob.size)
+                    AttestationChunkPayload(sha1(blob), sequenceNumber, blobChunk, metaData, signature)
+                else
+                    AttestationChunkPayload(sha1(blob), sequenceNumber, blobChunk)
             val packet = serializePacket(ATTESTATION, payload, prefix = this.prefix, timestamp = globalTime)
             this.endpoint.send(sockedAddress, packet)
             sequenceNumber += 1
