@@ -1,5 +1,6 @@
 package nl.tudelft.ipv8.messaging
 
+import java.nio.Buffer
 import java.nio.ByteBuffer
 
 const val SERIALIZED_USHORT_SIZE = 2
@@ -86,7 +87,8 @@ fun serializeLong(value: Long): ByteArray {
 fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
     val buffer = ByteBuffer.allocate(SERIALIZED_LONG_SIZE)
     buffer.put(bytes.copyOfRange(offset, offset + SERIALIZED_LONG_SIZE))
-    buffer.flip()
+    // In JDK 8 this returns a Buffer.
+    (buffer as Buffer).flip()
     return buffer.int.toLong()
 }
 
