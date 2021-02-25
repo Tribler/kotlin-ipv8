@@ -23,12 +23,9 @@ import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
-import nl.tudelft.ipv8.util.ByteArrayKey
-import nl.tudelft.ipv8.util.sha1
-import nl.tudelft.ipv8.util.toHex
+import nl.tudelft.ipv8.util.*
 import org.json.JSONObject
 import java.math.BigInteger
-import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -167,7 +164,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         val metadataJson = JSONObject()
         metadataJson.put("attribute", attributeName)
         // Encode to UTF-8
-        metadataJson.put("public_key", String(Base64.getEncoder().encode(publicKey.serialize())))
+        metadataJson.put("public_key", defaultEncodingUtils.encodeBase64ToString(publicKey.serialize()))
         metadataJson.putOpt("id_format", idFormat)
         metadataJson.putOpt("signature", signature)
 
@@ -204,7 +201,8 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         val metadata = JSONObject(payload.metadata)
         val attribute = metadata.getString("attribute")
         var value = metadata.optString("value").toByteArray()
-        val pubkeyEncoded = metadata.getString("public_key").toByteArray()
+        val pubkeyEncoded = metadata.getString("public_key")
+
         val idFormat = metadata.getString("id_format")
         val idAlgorithm = this.getIdAlgorithm(idFormat)
         val shouldSign = metadata.optBoolean("signature", false)
@@ -223,7 +221,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         metadata.put("trustchain_address_hash", peer.publicKey.keyToHash().toHex())
 
         // Decode as UTF-8 ByteArray
-        val publicKey = idAlgorithm.loadPublicKey(Base64.getDecoder().decode(pubkeyEncoded))
+        val publicKey = idAlgorithm.loadPublicKey(defaultEncodingUtils.decodeBase64FromString(pubkeyEncoded))
         val attestationBlob = idAlgorithm.attest(publicKey, value)
         val attestation =
             idAlgorithm.deserialize(attestationBlob, idFormat)

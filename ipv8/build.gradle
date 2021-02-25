@@ -27,7 +27,7 @@ ktlint {
     version = "$ktlint_version"
     android = true
     outputToConsole = true
-    ignoreFailures = true
+    ignoreFailures = false
     filter {
         // https://github.com/JLLeitschuh/ktlint-gradle/issues/97
         exclude { "**/generated/**" }
