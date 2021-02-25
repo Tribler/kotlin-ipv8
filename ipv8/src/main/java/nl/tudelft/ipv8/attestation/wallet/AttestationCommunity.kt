@@ -135,19 +135,19 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
 
     fun verifyAttestationLocally(
         peer: Peer,
-        attestation: WalletAttestation,
-        metaData: String,
+        attestationHash: ByteArray,
+        metadata: String,
         signature: ByteArray,
         attestorKey: PublicKey,
     ): Boolean {
-        val parsedMetadata = JSONObject(metaData)
+        val parsedMetadata = JSONObject(metadata)
         val attesteeKeyHash = parsedMetadata.optString("trustchain_address_hash")
         attesteeKeyHash ?: return false
 
         val isTrusted = this.trustedAuthorityManager.contains(attestorKey.keyToHash().toHex())
         val isOwner = peer.publicKey.keyToHash().toHex() == attesteeKeyHash
         val isSignatureValid = attestorKey.verify(signature,
-            sha1(attestation.serialize() + metaData.toByteArray()))
+            sha1(attestationHash + metadata.toByteArray()))
 
         return isTrusted && isOwner && isSignatureValid
     }
@@ -228,7 +228,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         val attestation =
             idAlgorithm.deserialize(attestationBlob, idFormat)
 
-        val signableData = attestation.serialize() + metadata.toString().toByteArray()
+        val signableData = attestation.getHash() + metadata.toString().toByteArray()
         val signature = (myPeer.key as PrivateKey).sign(sha1(signableData))
 
         this.attestationRequestCompleteCallback(
