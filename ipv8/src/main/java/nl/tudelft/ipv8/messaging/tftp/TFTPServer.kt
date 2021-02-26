@@ -142,7 +142,7 @@ class TFTPServer(
                             // shouldn't be sending any more packets.
                             break
                         }
-                        if (dataPacket.address != twrp.address || dataPacket.port != twrp.port) {
+                        if (dataPacket!!.address != twrp.address || dataPacket.port != twrp.port) {
                             // make sure it was from the right client...
                             send(TFTPErrorPacket(dataPacket.address, dataPacket.port,
                                 TFTPErrorPacket.UNKNOWN_TID, "Unexpected Host or Port")

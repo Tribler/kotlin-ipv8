@@ -10,7 +10,7 @@ import java.lang.IllegalArgumentException
 
 class Packet(
     val source: Address,
-    val data: ByteArray
+    val data: ByteArray,
 ) {
     /**
      * Deserializes an unauthenticated packet and returns the main payload.
@@ -35,6 +35,14 @@ class Packet(
         val (_, distSize) = GlobalTimeDistributionPayload.deserialize(remainder)
         val (payload, _) = deserializer.deserialize(remainder, distSize)
         return Pair(peer, payload)
+    }
+
+    @Throws(PacketDecodingException::class)
+    fun <T> getAuthPayloadWithDist(deserializer: Deserializable<T>): Triple<Peer, GlobalTimeDistributionPayload, T> {
+        val (peer, remainder) = getAuthPayload()
+        val (dist, distSize) = GlobalTimeDistributionPayload.deserialize(remainder)
+        val (payload, _) = deserializer.deserialize(remainder, distSize)
+        return Triple(peer, dist, payload)
     }
 
     @Throws(PacketDecodingException::class)
