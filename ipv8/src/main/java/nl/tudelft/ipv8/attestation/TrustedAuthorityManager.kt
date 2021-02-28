@@ -27,6 +27,10 @@ class TrustedAuthorityManager(private val database: AttestationStore) {
         TODO("Preinstalled Authorities yet to be designed.")
     }
 
+    fun getAuthorities(): List<Authority> {
+        return this.database.getAllAuthorities()
+    }
+
     fun addTrustedAuthority(publicKey: PublicKey) {
         val hash = publicKey.keyToHash().toHex()
         if (!this.contains(hash)) {
@@ -37,8 +41,20 @@ class TrustedAuthorityManager(private val database: AttestationStore) {
         }
     }
 
+    fun deleteTrustedAuthority(hash: String) {
+        if (this.contains(hash)) {
+            this.trustedAuthorities.remove(hash)
+            this.database.deleteAuthorityByHash(hash)
+        }
+    }
+
+    fun deleteTrustedAuthority(publicKey: PublicKey) {
+        return this.deleteTrustedAuthority(publicKey.keyToHash().toHex())
+    }
+
     fun contains(hash: String): Boolean {
         return this.trustedAuthorities.containsKey(hash)
     }
+
 
 }

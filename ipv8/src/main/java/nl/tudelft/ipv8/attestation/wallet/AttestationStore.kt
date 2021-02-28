@@ -17,6 +17,7 @@ class AttestationBlob(
 
 interface AttestationStore {
     fun getAllAttestations(): List<AttestationBlob>
+
     fun insertAttestation(
         attestation: WalletAttestation,
         attestationHash: ByteArray,
@@ -29,8 +30,15 @@ interface AttestationStore {
 
     fun getAttestationByHash(attestationHash: ByteArray): ByteArray?
 
+    fun deleteAttestationByHash(attestationHash: ByteArray)
+
     fun getAllAuthorities(): List<Authority>
+
     fun insertAuthority(publicKey: PublicKey, hash: String)
+
     fun getAuthorityByPublicKey(publicKey: PublicKey): Authority?
+
     fun getAuthorityByHash(hash: String): Authority?
+
+    fun deleteAuthorityByHash(hash: String)
 }
