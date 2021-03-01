@@ -126,4 +126,8 @@ class SchemaManager {
         return this.formats[idFormat]?.get("algorithm").toString()
     }
 
+    fun getSchemaNames(): List<String> {
+        return this.formats.keys.toList()
+    }
+    
 }
