@@ -88,6 +88,7 @@ object IPv8Android {
             IPv8Android.serviceClass = serviceClass
 
             defaultCryptoProvider = AndroidCryptoProvider
+            defaultEncodingUtils = AndroidEncodingUtils
 
             return ipv8
         }
