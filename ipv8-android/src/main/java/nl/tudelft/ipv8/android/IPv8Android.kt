@@ -17,10 +17,13 @@ import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeAdvertiser
 import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeScanner
 import nl.tudelft.ipv8.android.messaging.udp.AndroidUdpEndpoint
 import nl.tudelft.ipv8.android.service.IPv8Service
+import nl.tudelft.ipv8.android.util.AndroidEncodingUtils
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.peerdiscovery.Network
+import nl.tudelft.ipv8.util.defaultEncodingUtils
 import java.net.InetAddress
 
 object IPv8Android {
@@ -32,14 +35,34 @@ object IPv8Android {
     }
 
     class Factory(
-        private val application: Application
+        private val application: Application,
     ) {
+
         private var privateKey: PrivateKey? = null
+        private var identityPrivateKeySmall: BonehPrivateKey? = null
+        private var identityPrivateKeyBig: BonehPrivateKey? = null
+        private var identityPrivateKeyHuge: BonehPrivateKey? = null
+
         private var configuration: IPv8Configuration? = null
         private var serviceClass: Class<out IPv8Service> = IPv8Service::class.java
 
         fun setPrivateKey(key: PrivateKey): Factory {
             this.privateKey = key
+            return this
+        }
+
+        fun setIdentityKeySmall(key: BonehPrivateKey): Factory {
+            this.identityPrivateKeySmall = key
+            return this
+        }
+
+        fun setIdentityKeyBig(key: BonehPrivateKey): Factory {
+            this.identityPrivateKeyBig = key
+            return this
+        }
+
+        fun setIdentityKeyHuge(key: BonehPrivateKey): Factory {
+            this.identityPrivateKeyHuge = key
             return this
         }
 
@@ -65,6 +88,7 @@ object IPv8Android {
             IPv8Android.serviceClass = serviceClass
 
             defaultCryptoProvider = AndroidCryptoProvider
+            defaultEncodingUtils = AndroidEncodingUtils
 
             return ipv8
         }
@@ -72,6 +96,7 @@ object IPv8Android {
         private fun create(): IPv8 {
             val privateKey = privateKey
                 ?: throw IllegalStateException("Private key is not set")
+
             val configuration = configuration
                 ?: throw IllegalStateException("Configuration is not set")
 
@@ -84,16 +109,25 @@ object IPv8Android {
             val bluetoothManager = application.getSystemService<BluetoothManager>()
                 ?: throw IllegalStateException("BluetoothManager not found")
 
-            val myPeer = Peer(privateKey)
+            val myPeer = Peer(privateKey,
+                identityPrivateKeySmall = this.identityPrivateKeySmall,
+                identityPrivateKeyBig = this.identityPrivateKeyBig,
+                identityPrivateKeyHuge = this.identityPrivateKeyHuge
+            )
+
             val network = Network()
 
             val gattServer = GattServerManager(application, myPeer)
             val bleAdvertiser = IPv8BluetoothLeAdvertiser(bluetoothManager)
             val bleScanner = IPv8BluetoothLeScanner(bluetoothManager, network)
-            val bluetoothEndpoint = if (bluetoothManager.adapter != null &&
-                Build.VERSION.SDK_INT >= 24)
-                BluetoothLeEndpoint(application, bluetoothManager, gattServer, bleAdvertiser,
-                    bleScanner, network, myPeer) else null
+            val bluetoothEndpoint =
+                if (
+                    bluetoothManager.adapter != null &&
+                    Build.VERSION.SDK_INT >= 24
+                )
+                    BluetoothLeEndpoint(application, bluetoothManager, gattServer, bleAdvertiser,
+                        bleScanner, network, myPeer)
+                else null
 
             val endpointAggregator = EndpointAggregator(
                 udpEndpoint,
