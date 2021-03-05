@@ -129,5 +129,5 @@ class SchemaManager {
     fun getSchemaNames(): List<String> {
         return this.formats.keys.toList()
     }
-    
+
 }

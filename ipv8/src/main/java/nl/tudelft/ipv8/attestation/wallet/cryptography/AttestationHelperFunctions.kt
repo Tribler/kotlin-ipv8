@@ -69,7 +69,7 @@ fun attest(publicKey: BonehPublicKey, value: BigInteger, bitSpace: Int): BonehAt
         a.push(0)
     }
     val r = generateModularAdditiveInverse(publicKey.p, bitSpace)
-    var tOutPublic = a.zip(r).map { encode(publicKey, BigInteger(it.first.toString()) + it.second) }
+    val tOutPublic = a.zip(r).map { encode(publicKey, BigInteger(it.first.toString()) + it.second) }
     val tOutPrivate = arrayListOf<Pair<Int, FP2Value>>()
     for (i in 0 until a.size - 1 step 2) {
         tOutPrivate.add(Pair(i,
