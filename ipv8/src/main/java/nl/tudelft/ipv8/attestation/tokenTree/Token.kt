@@ -1,4 +1,4 @@
-package nl.tudelft.ipv8.attestation.token_tree
+package nl.tudelft.ipv8.attestation.tokenTree
 
 import nl.tudelft.ipv8.attestation.SignedObject
 import nl.tudelft.ipv8.keyvault.PrivateKey
