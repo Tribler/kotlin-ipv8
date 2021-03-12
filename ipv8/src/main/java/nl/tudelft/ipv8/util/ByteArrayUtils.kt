@@ -20,3 +20,7 @@ class ByteArrayKey(val bytes: ByteArray) {
         return bytes.contentToString()
     }
 }
+
+fun ByteArray.toKey(): ByteArrayKey {
+    return ByteArrayKey(this)
+}
