@@ -1,0 +1,70 @@
+package nl.tudelft.ipv8.attestation.identity.manager
+
+import nl.tudelft.ipv8.attestation.identity.IdentityAttestation
+import nl.tudelft.ipv8.attestation.identity.Metadata
+import nl.tudelft.ipv8.attestation.identity.database.IdentityAttestationStore
+import nl.tudelft.ipv8.attestation.wallet.cryptography.attest
+import nl.tudelft.ipv8.keyvault.Key
+import nl.tudelft.ipv8.keyvault.PrivateKey
+import nl.tudelft.ipv8.keyvault.PublicKey
+import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
+import nl.tudelft.ipv8.messaging.SERIALIZED_UINT_SIZE
+import nl.tudelft.ipv8.messaging.SERIALIZED_USHORT_SIZE
+import nl.tudelft.ipv8.messaging.deserializeUInt
+import nl.tudelft.ipv8.messaging.deserializeUShort
+import nl.tudelft.ipv8.util.ByteArrayKey
+
+class IdentityManager(internal val database: IdentityAttestationStore) {
+
+    val pseudonyms = hashMapOf<ByteArrayKey, PseudonymManager>()
+
+    fun getPseudonym(key: Key): PseudonymManager {
+        val publicKeyMaterial = key.pub().keyToBin()
+        if (!this.pseudonyms.containsKey(ByteArrayKey(publicKeyMaterial))) {
+            if (key is PrivateKey) {
+                this.pseudonyms[ByteArrayKey(publicKeyMaterial)] = PseudonymManager(this.database, privateKey = key)
+            } else {
+                this.pseudonyms[ByteArrayKey(publicKeyMaterial)] = PseudonymManager(this.database, publicKey = key as PublicKey)
+            }
+        }
+        return this.pseudonyms[ByteArrayKey(publicKeyMaterial)]!!
+    }
+
+    fun substantiate(
+        publicKey: PublicKey,
+        serializeMetadata: ByteArray,
+        serializedTokens: ByteArray,
+        serializedAttestations: ByteArray,
+        serializedAuthorities: ByteArray,
+    ): Pair<Boolean, PseudonymManager> {
+        val pseudonym = this.getPseudonym(publicKey)
+        var correct = pseudonym.tree.deserializePublic(serializedTokens)
+
+        var metadataOffset = 0
+        while (metadataOffset < serializeMetadata.size) {
+            val metadataSize = deserializeUInt(serializeMetadata, metadataOffset).toInt()
+            metadataOffset += SERIALIZED_UINT_SIZE
+            val metadata =
+                Metadata.deserialize(serializeMetadata.copyOfRange(metadataOffset, metadataOffset + metadataSize),
+                    publicKey)
+            pseudonym.addMetadata(metadata)
+            metadataOffset + metadataSize
+        }
+
+        var attestationOffset = 0
+        var authorityOffset = 0
+
+        while (authorityOffset < serializedAttestations.size) {
+            val authoritySize = deserializeUShort(serializedAuthorities, authorityOffset)
+            authorityOffset += SERIALIZED_USHORT_SIZE
+            val authority = defaultCryptoProvider.keyFromPublicBin(serializedAuthorities.copyOfRange(authorityOffset,
+                authorityOffset + authoritySize))
+            authorityOffset += authoritySize
+            correct = correct && pseudonym.addAttestation(authority,
+                IdentityAttestation.deserialize(serializedAttestations, authority, attestationOffset))
+            attestationOffset += 32 + authority.getSignatureLength()
+        }
+
+        return Pair(correct, pseudonym)
+    }
+}
