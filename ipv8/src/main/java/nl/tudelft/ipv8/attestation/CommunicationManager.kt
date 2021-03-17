@@ -6,7 +6,7 @@ import nl.tudelft.ipv8.IPv8
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.identity.IdentityCommunity
 import nl.tudelft.ipv8.attestation.identity.createCommunity
-import nl.tudelft.ipv8.attestation.identity.database.IdentityAttestationStore
+import nl.tudelft.ipv8.attestation.identity.database.IdentityStore
 import nl.tudelft.ipv8.attestation.identity.manager.IdentityManager
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
 import nl.tudelft.ipv8.attestation.wallet.AttestationStore
@@ -27,7 +27,7 @@ private val logger = KotlinLogging.logger {}
 class CommunicationManager(
     private val iPv8Instance: IPv8,
     private val attestationStore: AttestationStore,
-    private val identityStore: IdentityAttestationStore,
+    private val identityStore: IdentityStore,
 ) {
     private val channels = hashMapOf<ByteArrayKey, CommunicationChannel>()
     private val nameToChannel = hashMapOf<String, CommunicationChannel>()
@@ -92,6 +92,10 @@ class CommunicationManager(
     fun listLoadedPseudonyms(): List<String> {
         val pseudonyms = this.listPseudonyms()
         return this.nameToChannel.keys.filter { pseudonyms.contains(it) }
+    }
+
+    fun shutdown() {
+        TODO()
     }
 
     companion object {

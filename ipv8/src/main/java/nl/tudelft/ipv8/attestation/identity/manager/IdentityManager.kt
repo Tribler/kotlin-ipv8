@@ -2,8 +2,7 @@ package nl.tudelft.ipv8.attestation.identity.manager
 
 import nl.tudelft.ipv8.attestation.identity.IdentityAttestation
 import nl.tudelft.ipv8.attestation.identity.Metadata
-import nl.tudelft.ipv8.attestation.identity.database.IdentityAttestationStore
-import nl.tudelft.ipv8.attestation.wallet.cryptography.attest
+import nl.tudelft.ipv8.attestation.identity.database.IdentityStore
 import nl.tudelft.ipv8.keyvault.Key
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
@@ -14,7 +13,7 @@ import nl.tudelft.ipv8.messaging.deserializeUInt
 import nl.tudelft.ipv8.messaging.deserializeUShort
 import nl.tudelft.ipv8.util.ByteArrayKey
 
-class IdentityManager(internal val database: IdentityAttestationStore) {
+class IdentityManager(internal val database: IdentityStore) {
 
     val pseudonyms = hashMapOf<ByteArrayKey, PseudonymManager>()
 

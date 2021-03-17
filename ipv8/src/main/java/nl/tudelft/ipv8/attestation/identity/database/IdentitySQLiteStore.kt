@@ -31,7 +31,7 @@ private val identityAttestationMapper: (
     IdentityAttestation.fromDatabaseTuple(metadataPointer, signature)
 }
 
-class IdentitySQLiteStore(database: Database) : IdentityAttestationStore {
+class IdentitySQLiteStore(database: Database) : IdentityStore {
     private val dao = database.dbIdentityQueries
 
     override fun insertToken(publicKey: PublicKey, token: Token) {

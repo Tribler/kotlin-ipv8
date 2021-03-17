@@ -7,7 +7,7 @@ import nl.tudelft.ipv8.keyvault.PublicKey
 
 class Credential(val metadata: Metadata, val attestations: Set<IdentityAttestation>)
 
-interface IdentityAttestationStore {
+interface IdentityStore {
 
     fun insertToken(publicKey: PublicKey, token: Token)
     fun insertMetadata(publicKey: PublicKey, metadata: Metadata)

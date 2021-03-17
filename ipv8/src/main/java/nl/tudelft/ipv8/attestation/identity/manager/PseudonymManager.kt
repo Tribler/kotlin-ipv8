@@ -4,7 +4,7 @@ import mu.KotlinLogging
 import nl.tudelft.ipv8.attestation.identity.IdentityAttestation
 import nl.tudelft.ipv8.attestation.identity.Metadata
 import nl.tudelft.ipv8.attestation.identity.database.Credential
-import nl.tudelft.ipv8.attestation.identity.database.IdentityAttestationStore
+import nl.tudelft.ipv8.attestation.identity.database.IdentityStore
 import nl.tudelft.ipv8.attestation.tokenTree.Token
 import nl.tudelft.ipv8.attestation.tokenTree.TokenTree
 import nl.tudelft.ipv8.keyvault.PrivateKey
@@ -18,7 +18,7 @@ import org.json.JSONObject
 private val logger = KotlinLogging.logger {}
 
 class PseudonymManager(
-    internal val database: IdentityAttestationStore,
+    internal val database: IdentityStore,
     publicKey: PublicKey? = null,
     privateKey: PrivateKey? = null,
 ) {

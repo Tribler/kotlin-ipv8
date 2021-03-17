@@ -5,7 +5,7 @@ import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.IPv8
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.identity.database.Credential
-import nl.tudelft.ipv8.attestation.identity.database.IdentityAttestationStore
+import nl.tudelft.ipv8.attestation.identity.database.IdentityStore
 import nl.tudelft.ipv8.attestation.identity.manager.Disclosure
 import nl.tudelft.ipv8.attestation.identity.manager.IdentityManager
 import nl.tudelft.ipv8.attestation.identity.manager.PseudonymManager
@@ -47,7 +47,7 @@ private val logger = KotlinLogging.logger {}
 class IdentityCommunity(
     override var myPeer: Peer,
     identityManager: IdentityManager? = null,
-    database: IdentityAttestationStore,
+    database: IdentityStore,
     override var serviceId: String = SERVICE_ID,
     override var network: Network = Network(),
 ) : Community() {
@@ -333,7 +333,7 @@ fun createCommunity(
     privateKey: PrivateKey,
     ipv8: IPv8,
     identityManager: IdentityManager,
-    database: IdentityAttestationStore,
+    database: IdentityStore,
     rendezvousToken: ByteArray?,
 ): IdentityCommunity {
     val myPeer = Peer(privateKey)
