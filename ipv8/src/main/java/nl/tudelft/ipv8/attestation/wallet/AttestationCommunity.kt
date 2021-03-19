@@ -1,5 +1,9 @@
 package nl.tudelft.ipv8.attestation.wallet
 
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.IPv4Address
@@ -19,8 +23,11 @@ import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKe
 import nl.tudelft.ipv8.attestation.wallet.payloads.*
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
+import nl.tudelft.ipv8.messaging.Endpoint
+import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
+import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.*
 import org.json.JSONObject
 import java.math.BigInteger
@@ -35,14 +42,26 @@ private val logger = KotlinLogging.logger {}
 private const val CHUNK_SIZE = 800
 
 class AttestationCommunity(val database: AttestationStore) : Community() {
+
+    override lateinit var myPeer: Peer
+    override lateinit var endpoint: EndpointAggregator
+    override lateinit var network: Network
+
+    constructor(myPeer: Peer, endpoint: EndpointAggregator, network: Network, database: AttestationStore) : this(
+        database) {
+        this.myPeer = myPeer
+        this.endpoint = endpoint
+        this.network = network
+    }
+
     override val serviceId = "e5d116f803a916a84850b9057cc0f662163f71f5"
 
     private val receiveBlockLock = ReentrantLock()
     val schemaManager = SchemaManager()
 
-    private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> ByteArray
+    private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> Deferred<ByteArray?>
     private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attestationHash: ByteArray, idFormat: String, fromPeer: Peer?, metaData: String?, signature: ByteArray?) -> Unit
-    private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Boolean
+    private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Deferred<Boolean>
     private lateinit var attestationChunkCallback: (peer: Peer, sequenceNumber: Int) -> Unit
 
     val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
@@ -55,6 +74,17 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     val requestCache = RequestCache()
 
     init {
+        // Use parameters of baseclass if not overridden.
+        if (!this::myPeer.isInitialized) {
+            this.myPeer = super.myPeer
+        }
+        if (!this::endpoint.isInitialized) {
+            this.endpoint = super.endpoint
+        }
+        if (!this::network.isInitialized) {
+            this.network = super.network
+        }
+
         trustedAuthorityManager.loadAuthorities()
         schemaManager.registerDefaultSchemas()
         for (att in this.database.getAllAttestations()) {
@@ -74,11 +104,11 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     private fun onRequestAttestationWrapper(packet: Packet) {
         val (peer, dist, payload) = packet.getAuthPayloadWithDist(RequestAttestationPayload.Deserializer)
         logger.info("Received RequestAttestation from ${peer.mid} for metadata ${payload.metadata}.")
-        this.onRequestAttestation(peer, dist, payload)
+        GlobalScope.launch { onRequestAttestation(peer, dist, payload) }
     }
 
     private fun onChallengeResponseWrapper(packet: Packet) {
-        val (peer, _, payload) = packet.getAuthPayloadWithDist(ChallengeResponsePayload.Deserializer)
+        val (peer, payload) = packet.getAuthPayload(ChallengeResponsePayload.Deserializer)
         logger.info("Received ChallengeResponse from ${peer.mid} for hash ${String(payload.challengeHash)} with response ${
             String(payload.response)
         }.")
@@ -86,7 +116,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     }
 
     private fun onChallengeWrapper(packet: Packet) {
-        val (peer, _, payload) = packet.getAuthPayloadWithDist(ChallengePayload.Deserializer)
+        val (peer, payload) = packet.getAuthPayload(ChallengePayload.Deserializer)
         logger.info("Received Challenge from ${peer.mid} for hash ${String(payload.attestationHash)} with challenge ${
             String(payload.challenge)
         }.")
@@ -102,17 +132,17 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     }
 
     private fun onVerifyAttestationRequestWrapper(packet: Packet) {
-        val (peer, _, payload) = packet.getAuthPayloadWithDist(VerifyAttestationRequestPayload.Deserializer)
+        val (peer, payload) = packet.getAuthPayload(VerifyAttestationRequestPayload.Deserializer)
         logger.info("Received VerifyAttestationRequest from ${peer.mid} for hash ${String(payload.hash)}.")
-        this.onVerifyAttestationRequest(peer, payload)
+        GlobalScope.launch { onVerifyAttestationRequest(peer, payload) }
 
     }
 
-    private fun getIdAlgorithm(idFormat: String): IdentityAlgorithm {
+    fun getIdAlgorithm(idFormat: String): IdentityAlgorithm {
         return this.schemaManager.getAlgorithmInstance(idFormat)
     }
 
-    fun setAttestationRequestCallback(f: (peer: Peer, attributeName: String, metaData: String) -> ByteArray) {
+    fun setAttestationRequestCallback(f: (peer: Peer, attributeName: String, metaData: String) -> Deferred<ByteArray?>) {
         this.attestationRequestCallback = f
     }
 
@@ -120,7 +150,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         this.attestationRequestCompleteCallback = f
     }
 
-    fun setVerifyRequestCallback(f: (attributeName: Peer, attributeHash: ByteArray) -> Boolean) {
+    fun setVerifyRequestCallback(f: (attributeName: Peer, attributeHash: ByteArray) -> Deferred<Boolean>) {
         this.verifyRequestCallback = f
     }
 
@@ -197,22 +227,28 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         endpoint.send(peer, packet)
     }
 
-    private fun onRequestAttestation(
+    private suspend fun onRequestAttestation(
         peer: Peer,
         dist: GlobalTimeDistributionPayload,
         payload: RequestAttestationPayload,
     ) {
         val metadata = JSONObject(payload.metadata)
         val attribute = metadata.getString("attribute")
-        var value = metadata.optString("value").toByteArray()
+        var value: ByteArray? = metadata.optString("value").toByteArray()
         val pubkeyEncoded = metadata.getString("public_key")
 
         val idFormat = metadata.getString("id_format")
         val idAlgorithm = this.getIdAlgorithm(idFormat)
         val shouldSign = metadata.optBoolean("signature", false)
 
-        if (value.isEmpty()) {
-            value = this.attestationRequestCallback(peer, attribute, payload.metadata)
+        if (value?.isNotEmpty() == true) {
+            logger.info("Client passed value of his own")
+        }
+
+        value = this.attestationRequestCallback(peer, attribute, payload.metadata).await()
+        if (value == null) {
+            logger.error("Failed to get value from callback")
+            return
         }
 
         val stringifiedValue = when (idFormat) {
@@ -287,7 +323,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     fun verifyAttestationValues(
         socketAddress: IPv4Address,
         attestationHash: ByteArray,
-        values: ArrayList<ByteArray>,
+        values: List<ByteArray>,
         callback: ((ByteArray, List<Double>) -> Unit),
         idFormat: String,
     ) {
@@ -313,7 +349,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         this.endpoint.send(socketAddress, packet)
     }
 
-    private fun onVerifyAttestationRequest(
+    private suspend fun onVerifyAttestationRequest(
         peer: Peer,
         payload: VerifyAttestationRequestPayload,
     ) {
@@ -327,7 +363,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
             logger.warn("Attestation blob for verification is empty: ${payload.hash}!")
         }
 
-        val value = verifyRequestCallback(peer, payload.hash)
+        val value = verifyRequestCallback(peer, payload.hash).await()
         if (!value) {
             logger.info("Verify request callback returned false for $peer, ${payload.hash}")
             return

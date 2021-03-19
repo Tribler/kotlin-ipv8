@@ -11,11 +11,21 @@ class IPv8(
     private val endpoint: EndpointAggregator,
     private val configuration: IPv8Configuration,
     val myPeer: Peer,
-    val network: Network = Network()
+    val network: Network = Network(),
 ) {
     private val overlayLock = Object()
 
+    /*
+     * Primary Overlays. Should not contain duplicates.
+     */
     val overlays = mutableMapOf<Class<out Overlay>, Overlay>()
+
+    /*
+     * Secondary Overlays. These contain alternative channels of an Overlay.
+     * Ensure unique Service IDs. TODO: remove Overlays singleton constraint.
+     */
+    val secondaryOverlays = mutableMapOf<String, Overlay>()
+
     private val strategies = mutableListOf<DiscoveryStrategy>()
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -29,6 +39,10 @@ class IPv8(
 
     inline fun <reified T : Overlay> getOverlay(): T? {
         return overlays[T::class.java] as? T
+    }
+
+    inline fun <reified T : Overlay> getSecondaryOverlay(serviceId: String): T? {
+        return secondaryOverlays[serviceId] as? T
     }
 
     fun start() {
@@ -66,6 +80,15 @@ class IPv8(
 
         // Start looping call
         startLoopingCall()
+    }
+
+    fun addSecondaryOverlayStrategy(overlay: Overlay, strategy: DiscoveryStrategy) {
+        synchronized(overlayLock) {
+            if (!this.secondaryOverlays.containsKey(overlay.serviceId)) {
+                this.secondaryOverlays[overlay.serviceId] = overlay
+            }
+            this.strategies.add(strategy)
+        }
     }
 
     private fun onTick() {
