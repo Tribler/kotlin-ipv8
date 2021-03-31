@@ -1,10 +1,12 @@
 package nl.tudelft.ipv8.attestation.revocation
 
+import mu.KotlinLogging
 import nl.tudelft.ipv8.attestation.Authority
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.sqldelight.Database
 import nl.tudelft.ipv8.sqldelight.GetAllRevocations
+import nl.tudelft.ipv8.util.toHex
 
 private val authorityMapper: (
     ByteArray?,
@@ -18,6 +20,7 @@ private val authorityMapper: (
         recognized?.toInt() == 1)
 }
 
+private val logger = KotlinLogging.logger {}
 class AuthoritySQLiteStore(database: Database) : AuthorityStore {
     private val dao = database.dbAuthorityQueries
 
@@ -59,6 +62,15 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
         if (authorityId == null) {
             this.insertAuthority(publicKeyHash)
             authorityId = dao.getAuthorityIdByHash(publicKeyHash).executeAsOne()
+        }
+
+        if (version >= 2L) {
+            val previousId = dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L).executeAsOneOrNull()?.version_id
+            if (previousId == null) {
+                logger.warn("Received revocations out of order, skipping!")
+                return
+            }
+
         }
 
         var versionId =
