@@ -1,10 +1,7 @@
 package nl.tudelft.ipv8.attestation.revocation.payloads
 
-import nl.tudelft.ipv8.keyvault.PublicKey
-import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.util.*
-import java.lang.RuntimeException
 
 open class RevocationUpdatePreviewPayload(
     val revocationRefs: Map<ByteArrayKey, Long>,
