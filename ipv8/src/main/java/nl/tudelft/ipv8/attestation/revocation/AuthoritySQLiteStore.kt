@@ -21,6 +21,7 @@ private val authorityMapper: (
 }
 
 private val logger = KotlinLogging.logger {}
+
 class AuthoritySQLiteStore(database: Database) : AuthorityStore {
     private val dao = database.dbAuthorityQueries
 
@@ -65,7 +66,8 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
         }
 
         if (version >= 2L) {
-            val previousId = dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L).executeAsOneOrNull()?.version_id
+            val previousId =
+                dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L).executeAsOneOrNull()?.version_id
             if (previousId == null) {
                 logger.warn("Received revocations out of order, skipping!")
                 return
@@ -111,23 +113,5 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
     override fun getAllRevocations(): List<GetAllRevocations> {
         return dao.getAllRevocations().executeAsList()
     }
-
-
-//    fun insertAuthority(publicKey: PublicKey, hash: String, version: Long, recognized: Boolean) {
-//        val keyBin = publicKey.keyToBin()
-//        dao.insertAuthority(keyBin, hash, version, if (recognized) 1 else 0)
-//    }
-//
-//    fun getAuthorityByPublicKey(publicKey: PublicKey): Authority? {
-//        return dao.getAuthorityByPublicKey(publicKey.keyToBin(), authorityMapper).executeAsOneOrNull()
-//    }
-//
-//    fun getAuthorityByHash(hash: String): Authority? {
-//        return dao.getAuthorityByHash(hash, authorityMapper).executeAsOneOrNull()
-//    }
-//
-//    fun deleteAuthorityByHash(hash: String) {
-//        return dao.deleteAuthorityByHash(hash)
-//    }
-
+    
 }
