@@ -40,6 +40,10 @@ class RequestCache {
         return this.has(identifierPair.first, identifierPair.second)
     }
 
+    fun pop(identifierPair: Pair<String, BigInteger>): NumberCache? {
+        return this.pop(identifierPair.first, identifierPair.second)
+    }
+
     fun pop(prefix: String, number: BigInteger): NumberCache? {
         val identifier = this.createIdentifier(prefix, number)
         val cache = this.identifiers.remove(identifier)
@@ -51,9 +55,12 @@ class RequestCache {
         return this.identifiers.get(this.createIdentifier(prefix, number))
     }
 
+    fun get(identifierPair: Pair<String, BigInteger>): NumberCache? {
+        return this.get(identifierPair.first, identifierPair.second)
+    }
+
     private fun createIdentifier(prefix: String, number: BigInteger): String {
         return "$prefix:$number"
     }
-
 
 }
