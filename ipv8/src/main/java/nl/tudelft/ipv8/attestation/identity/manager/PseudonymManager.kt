@@ -12,6 +12,7 @@ import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.messaging.serializeUInt
 import nl.tudelft.ipv8.messaging.serializeUShort
 import nl.tudelft.ipv8.util.ByteArrayKey
+import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
 import org.json.JSONObject
 
@@ -31,7 +32,7 @@ class PseudonymManager(
     private val credentials = this.database.getCredentialsFor(this.publicKey)
 
     init {
-        logger.info("Loading public key ${this.publicKey.keyToHash()} from database")
+        logger.info("Loading public key ${this.publicKey.keyToHash().toHex()} from database")
         for (token in this.database.getTokensFor(this.publicKey)) {
             this.tree.elements[token.hash.toKey()] = token
         }
