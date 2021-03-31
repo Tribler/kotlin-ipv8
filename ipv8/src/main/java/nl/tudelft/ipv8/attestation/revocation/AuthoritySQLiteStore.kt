@@ -89,7 +89,7 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
             dao.getVersionsByAuthorityIDandVersionNumbers(authorityId, versions).executeAsList()
 
         return versionEntries.map {
-            RevocationBlob(it.version_number,
+            RevocationBlob(publicKeyHash, it.version_number,
                 it.signature,
                 dao.getRevocationsByAuthorityIdAndVersionId(authorityId, it.version_id)
                     .executeAsList())

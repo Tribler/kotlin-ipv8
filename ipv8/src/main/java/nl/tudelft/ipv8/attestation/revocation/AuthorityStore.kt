@@ -5,7 +5,7 @@ import nl.tudelft.ipv8.attestation.Revocations
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.sqldelight.GetAllRevocations
 
-class RevocationBlob(val version: Long, val signature: ByteArray, val revocations: List<ByteArray>)
+class RevocationBlob(val publicKeyHash: ByteArray, val version: Long, val signature: ByteArray, val revocations: List<ByteArray>)
 
 interface AuthorityStore {
 
