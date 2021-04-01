@@ -113,5 +113,5 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
     override fun getAllRevocations(): List<GetAllRevocations> {
         return dao.getAllRevocations().executeAsList()
     }
-    
+
 }

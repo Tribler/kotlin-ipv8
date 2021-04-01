@@ -14,6 +14,7 @@ class RevocationUpdateRequestPayload(
 
     companion object Deserializer : Deserializable<RevocationUpdateRequestPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<RevocationUpdateRequestPayload, Int> {
+            @Suppress("UNCHECKED_CAST")
             return RevocationUpdatePreviewPayload.deserialize(buffer, offset) as Pair<RevocationUpdateRequestPayload, Int>
         }
     }

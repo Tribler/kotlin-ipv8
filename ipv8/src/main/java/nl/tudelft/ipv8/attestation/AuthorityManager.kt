@@ -83,7 +83,7 @@ class AuthorityManager(val database: AuthorityStore) {
 
     fun deleteTrustedAuthority(hash: ByteArray) {
         if (this.contains(hash)) {
-            this.trustedAuthorities.remove(hash)
+            this.trustedAuthorities.remove(hash.toKey())
             this.database.disregardAuthority(hash)
         }
     }

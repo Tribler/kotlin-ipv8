@@ -1,7 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.caches
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.time.withTimeout
 import mu.KotlinLogging
 import nl.tudelft.ipv8.attestation.wallet.RequestCache
 import java.math.BigInteger
