@@ -28,6 +28,7 @@ class CommunicationManager(
     private val iPv8Instance: IPv8,
     private val attestationStore: AttestationStore,
     private val identityStore: IdentityStore,
+    private val authorityManager: AuthorityManager,
 ) {
     private val channels = hashMapOf<ByteArrayKey, CommunicationChannel>()
     private val nameToChannel = hashMapOf<String, CommunicationChannel>()
@@ -73,6 +74,7 @@ class CommunicationManager(
             val attestationOverlay = AttestationCommunity(identityOverlay.myPeer,
                 identityOverlay.endpoint,
                 identityOverlay.network,
+                authorityManager,
                 attestationStore)
 
             this.channels[publicKeyBytes.toKey()] = CommunicationChannel(attestationOverlay, identityOverlay)

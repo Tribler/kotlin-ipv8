@@ -2,7 +2,6 @@ package nl.tudelft.ipv8.attestation.wallet
 
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
@@ -11,7 +10,7 @@ import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.IdentityAlgorithm
-import nl.tudelft.ipv8.attestation.TrustedAuthorityManager
+import nl.tudelft.ipv8.attestation.AuthorityManager
 import nl.tudelft.ipv8.attestation.schema.*
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION_REQUEST
@@ -23,7 +22,6 @@ import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKe
 import nl.tudelft.ipv8.attestation.wallet.payloads.*
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
-import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
@@ -32,7 +30,6 @@ import nl.tudelft.ipv8.util.*
 import org.json.JSONObject
 import java.math.BigInteger
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.random.Random
 import kotlin.random.nextUBytes
@@ -41,13 +38,19 @@ import kotlin.random.nextUBytes
 private val logger = KotlinLogging.logger {}
 private const val CHUNK_SIZE = 800
 
-class AttestationCommunity(val database: AttestationStore) : Community() {
+class AttestationCommunity(val authorityManager: AuthorityManager, val database: AttestationStore) : Community() {
 
     override lateinit var myPeer: Peer
     override lateinit var endpoint: EndpointAggregator
     override lateinit var network: Network
 
-    constructor(myPeer: Peer, endpoint: EndpointAggregator, network: Network, database: AttestationStore) : this(
+    constructor(
+        myPeer: Peer,
+        endpoint: EndpointAggregator,
+        network: Network,
+        authorityManager: AuthorityManager,
+        database: AttestationStore,
+    ) : this(authorityManager,
         database) {
         this.myPeer = myPeer
         this.endpoint = endpoint
@@ -69,8 +72,6 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     private val cachedAttestationBlobs = mutableMapOf<ByteArrayKey, WalletAttestation>()
     private val allowedAttestations = mutableMapOf<String, Array<ByteArray>>()
 
-    val trustedAuthorityManager = TrustedAuthorityManager(database)
-
     val requestCache = RequestCache()
 
     init {
@@ -85,7 +86,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
             this.network = super.network
         }
 
-        trustedAuthorityManager.loadAuthorities()
+        authorityManager.loadTrustedAuthorities()
         schemaManager.registerDefaultSchemas()
         for (att in this.database.getAllAttestations()) {
             val hash = att.attestationHash
@@ -175,7 +176,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
         val attesteeKeyHash = parsedMetadata.optString("trustchain_address_hash")
         attesteeKeyHash ?: return false
 
-        val isTrusted = this.trustedAuthorityManager.contains(attestorKey.keyToHash().toHex())
+        val isTrusted = this.authorityManager.contains(attestorKey.keyToHash())
         val isOwner = peer.publicKey.keyToHash().toHex() == attesteeKeyHash
         val isSignatureValid = attestorKey.verify(signature,
             sha1(attestationHash + metadata.toByteArray()))
@@ -645,10 +646,11 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     }
 
     class Factory(
+        private val authorityManager: AuthorityManager,
         private val database: AttestationStore,
     ) : Overlay.Factory<AttestationCommunity>(AttestationCommunity::class.java) {
         override fun create(): AttestationCommunity {
-            return AttestationCommunity(database)
+            return AttestationCommunity(authorityManager, database)
         }
     }
 

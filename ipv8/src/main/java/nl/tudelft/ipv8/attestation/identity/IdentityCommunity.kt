@@ -245,8 +245,8 @@ class IdentityCommunity(
         val credential = this.selfAdvertise(attributeHash, name, blockType, metadata)
         this.permissions[peer] = this.tokenChain.size
         val disclosure = this.pseudonymManager.discloseCredentials(listOf(credential), setOf())
-        val (metadata, tokens, attestations, authorities) = this.fitDisclosure(disclosure)
-        val payload = DisclosePayload(metadata, tokens, attestations, authorities)
+        val (metadataObj, tokens, attestations, authorities) = this.fitDisclosure(disclosure)
+        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities)
         this.endpoint.send(peer, serializePacket(DISCLOSURE_PAYLOAD, payload))
     }
 

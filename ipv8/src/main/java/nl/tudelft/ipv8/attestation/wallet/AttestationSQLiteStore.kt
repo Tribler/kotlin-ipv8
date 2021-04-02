@@ -29,14 +29,6 @@ private val attestationMapper: (
     )
 }
 
-private val authorityMapper: (
-    ByteArray,
-    String,
-) -> Authority = { public_key, hash ->
-    Authority(defaultCryptoProvider.keyFromPublicBin(public_key), hash)
-}
-
-
 private val logger = KotlinLogging.logger {}
 
 class AttestationSQLiteStore(database: Database) : AttestationStore {
@@ -72,27 +64,6 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
 
     override fun deleteAttestationByHash(attestationHash: ByteArray) {
         return dao.deleteAttestationByHash(attestationHash)
-    }
-
-    override fun getAllAuthorities(): List<Authority> {
-        return dao.getAllAuthorities(authorityMapper).executeAsList()
-    }
-
-    override fun insertAuthority(publicKey: PublicKey, hash: String) {
-        val keyBin = publicKey.keyToBin()
-        dao.insertAuthority(keyBin, hash)
-    }
-
-    override fun getAuthorityByPublicKey(publicKey: PublicKey): Authority? {
-        return dao.getAuthorityByPublicKey(publicKey.keyToBin(), authorityMapper).executeAsOneOrNull()
-    }
-
-    override fun getAuthorityByHash(hash: String): Authority? {
-        return dao.getAuthorityByHash(hash, authorityMapper).executeAsOneOrNull()
-    }
-
-    override fun deleteAuthorityByHash(hash: String) {
-        return dao.deleteAuthorityByHash(hash)
     }
 
 }
