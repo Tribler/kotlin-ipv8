@@ -1,8 +1,6 @@
 package nl.tudelft.ipv8.attestation.trustchain
 
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.*
 import mu.KotlinLogging
 import nl.tudelft.ipv8.*
 import nl.tudelft.ipv8.attestation.trustchain.validation.TransactionValidator
@@ -500,7 +498,10 @@ open class TrustChainCommunity(
     /**
      * Process a received half block.
      */
-    private suspend fun processHalfBlock(block: TrustChainBlock, peer: Peer) {
+    protected suspend fun processHalfBlock(block: TrustChainBlock, peer: Peer) {
+        // If we already attempted the crawl the blocks probably don't exist, which means the
+        // block is invalid
+
         val result = validateAndPersistBlock(block)
 
         logger.info("Processing half-block from $peer")
@@ -516,6 +517,20 @@ open class TrustChainCommunity(
             database.getLinked(block) == null
 
         if (canSign) {
+            if (result is ValidationResult.MissingBlocks) {
+                // Crawl for the missing blocks
+                result.blockRanges.map { blockRange ->
+                    scope.async {sendCrawlRequest(peer, blockRange.publicKey, blockRange.range, forHalfBlock=block)}
+                }.awaitAll()
+
+                val newResult = validateAndPersistBlock(block)
+                if (result != newResult){ //New information, validate again
+                    return processHalfBlock(block, peer)
+                } else { //No new information, stop processing
+                    return
+                }
+            }
+
             // Crawl missing blocks in case of partial validation result
             val isPartialChain = (result is ValidationResult.PartialPrevious ||
                 result is ValidationResult.Partial ||
@@ -571,7 +586,9 @@ open class TrustChainCommunity(
     internal fun validateAndPersistBlock(block: TrustChainBlock): ValidationResult {
         val validationResult = validateBlock(block)
 
-        if (validationResult !is ValidationResult.Invalid) {
+        if (validationResult is ValidationResult.Invalid) {
+            logger.warn { "Block is invalid: ${validationResult.errors}" }
+        } else {
             if (!database.contains(block)) {
                 try {
                     logger.debug("addBlock " + block.publicKey.toHex() + " " + block.sequenceNumber)
@@ -581,10 +598,7 @@ open class TrustChainCommunity(
                 }
                 notifyListeners(block)
             }
-        } else {
-            logger.warn { "Block is invalid: ${validationResult.errors}" }
         }
-
         return validationResult
     }
 
