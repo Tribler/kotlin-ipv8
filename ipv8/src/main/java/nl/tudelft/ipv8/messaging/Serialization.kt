@@ -1,15 +1,18 @@
 package nl.tudelft.ipv8.messaging
 
+import java.nio.Buffer
 import java.nio.ByteBuffer
 
 const val SERIALIZED_USHORT_SIZE = 2
 const val SERIALIZED_UINT_SIZE = 4
 const val SERIALIZED_ULONG_SIZE = 8
 const val SERIALIZED_LONG_SIZE = 4
+const val SERIALIZED_UBYTE_SIZE = 1
 
 const val SERIALIZED_PUBLIC_KEY_SIZE = 74
 const val HASH_SIZE = 32
 const val SIGNATURE_SIZE = 64
+const val SERIALIZED_SHA1_HASH_SIZE = 20
 
 interface Serializable {
     fun serialize(): ByteArray
@@ -84,8 +87,18 @@ fun serializeLong(value: Long): ByteArray {
 fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
     val buffer = ByteBuffer.allocate(SERIALIZED_LONG_SIZE)
     buffer.put(bytes.copyOfRange(offset, offset + SERIALIZED_LONG_SIZE))
-    buffer.flip()
+    // In JDK 8 this returns a Buffer.
+    (buffer as Buffer).flip()
     return buffer.int.toLong()
+}
+
+fun serializeUChar(char: UByte): ByteArray {
+    return byteArrayOf(char.toByte())
+}
+
+fun deserializeUChar(buffer: ByteArray, offset: Int = 0): UByte {
+    val ubuffer = buffer.toUByteArray()
+    return ubuffer[offset]
 }
 
 fun serializeVarLen(bytes: ByteArray): ByteArray {
@@ -97,6 +110,30 @@ fun deserializeVarLen(buffer: ByteArray, offset: Int = 0): Pair<ByteArray, Int> 
     val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
         offset + SERIALIZED_UINT_SIZE + len)
     return Pair(payload, SERIALIZED_UINT_SIZE + len)
+}
+
+fun deserializeRecursively(buffer: ByteArray, offset: Int = 0): Array<ByteArray> {
+    if (buffer.isEmpty()) {
+        return arrayOf()
+    }
+    val len = deserializeUInt(buffer, offset).toInt()
+    val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
+        offset + SERIALIZED_UINT_SIZE + len)
+    return arrayOf(payload) + deserializeRecursively(buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE + len,
+        buffer.size), offset)
+}
+
+fun deserializeAmount(buffer: ByteArray, amount: Int, offset: Int = 0): Pair<Array<ByteArray>, ByteArray> {
+    val returnValues = arrayListOf<ByteArray>()
+    var localOffset = offset
+    for (i in 0 until amount) {
+        val len = deserializeUInt(buffer, localOffset).toInt()
+        val payload = buffer.copyOfRange(localOffset + SERIALIZED_UINT_SIZE,
+            localOffset + SERIALIZED_UINT_SIZE + len)
+        localOffset += SERIALIZED_UINT_SIZE + len
+        returnValues.add(payload)
+    }
+    return Pair(returnValues.toTypedArray(), buffer.copyOfRange(localOffset, buffer.size))
 }
 
 /**

@@ -258,13 +258,14 @@ abstract class Community : Overlay {
         peer: Peer = myPeer,
         prefix: ByteArray = this.prefix,
         encrypt: Boolean = false,
+        timestamp: ULong? = null,
         recipient: Peer? = null
     ): ByteArray {
         val payloads = mutableListOf<Serializable>()
         if (sign) {
             payloads += BinMemberAuthenticationPayload(peer.publicKey.keyToBin())
         }
-        payloads += GlobalTimeDistributionPayload(claimGlobalTime())
+        payloads += GlobalTimeDistributionPayload(timestamp ?: claimGlobalTime())
         payloads += payload
         return serializePacket(
             messageId,

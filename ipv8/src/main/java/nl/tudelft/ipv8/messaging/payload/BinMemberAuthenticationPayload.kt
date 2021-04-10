@@ -3,7 +3,7 @@ package nl.tudelft.ipv8.messaging.payload
 import nl.tudelft.ipv8.messaging.*
 
 class BinMemberAuthenticationPayload(
-    val publicKey: ByteArray
+    val publicKey: ByteArray,
 ) : Serializable {
     override fun serialize(): ByteArray {
         return serializeUShort(publicKey.size) + publicKey
@@ -12,7 +12,7 @@ class BinMemberAuthenticationPayload(
     companion object : Deserializable<BinMemberAuthenticationPayload> {
         override fun deserialize(
             buffer: ByteArray,
-            offset: Int
+            offset: Int,
         ): Pair<BinMemberAuthenticationPayload, Int> {
             var localOffset = 0
             val payloadSize = deserializeUShort(buffer, offset)
