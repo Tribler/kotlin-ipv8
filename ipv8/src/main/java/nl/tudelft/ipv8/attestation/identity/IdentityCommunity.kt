@@ -327,6 +327,30 @@ class IdentityCommunity(
     companion object {
         const val SERVICE_ID = "d5889074c1e4c50423cdb6e9307ee0ca5695ead7"
     }
+
+    class Factory(
+        private val myPeer: Peer,
+        private val identityManager: IdentityManager,
+        private val database: IdentityStore,
+        private val rendezvousId: String? = null,
+        private val network: Network? = null
+    ) : Overlay.Factory<IdentityCommunity>(IdentityCommunity::class.java) {
+        override fun create(): IdentityCommunity {
+            return if (rendezvousId != null) {
+                if (network != null) {
+                    IdentityCommunity(myPeer, identityManager, database, rendezvousId, network)
+                } else {
+                    IdentityCommunity(myPeer, identityManager, database, rendezvousId)
+                }
+            } else {
+                if (network != null) {
+                    IdentityCommunity(myPeer, identityManager, database, network = network)
+                } else {
+                    IdentityCommunity(myPeer, identityManager, database)
+                }
+            }
+        }
+    }
 }
 
 fun createCommunity(
@@ -337,19 +361,21 @@ fun createCommunity(
     rendezvousToken: ByteArray?,
 ): IdentityCommunity {
     val myPeer = Peer(privateKey)
-
+    val network = Network()
     var rendezvousId: String? = null
     if (rendezvousToken != null) {
-        val tokenString = rendezvousToken.toHex()
         rendezvousId =
             IdentityCommunity.SERVICE_ID.mapIndexed { i, c -> if (i < rendezvousToken.size) (c.toInt() xor rendezvousToken[i].toInt()).toChar() else c }
                 .joinToString("")
     }
 
-    val community = if (rendezvousId != null) IdentityCommunity(myPeer,
-        identityManager,
-        database,
-        rendezvousId) else IdentityCommunity(myPeer, identityManager, database)
-    ipv8.addSecondaryOverlayStrategy(community, RandomWalk(community, 3.0, 5, 50, 0, 20))
-    return community
+    val randomWalk = RandomWalk.Factory(timeout = 3.0, peers = 20)
+    val config = SecondaryOverlayConfiguration(
+        IdentityCommunity.Factory(myPeer, identityManager, database, rendezvousId, network),
+        listOf(randomWalk),
+        myPeer = myPeer,
+        network = network
+    )
+
+    return ipv8.addSecondaryOverlayStrategy(config) as IdentityCommunity
 }

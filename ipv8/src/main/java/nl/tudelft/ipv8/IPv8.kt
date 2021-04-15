@@ -82,12 +82,31 @@ class IPv8(
         startLoopingCall()
     }
 
-    fun addSecondaryOverlayStrategy(overlay: Overlay, strategy: DiscoveryStrategy) {
+    /*
+     * Method for adding secondary overlays. These allow for multiple class instances, however, service IDs must be unique.
+     * As a consequence, the used peer, endpoint and network can be different than the main ones.
+     */
+    fun addSecondaryOverlayStrategy(overlayConfiguration: SecondaryOverlayConfiguration<*>): Overlay {
         synchronized(overlayLock) {
+            val overlay = overlayConfiguration.factory.create()
             if (!this.secondaryOverlays.containsKey(overlay.serviceId)) {
+                overlay.myPeer = overlayConfiguration.myPeer ?: myPeer
+                overlay.endpoint = overlayConfiguration.endpoint ?: endpoint
+                overlay.network = overlayConfiguration.network ?: network
+                overlay.maxPeers = overlayConfiguration.maxPeers
+                overlay.load()
+
                 this.secondaryOverlays[overlay.serviceId] = overlay
+
+                for (strategyFactory in overlayConfiguration.walkers) {
+                    val strategy = strategyFactory
+                        .setOverlay(overlay)
+                        .create()
+                    strategy.load()
+                    strategies.add(strategy)
+                }
             }
-            this.strategies.add(strategy)
+            return secondaryOverlays[overlay.serviceId]!!
         }
     }
 
@@ -126,6 +145,11 @@ class IPv8(
                 overlay.unload()
             }
             overlays.clear()
+
+            for ((_, overlay) in secondaryOverlays) {
+                overlay.unload()
+            }
+            secondaryOverlays.clear()
 
             for (strategy in strategies) {
                 strategy.unload()
