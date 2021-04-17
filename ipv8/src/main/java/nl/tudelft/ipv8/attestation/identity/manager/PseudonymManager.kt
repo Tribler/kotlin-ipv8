@@ -29,7 +29,7 @@ class PseudonymManager(
     val publicKey: PublicKey
         get() = this.tree.publicKey
 
-    private val credentials = this.database.getCredentialsFor(this.publicKey)
+    private var credentials = this.database.getCredentialsFor(this.publicKey).toMutableList()
 
     init {
         logger.info("Loading public key ${this.publicKey.keyToHash().toHex()} from database")
@@ -50,16 +50,16 @@ class PseudonymManager(
                 this.database.insertMetadata(this.publicKey, metadata)
             }
 
-            val validAttestations = setOf<IdentityAttestation>()
+            val validAttestations = mutableSetOf<IdentityAttestation>()
 
             for ((authorityPublicKey, identityAttestation) in attestations) {
                 if (this.addAttestation(authorityPublicKey, identityAttestation)) {
-                    validAttestations.plus(identityAttestation)
+                    validAttestations += identityAttestation
                 }
             }
 
             val out = Credential(metadata, validAttestations)
-            this.credentials.plus(out)
+            this.credentials.plusAssign(out)
             return out
         }
         return null
@@ -130,7 +130,7 @@ class PseudonymManager(
             }
         }
         val requiredTokenHashes = metadata.map { it.tokenPointer }
-        val tokens = setOf<Token>()
+        val tokens = mutableSetOf<Token>()
 
         for (requiredTokenHash in requiredTokenHashes) {
             val rootToken = this.tree.elements[requiredTokenHash.toKey()]!!
@@ -139,12 +139,12 @@ class PseudonymManager(
                 throw RuntimeException("Attempted to create disclosure for undisclosable Token!")
             }
 
-            tokens.plus(rootToken)
+            tokens += rootToken
             var currentToken = rootToken
 
             while (!currentToken.previousTokenHash.contentEquals(this.tree.genesisHash)) {
                 currentToken = this.tree.elements[currentToken.previousTokenHash.toKey()]!!
-                tokens.plus(currentToken)
+                tokens += currentToken
             }
         }
         var serializedTokens = byteArrayOf()
