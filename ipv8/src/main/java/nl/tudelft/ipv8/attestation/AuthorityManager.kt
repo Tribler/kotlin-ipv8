@@ -20,13 +20,13 @@ class Revocations(
     val revocations: List<String>,
 )
 
-class AuthorityManager(val database: AuthorityStore) {
+class AuthorityManager(val authorityDatabase: AuthorityStore) {
 
     private val trustedAuthorities = hashMapOf<ByteArrayKey, Authority>()
     private val lock = Object()
 
     fun loadTrustedAuthorities() {
-        val authorities = database.getRecognizedAuthorities()
+        val authorities = authorityDatabase.getRecognizedAuthorities()
         synchronized(lock) {
             authorities.forEach {
                 trustedAuthorities[it.hash.toKey()] = it
@@ -35,14 +35,14 @@ class AuthorityManager(val database: AuthorityStore) {
     }
 
     fun insertRevocations(publicKeyHash: ByteArray, versionNumber: Long, signature: ByteArray, revokedHashes: List<ByteArray>) {
-        database.insertRevocations(publicKeyHash, versionNumber, signature, revokedHashes)
+        authorityDatabase.insertRevocations(publicKeyHash, versionNumber, signature, revokedHashes)
         if (this.trustedAuthorities.containsKey(publicKeyHash.toKey())) {
             this.trustedAuthorities[publicKeyHash.toKey()]!!.version = versionNumber
         }
     }
 
     fun getLatestRevocationPreviews(): Map<ByteArrayKey, Long> {
-        val authorities = database.getKnownAuthorities()
+        val authorities = authorityDatabase.getKnownAuthorities()
         val localRefs = hashMapOf<ByteArrayKey, Long>()
         authorities.forEach {
             localRefs[it.hash.toKey()] = it.version
@@ -51,8 +51,8 @@ class AuthorityManager(val database: AuthorityStore) {
     }
 
     fun getRevocations(publicKeyHash: ByteArray, fromVersion: Long = 0): List<RevocationBlob> {
-        val versions = database.getVersionsSince(publicKeyHash, fromVersion)
-        return database.getRevocations(publicKeyHash, versions)
+        val versions = authorityDatabase.getVersionsSince(publicKeyHash, fromVersion)
+        return authorityDatabase.getRevocations(publicKeyHash, versions)
     }
 
     fun loadDefaultAuthorities() {
@@ -60,20 +60,20 @@ class AuthorityManager(val database: AuthorityStore) {
     }
 
     fun getAuthorities(): List<Authority> {
-        return this.database.getKnownAuthorities()
+        return this.authorityDatabase.getKnownAuthorities()
     }
 
     fun addTrustedAuthority(publicKey: PublicKey) {
         val hash = publicKey.keyToHash()
         if (!this.contains(hash)) {
-            val localAuthority = database.getAuthorityByHash(hash)
+            val localAuthority = authorityDatabase.getAuthorityByHash(hash)
             if (localAuthority == null) {
-                database.insertAuthority(publicKey)
+                authorityDatabase.insertAuthority(publicKey)
                 synchronized(lock) {
                     this.trustedAuthorities[hash.toKey()] = Authority(publicKey, hash)
                 }
             } else {
-                database.recognizeAuthority(publicKey.keyToHash())
+                authorityDatabase.recognizeAuthority(publicKey.keyToHash())
                 synchronized(lock) {
                     this.trustedAuthorities[hash.toKey()] = localAuthority
                 }
@@ -84,7 +84,7 @@ class AuthorityManager(val database: AuthorityStore) {
     fun deleteTrustedAuthority(hash: ByteArray) {
         if (this.contains(hash)) {
             this.trustedAuthorities.remove(hash.toKey())
-            this.database.disregardAuthority(hash)
+            this.authorityDatabase.disregardAuthority(hash)
         }
     }
 
@@ -93,7 +93,7 @@ class AuthorityManager(val database: AuthorityStore) {
     }
 
     fun getAuthority(hash: ByteArray): Authority? {
-        return this.trustedAuthorities.get(hash.toKey()) ?: database.getAuthorityByHash(hash)
+        return this.trustedAuthorities.get(hash.toKey()) ?: authorityDatabase.getAuthorityByHash(hash)
     }
 
     fun deleteTrustedAuthority(publicKey: PublicKey) {
