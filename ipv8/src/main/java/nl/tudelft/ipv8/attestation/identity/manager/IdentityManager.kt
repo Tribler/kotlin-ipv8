@@ -48,7 +48,7 @@ class IdentityManager(internal val database: IdentityStore) {
                 Metadata.deserialize(serializeMetadata.copyOfRange(metadataOffset, metadataOffset + metadataSize),
                     publicKey)
             pseudonym.addMetadata(metadata)
-            metadataOffset + metadataSize
+            metadataOffset += metadataSize
         }
 
         var attestationOffset = 0
