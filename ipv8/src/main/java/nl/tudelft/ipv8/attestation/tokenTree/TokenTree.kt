@@ -5,6 +5,7 @@ import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.util.ByteArrayKey
 import nl.tudelft.ipv8.util.sha3_256
+import nl.tudelft.ipv8.util.toKey
 
 const val UNCHAINED_MAX_SIZE = 100
 const val DEFAULT_CHUNK_SUZE = 64
@@ -60,8 +61,8 @@ class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
                 }
                 logger.info("Delaying unchained token $token!")
                 return null
-            } else if (this.elements.containsKey(ByteArrayKey(token.hash))) {
-                val shadowToken = this.elements[ByteArrayKey(token.hash)]!!
+            } else if (this.elements.containsKey(token.hash.toKey())) {
+                val shadowToken = this.elements[token.hash.toKey()]!!
                 if (shadowToken.content == null && token.content != null) {
                     shadowToken.receiveContent(token.content!!)
                 }
@@ -86,7 +87,7 @@ class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
                 return false
             }
             if (current.previousTokenHash.contentEquals(this.genesisHash)) {
-                return false
+                break
             }
             if (!this.elements.containsKey(ByteArrayKey(current.previousTokenHash))) {
                 return false
