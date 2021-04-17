@@ -290,8 +290,8 @@ class CommunicationChannel(val attestationOverlay: AttestationCommunity, val ide
 
     fun requestAttestation(peer: Peer, attributeName: String, idFormat: String, metadata: HashMap<String, String>) {
         val key = this.attestationOverlay.getIdAlgorithm(idFormat).generateSecretKey()
-        metadata.put("id_format", idFormat)
-        this.attestationMetadata[AttributePointer(peer, attributeName)] = metadata
+        metadata["id_format"] = idFormat
+        this.attestationMetadata[AttributePointer(this.identityOverlay.myPeer, attributeName)] = metadata
         this.attestationOverlay.requestAttestation(peer, attributeName, key, metadata)
     }
 
