@@ -128,7 +128,7 @@ class IdentityCommunity(
         val hash = if (attributeHash.size == 20) padSHA1Hash(attributeHash) else attributeHash
         for (credential in this.pseudonymManager.getCredentials()) {
             val token = this.pseudonymManager.tree.elements.get(ByteArrayKey(credential.metadata.tokenPointer))
-            if (token?.hash.contentEquals(hash)) {
+            if (token?.contentHash.contentEquals(hash)) {
                 return credential.metadata
             }
         }
@@ -216,11 +216,14 @@ class IdentityCommunity(
 
             if (correct && requiredAttributes.any { knownAttributes.contains(it) }) {
                 for (credential in pseudonym.getCredentials()) {
-                    logger.info("Attesting to ${credential.metadata}.")
-                    val attestation = pseudonym.createAttestation(credential.metadata, this.myPeer.key as PrivateKey)
-                    pseudonym.addAttestation(this.myPeer.publicKey, attestation)
-                    val payload = AttestPayload(attestation.getPlaintextSigned())
-                    this.endpoint.send(peer, serializePacket(ATTEST_PAYLOAD, payload))
+                    if (shouldSign(pseudonym, credential.metadata)) {
+                        logger.info("Attesting to ${credential.metadata}.")
+                        val attestation =
+                            pseudonym.createAttestation(credential.metadata, this.myPeer.key as PrivateKey)
+                        pseudonym.addAttestation(this.myPeer.publicKey, attestation)
+                        val payload = AttestPayload(attestation.getPlaintextSigned())
+                        this.endpoint.send(peer, serializePacket(ATTEST_PAYLOAD, payload))
+                    }
                 }
             }
 
