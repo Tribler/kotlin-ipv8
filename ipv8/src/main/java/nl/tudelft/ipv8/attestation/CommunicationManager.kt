@@ -62,20 +62,26 @@ class CommunicationManager(
         }
         val publicKeyBytes = privateKey.pub().keyToBin()
 
-        if (this.channels.containsKey(publicKeyBytes.toKey())) {
+        if (!this.channels.containsKey(publicKeyBytes.toKey())) {
             val decodedRendezvousToken: ByteArray? =
-                (rendezvousToken ?: defaultEncodingUtils.decodeBase64FromString(rendezvousToken!!)) as ByteArray?
-            val identityOverlay = createCommunity(privateKey,
+                (rendezvousToken?.let { defaultEncodingUtils.decodeBase64FromString(it) })
+
+            val identityOverlay = createCommunity(
+                privateKey,
                 this.iPv8Instance,
                 this.lazyIdentityManager(),
                 identityStore,
-                decodedRendezvousToken)
+                decodedRendezvousToken
+            )
 
-            val attestationOverlay = AttestationCommunity(identityOverlay.myPeer,
+            val attestationOverlay = AttestationCommunity(
+                identityOverlay.myPeer,
                 identityOverlay.endpoint,
                 identityOverlay.network,
                 authorityManager,
-                attestationStore)
+                attestationStore
+            )
+            attestationOverlay.load()
 
             this.channels[publicKeyBytes.toKey()] = CommunicationChannel(attestationOverlay, identityOverlay)
             this.nameToChannel[name] = this.channels[publicKeyBytes.toKey()]!!
