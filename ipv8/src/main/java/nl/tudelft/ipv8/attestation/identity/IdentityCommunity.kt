@@ -34,6 +34,9 @@ const val ATTEST_PAYLOAD = 2
 const val REQUEST_MISSING_PAYLOAD = 3
 const val MISSING_RESPONSE_PAYLOAD = 4
 
+// TODO: "clean up".
+val DEFAULT_METADATA = arrayOf("name", "date", "schema", "signature", "public_key", "attribute")
+
 class HashInformation(
     val name: String,
     val time: Float,
@@ -163,8 +166,9 @@ class IdentityCommunity(
             return false
         }
         if (this.knownAttestationHashes[attributeHash.toKey()]!!.metadata != null
-            && transaction.toMap().filterKeys { it !in arrayOf("name", "data", "schema") }
-            != this.knownAttestationHashes[attributeHash.toKey()]!!.metadata
+            && transaction.toMap().filterKeys { it !in DEFAULT_METADATA }
+            // TODO: Remove filter here.
+            != this.knownAttestationHashes[attributeHash.toKey()]!!.metadata!!.filterKeys { it !in DEFAULT_METADATA }
         ) {
             logger.debug("Not signing $metadata, metadata does not match!")
             return false
