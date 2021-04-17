@@ -41,7 +41,7 @@ class Metadata(
             }
 
             // Index on which signature start.
-            val signIndex = data.lastIndex - publicKey.getSignatureLength()
+            val signIndex = data.size - publicKey.getSignatureLength()
             return Metadata(data.copyOfRange(0, 32),
                 data.copyOfRange(32, signIndex),
                 signature = data.copyOfRange(signIndex, data.size))
