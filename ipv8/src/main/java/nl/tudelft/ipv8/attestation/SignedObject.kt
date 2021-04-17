@@ -22,15 +22,13 @@ abstract class SignedObject(val privateKey: PrivateKey? = null, private val know
 
     private fun sign(privateKey: PrivateKey? = null, signature: ByteArray? = null) {
         if (privateKey != null && signature == null) {
-            privateKey.sign(this.getPlaintext())
+            this.signature = privateKey.sign(this.getPlaintext())
         } else if (privateKey == null && signature != null) {
             this.signature = signature
         } else {
             throw RuntimeException("Specify either a private key or a signature.")
         }
-
         this.hash = sha3_256(this.getPlaintextSigned())
-
     }
 
     abstract fun getPlaintext(): ByteArray
