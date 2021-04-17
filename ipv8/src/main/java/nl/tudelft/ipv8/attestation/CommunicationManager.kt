@@ -297,26 +297,28 @@ class CommunicationChannel(val attestationOverlay: AttestationCommunity, val ide
 
     fun attest(peer: Peer, attributeName: String, value: ByteArray) {
         val outstanding = this.attestationRequests.remove(AttributePointer(peer, attributeName))!!
-        GlobalScope.launch { outstanding.first.await() }
+        GlobalScope.launch { outstanding.first.setResult(value) }
     }
 
     fun allowVerification(peer: Peer, attributeName: String) {
         val outstanding = this.verifyRequests.remove(AttributePointer(peer, attributeName))!!
-        GlobalScope.launch { outstanding.await() }
+        GlobalScope.launch { outstanding.setResult(true) }
     }
 
     fun disallowVerification(peer: Peer, attributeName: String) {
         val outstanding = this.verifyRequests.remove(AttributePointer(peer, attributeName))!!
-        GlobalScope.launch { outstanding.await() }
+        GlobalScope.launch { outstanding.setResult(false) }
     }
 
-    fun verify(peer: Peer, attributeHash: ByteArray, referenceValues: List<ByteArray>, idFormat: String) {
-        this.verificationOutput[attributeHash.toKey()] = referenceValues.map { Pair(it, null) }
-        this.attestationOverlay.verifyAttestationValues(peer.address,
-            attributeHash,
+    fun verify(peer: Peer, attestationHash: ByteArray, referenceValues: List<ByteArray>, idFormat: String) {
+        this.verificationOutput[attestationHash.toKey()] = referenceValues.map { Pair(it, null) }
+        this.attestationOverlay.verifyAttestationValues(
+            peer.address,
+            attestationHash,
             referenceValues,
             this::onVerificationResults,
-            idFormat)
+            idFormat
+        )
     }
 
 }
