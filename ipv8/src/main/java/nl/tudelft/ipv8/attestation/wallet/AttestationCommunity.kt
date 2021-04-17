@@ -126,9 +126,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
 
     private fun onAttestationChunkWrapper(packet: Packet) {
         val (peer, dist, payload) = packet.getAuthPayloadWithDist(AttestationChunkPayload.Deserializer)
-        logger.info("Received AttestationChunk from ${peer.mid} with sequence number ${payload.sequenceNumber}, data ${
-            String(payload.data)
-        } hash ${String(payload.hash)}.")
+        logger.info("Received AttestationChunk from ${peer.mid} with sequence number ${payload.sequenceNumber}, data ${payload.data.size} bytes, hash ${payload.hash.toHex()}.")
         this.onAttestationChunk(peer, dist, payload)
     }
 
