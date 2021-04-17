@@ -202,10 +202,13 @@ class CommunicationChannel(val attestationOverlay: AttestationCommunity, val ide
         metadataString: String,
     ): Deferred<ByteArray?> {
         // Promise some ByteArray.
-        val deferred: Deferred<ByteArray?> = GlobalScope.async(start = CoroutineStart.LAZY) { null }
+        val deferred = SettableDeferred<ByteArray>()
         this.attestationRequests[AttributePointer(peer, attributeName)] = Pair(deferred, metadataString)
-        this.attestationMetadata[AttributePointer(peer, attributeName)]
-        return deferred
+        @Suppress("UNCHECKED_CAST")
+        this.attestationMetadata[AttributePointer(peer, attributeName)] =
+            JSONObject(metadataString).toMap() as Map<String, String>
+
+        return GlobalScope.async(start = CoroutineStart.LAZY) { deferred.await() }
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -236,12 +239,12 @@ class CommunicationChannel(val attestationOverlay: AttestationCommunity, val ide
         }
     }
 
-    private fun onVerifyRequestAsync(peer: Peer, attributeHash: ByteArray): Deferred<Boolean> {
+    private fun onVerifyRequestAsync(peer: Peer, attributeHash: ByteArray): Deferred<Boolean?> {
         val metadata = this.identityOverlay.getAttestationByHash(attributeHash) ?: return CompletableDeferred(null)
         val attributeName = JSONObject(String(metadata.serializedMetadata)).getString("name")
-        val deferred = GlobalScope.async(start = CoroutineStart.LAZY) { false }
+        val deferred = SettableDeferred<Boolean?>()
         this.verifyRequests[AttributePointer(peer, attributeName)] = deferred
-        return deferred
+        return GlobalScope.async(start = CoroutineStart.LAZY) { deferred.await() }
     }
 
     private fun onVerificationResults(attributeHash: ByteArray, value: List<Double>) {
