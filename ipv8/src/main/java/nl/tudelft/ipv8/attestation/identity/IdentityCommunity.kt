@@ -1,9 +1,7 @@
 package nl.tudelft.ipv8.attestation.identity
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.Community
-import nl.tudelft.ipv8.IPv8
-import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.*
 import nl.tudelft.ipv8.attestation.identity.database.Credential
 import nl.tudelft.ipv8.attestation.identity.database.IdentityStore
 import nl.tudelft.ipv8.attestation.identity.manager.Disclosure
@@ -21,6 +19,7 @@ import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.strategy.RandomWalk
 import nl.tudelft.ipv8.util.ByteArrayKey
+import nl.tudelft.ipv8.util.padSHA1Hash
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
 import org.json.JSONObject
@@ -74,8 +73,8 @@ class IdentityCommunity(
         for (credential in this.pseudonymManager.getCredentials()) {
             for (token in this.tokenChain) {
                 if (credential.metadata.tokenPointer.contentEquals(token.hash)) {
-                    this.metadataChain.plus(credential.metadata)
-                    this.attestationChain.plus(credential.attestations)
+                    this.metadataChain += credential.metadata
+                    this.attestationChain += credential.attestations
                     break
                 }
             }
@@ -85,12 +84,6 @@ class IdentityCommunity(
         messageHandlers[ATTEST_PAYLOAD] = ::onAttestWrapper
         messageHandlers[REQUEST_MISSING_PAYLOAD] = ::onRequestMissingWrapper
         messageHandlers[MISSING_RESPONSE_PAYLOAD] = ::onMissingResponseWrapper
-    }
-
-
-    private fun padHash(attributeHash: ByteArray): ByteArray {
-        logger.debug("Padding deprecated SHA-1 hash to 32 bytes. SHA3-256 should be used instead.")
-        return "SHA-1".toByteArray() + byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00) + attributeHash
     }
 
     private fun onDisclosureWrapper(packet: Packet) {
@@ -123,13 +116,13 @@ class IdentityCommunity(
         publicKey: PublicKey,
         metadata: HashMap<String, String>? = null,
     ) {
-        val hash = if (attributeHash.size == 20) this.padHash(attributeHash) else attributeHash
+        val hash = if (attributeHash.size == 20) padSHA1Hash(attributeHash) else attributeHash
         this.knownAttestationHashes[ByteArrayKey(hash)] =
             HashInformation(name, System.currentTimeMillis() / 1000F, publicKey, metadata)
     }
 
     fun getAttestationByHash(attributeHash: ByteArray): Metadata? {
-        val hash = if (attributeHash.size == 20) this.padHash(attributeHash) else attributeHash
+        val hash = if (attributeHash.size == 20) padSHA1Hash(attributeHash) else attributeHash
         for (credential in this.pseudonymManager.getCredentials()) {
             val token = this.pseudonymManager.tree.elements.get(ByteArrayKey(credential.metadata.tokenPointer))
             if (token?.hash.contentEquals(hash)) {
@@ -205,11 +198,13 @@ class IdentityCommunity(
     private fun receivedDisclosureForAttest(peer: Peer, disclosure: Disclosure) {
         val solicited = this.knownAttestationHashes.values.filter { it.publicKey == peer.publicKey }
         if (solicited.isNotEmpty()) {
-            val (correct, pseudonym) = this.identityManager.substantiate(peer.publicKey,
+            val (correct, pseudonym) = this.identityManager.substantiate(
+                peer.publicKey,
                 disclosure.metadata,
                 disclosure.tokens,
                 disclosure.attestations,
-                disclosure.authorities)
+                disclosure.authorities
+            )
             val requiredAttributes =
                 this.knownAttestationHashes.filter { it.value.publicKey == peer.publicKey }.keys.toTypedArray()
             val knownAttributes: List<ByteArrayKey> =
@@ -259,7 +254,7 @@ class IdentityCommunity(
         blockType: String,
         metadata: HashMap<String, String>?,
     ): Credential {
-        val hash = if (attributeHash.size == 20) this.padHash(attributeHash) else attributeHash
+        val hash = if (attributeHash.size == 20) padSHA1Hash(attributeHash) else attributeHash
 
         val extendedMetadata =
             hashMapOf<String, Any>("name" to name, "schema" to blockType, "date" to System.currentTimeMillis() / 1000F)
@@ -267,20 +262,24 @@ class IdentityCommunity(
             extendedMetadata.putAll(metadata)
         }
 
-        val credential = this.pseudonymManager.createCredential(hash,
+        val credential = this.pseudonymManager.createCredential(
+            hash,
             extendedMetadata,
-            if (this.metadataChain.isNotEmpty()) this.metadataChain.last() else null)
+            if (this.metadataChain.isNotEmpty()) this.metadataChain.last() else null
+        )
 
-        this.attestationChain.plus(credential.attestations)
-        this.metadataChain.plus(credential.metadata)
-        this.tokenChain.plus(this.pseudonymManager.tree.elements[credential.metadata.tokenPointer.toKey()])
+        this.attestationChain += credential.attestations
+        this.metadataChain += credential.metadata
+        this.tokenChain += this.pseudonymManager.tree.elements[credential.metadata.tokenPointer.toKey()]!!
 
         return credential
     }
 
     private fun onDisclosure(peer: Peer, payload: DisclosePayload) {
-        this.receivedDisclosureForAttest(peer,
-            Disclosure(payload.metadata, payload.tokens, payload.attestations, payload.authorities))
+        this.receivedDisclosureForAttest(
+            peer,
+            Disclosure(payload.metadata, payload.tokens, payload.attestations, payload.authorities)
+        )
     }
 
     private fun onAttest(peer: Peer, payload: AttestPayload) {
