@@ -11,6 +11,10 @@ class IdentityAttestation(
     signature: ByteArray? = null,
 ) : SignedObject(privateKey, signature) {
 
+    init {
+        super.init()
+    }
+
     override fun getPlaintext(): ByteArray {
         return this.metadataPointer
     }

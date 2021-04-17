@@ -24,6 +24,7 @@ class Token(
         } else if (content == null && contentHash != null) {
             this.contentHash = contentHash
         } else throw RuntimeException("Specify either `content` or `content_hash`.")
+        super.init()
     }
 
     override fun getPlaintext(): ByteArray {
