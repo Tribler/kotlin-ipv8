@@ -9,7 +9,7 @@ class DisclosePayload(
     val authorities: ByteArray,
 ) : Serializable {
     override fun serialize(): ByteArray {
-        return serializeVarLen(metadata) + serializeVarLen(metadata) + serializeVarLen(attestations) + serializeVarLen(
+        return serializeVarLen(metadata) + serializeVarLen(tokens) + serializeVarLen(attestations) + serializeVarLen(
             authorities)
     }
 
