@@ -1,5 +1,7 @@
 package nl.tudelft.ipv8.util
 
+import org.bouncycastle.jcajce.provider.digest.SHA3
+import org.bouncycastle.jcajce.provider.digest.SHA3.DigestSHA3
 import java.math.BigInteger
 import java.security.MessageDigest
 
@@ -7,6 +9,7 @@ private const val SHA1 = "SHA-1"
 private const val SHA256 = "SHA-256"
 private const val SHA512 = "SHA-512"
 private const val SHA3_256 = "SHA3-256"
+private val SHA1_PADDING = "SHA-1".toByteArray() + byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
 
 fun sha1(input: ByteArray): ByteArray {
     return MessageDigest
@@ -27,9 +30,9 @@ fun sha512(input: ByteArray): ByteArray {
 }
 
 fun sha3_256(input: ByteArray): ByteArray {
-    return MessageDigest.getInstance(SHA3_256).digest(input)
+    val digestSHA3: DigestSHA3 = SHA3.Digest256()
+    return digestSHA3.digest(input)
 }
-
 
 fun toASCII(value: String): ByteArray {
     return value.toByteArray(Charsets.US_ASCII)
@@ -64,3 +67,15 @@ fun sha512AsBigInt(input: ByteArray): BigInteger {
     }
     return out
 }
+
+fun stripSHA1Padding(input: ByteArray): ByteArray {
+    val prefix = input.copyOfRange(0, 12)
+    return if (prefix.contentEquals(SHA1_PADDING)) input.copyOfRange(12, input.size) else input
+}
+
+fun padSHA1Hash(attributeHash: ByteArray): ByteArray {
+    return SHA1_PADDING + attributeHash
+}
+
+
+
