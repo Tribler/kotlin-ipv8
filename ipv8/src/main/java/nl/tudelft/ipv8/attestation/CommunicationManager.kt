@@ -29,6 +29,8 @@ class CommunicationManager(
     private val attestationStore: AttestationStore,
     private val identityStore: IdentityStore,
     private val authorityManager: AuthorityManager,
+    private val storePseudonym: ((String, PrivateKey) -> Unit)? = null,
+    private val loadPseudonym: ((String) -> PrivateKey)? = null,
 ) {
     private val channels = hashMapOf<ByteArrayKey, CommunicationChannel>()
     private val nameToChannel = hashMapOf<String, CommunicationChannel>()
@@ -46,9 +48,7 @@ class CommunicationManager(
 
     fun load(
         name: String,
-        rendezvousToken: String?,
-        storePseudonym: ((String, PrivateKey) -> Unit)? = null,
-        loadPseudonym: ((String) -> PrivateKey)? = null,
+        rendezvousToken: String? = null,
     ): CommunicationChannel {
         if (nameToChannel.containsKey(name)) {
             return this.nameToChannel[name]!!
