@@ -64,7 +64,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
 
     private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> Deferred<ByteArray?>
     private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attestationHash: ByteArray, idFormat: String, fromPeer: Peer?, metaData: String?, signature: ByteArray?) -> Unit
-    private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Deferred<Boolean>
+    private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Deferred<Boolean?>
     private lateinit var attestationChunkCallback: (peer: Peer, sequenceNumber: Int) -> Unit
 
     val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
@@ -151,7 +151,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         this.attestationRequestCompleteCallback = f
     }
 
-    fun setVerifyRequestCallback(f: (attributeName: Peer, attributeHash: ByteArray) -> Deferred<Boolean>) {
+    fun setVerifyRequestCallback(f: (attributeName: Peer, attributeHash: ByteArray) -> Deferred<Boolean?>) {
         this.verifyRequestCallback = f
     }
 
@@ -365,7 +365,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         }
 
         val value = verifyRequestCallback(peer, payload.hash).await()
-        if (!value) {
+        if (value == null || !value) {
             logger.info("Verify request callback returned false for $peer, ${payload.hash}")
             return
         }
