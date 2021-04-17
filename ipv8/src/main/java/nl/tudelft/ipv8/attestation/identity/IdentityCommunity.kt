@@ -52,16 +52,19 @@ class IdentityCommunity(
     override var network: Network = Network(),
 ) : Community() {
 
-    internal var identityManager: IdentityManager = identityManager ?: IdentityManager(database)
+    var identityManager: IdentityManager = identityManager ?: IdentityManager(database)
     private val knownAttestationHashes = hashMapOf<ByteArrayKey, HashInformation>()
-    private val pseudonymManager = this.identityManager.getPseudonym(this.myPeer.publicKey)
+    private val pseudonymManager = this.identityManager.getPseudonym(this.myPeer.key)
 
-    private var tokenChain: List<Token> = arrayListOf()
-    private val metadataChain: List<Metadata> = listOf()
-    private val attestationChain: List<IdentityAttestation> = listOf()
+    private var tokenChain: List<Token> = mutableListOf()
+    private var metadataChain: List<Metadata> = mutableListOf()
+    private var attestationChain: List<IdentityAttestation> = mutableListOf()
     private val permissions: HashMap<Peer, Int> = hashMapOf()
 
     init {
+        super.myPeer = myPeer
+        super.network = network
+
         for (token in this.pseudonymManager.tree.elements.values) {
             val chain = this.pseudonymManager.tree.getRootPath(token)
             if (chain.size > this.tokenChain.size) {
