@@ -194,7 +194,7 @@ class IdentityCommunity(
             }
             packetSpace = max(0, packetSpace)
             val trimLength = packetSpace / tokenSize
-            tokensOut = tokens.copyOfRange(-trimLength * tokenSize, tokensOut.size)
+            tokensOut = tokens.copyOfRange(tokens.size - (trimLength * tokenSize), tokens.size)
         }
         return Disclosure(metadata, tokensOut, attestations, authorities)
     }
