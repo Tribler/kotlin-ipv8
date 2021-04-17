@@ -12,6 +12,7 @@ import nl.tudelft.ipv8.messaging.SERIALIZED_USHORT_SIZE
 import nl.tudelft.ipv8.messaging.deserializeUInt
 import nl.tudelft.ipv8.messaging.deserializeUShort
 import nl.tudelft.ipv8.util.ByteArrayKey
+import nl.tudelft.ipv8.util.toKey
 
 class IdentityManager(internal val database: IdentityStore) {
 
@@ -19,14 +20,14 @@ class IdentityManager(internal val database: IdentityStore) {
 
     fun getPseudonym(key: Key): PseudonymManager {
         val publicKeyMaterial = key.pub().keyToBin()
-        if (!this.pseudonyms.containsKey(ByteArrayKey(publicKeyMaterial))) {
+        if (!this.pseudonyms.containsKey(publicKeyMaterial.toKey())) {
             if (key is PrivateKey) {
-                this.pseudonyms[ByteArrayKey(publicKeyMaterial)] = PseudonymManager(this.database, privateKey = key)
+                this.pseudonyms[publicKeyMaterial.toKey()] = PseudonymManager(this.database, privateKey = key)
             } else {
-                this.pseudonyms[ByteArrayKey(publicKeyMaterial)] = PseudonymManager(this.database, publicKey = key as PublicKey)
+                this.pseudonyms[publicKeyMaterial.toKey()] = PseudonymManager(this.database, publicKey = key as PublicKey)
             }
         }
-        return this.pseudonyms[ByteArrayKey(publicKeyMaterial)]!!
+        return this.pseudonyms[publicKeyMaterial.toKey()]!!
     }
 
     fun substantiate(
