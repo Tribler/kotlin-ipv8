@@ -12,10 +12,7 @@ import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
 import nl.tudelft.ipv8.attestation.wallet.AttestationStore
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
-import nl.tudelft.ipv8.util.ByteArrayKey
-import nl.tudelft.ipv8.util.defaultEncodingUtils
-import nl.tudelft.ipv8.util.toHex
-import nl.tudelft.ipv8.util.toKey
+import nl.tudelft.ipv8.util.*
 import org.json.JSONObject
 import java.io.File
 import java.io.FileNotFoundException
@@ -89,6 +86,7 @@ class CommunicationManager(
         return this.nameToChannel[name]!!
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun unload(name: String) {
         TODO()
     }
@@ -173,9 +171,9 @@ class AttributePointer(val peer: Peer, val attributeName: String) {
 
 class CommunicationChannel(val attestationOverlay: AttestationCommunity, val identityOverlay: IdentityCommunity) {
 
-    private val attestationRequests = hashMapOf<AttributePointer, Pair<Deferred<ByteArray?>, String>>()
-    private val verifyRequests = hashMapOf<AttributePointer, Deferred<Boolean?>>()
-    private val verificationOutput = hashMapOf<ByteArrayKey, List<Pair<ByteArray, Double?>>>()
+    val attestationRequests = hashMapOf<AttributePointer, Pair<SettableDeferred<ByteArray>, String>>()
+    val verifyRequests = hashMapOf<AttributePointer, SettableDeferred<Boolean?>>()
+    val verificationOutput = hashMapOf<ByteArrayKey, List<Pair<ByteArray, Double?>>>()
     private val attestationMetadata = hashMapOf<AttributePointer, Map<String, String>>()
 
     init {
@@ -227,15 +225,21 @@ class CommunicationChannel(val attestationOverlay: AttestationCommunity, val ide
         if (forPeer == myPeer) {
             if (fromPeer == myPeer) {
                 @Suppress("UNCHECKED_CAST")
-                this.identityOverlay.selfAdvertise(attributeHash, attributeName, idFormat,
-                    JSONObject(metadata).toMap() as HashMap<String, String>?)
+                this.identityOverlay.selfAdvertise(
+                    attributeHash, attributeName, idFormat,
+                    JSONObject(metadata).toMap() as HashMap<String, String>?
+                )
             } else {
-                this.identityOverlay.requestAttestationAdvertisement(fromPeer!!, attributeHash, attributeName, idFormat,
-                    metadata as HashMap<String, String>?)
+                this.identityOverlay.requestAttestationAdvertisement(
+                    fromPeer!!, attributeHash, attributeName, idFormat,
+                    metadata as HashMap<String, String>?
+                )
             }
         } else {
-            this.identityOverlay.addKnownHash(attributeHash, attributeName, forPeer.publicKey,
-                metadata as HashMap<String, String>?)
+            this.identityOverlay.addKnownHash(
+                attributeHash, attributeName, forPeer.publicKey,
+                metadata as HashMap<String, String>?
+            )
         }
     }
 
@@ -278,10 +282,10 @@ class CommunicationChannel(val attestationOverlay: AttestationCommunity, val ide
 
         for (credential in pseudonym.getCredentials()) {
             val attestations = credential.attestations.toList()
-            val attesters = listOf<ByteArray>()
+            val attesters = mutableListOf<ByteArray>()
 
             for (attestation in attestations) {
-                attesters.plus(this.identityOverlay.identityManager.database.getAuthority(attestation))
+                attesters += this.identityOverlay.identityManager.database.getAuthority(attestation)
             }
             val attributeHash = pseudonym.tree.elements[credential.metadata.tokenPointer.toKey()]!!.contentHash
             val jsonMetadata = JSONObject(String(credential.metadata.serializedMetadata))
