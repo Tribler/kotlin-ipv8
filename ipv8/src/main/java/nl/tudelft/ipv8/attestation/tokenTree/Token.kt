@@ -72,8 +72,8 @@ class Token(
         fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int = 0): Token {
             val sigLength = publicKey.getSignatureLength()
             return Token(data.copyOfRange(offset, offset + 32),
-                data.copyOfRange(offset + 32, offset + 64),
-                data.copyOfRange(offset + 64, offset + 64 + sigLength))
+                contentHash = data.copyOfRange(offset + 32, offset + 64),
+                signature = data.copyOfRange(offset + 64, offset + 64 + sigLength))
         }
 
         fun create(previousToken: Token, content: ByteArray, privateKey: PrivateKey): Token {
