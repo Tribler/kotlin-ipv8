@@ -35,7 +35,6 @@ class CommunicationManager(
         get() = iPv8Instance.getOverlay<IdentityCommunity>()
     var identityManager = loadedCommunity?.identityManager
 
-
     fun lazyIdentityManager(): IdentityManager {
         if (this.identityManager == null) {
             this.identityManager = IdentityManager(identityStore)
@@ -146,7 +145,6 @@ class CommunicationManager(
                 .toArray().toList() as List<String>
         }
     }
-
 }
 
 class AttributePointer(val peer: Peer, val attributeName: String) {
@@ -327,5 +325,4 @@ class CommunicationChannel(val attestationOverlay: AttestationCommunity, val ide
             idFormat
         )
     }
-
 }

@@ -234,7 +234,6 @@ class IdentityCommunity(
                     this.endpoint.send(peer, serializePacket(REQUEST_MISSING_PAYLOAD, payload))
                 }
             }
-
         } else {
             logger.warn("Received unsolicited disclosure from $peer, dropping.")
         }
