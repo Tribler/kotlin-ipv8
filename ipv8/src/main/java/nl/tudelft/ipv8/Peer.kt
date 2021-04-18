@@ -47,17 +47,17 @@ data class Peer(
     /**
      * The private key for small Boneh/ Peng & Bao attestations.
      */
-    val identityPrivateKeySmall: BonehPrivateKey? = null,
+    var identityPrivateKeySmall: BonehPrivateKey? = null,
 
     /**
      * The private key for big Boneh attestations.
      */
-    val identityPrivateKeyBig: BonehPrivateKey? = null,
+    var identityPrivateKeyBig: BonehPrivateKey? = null,
 
     /**
      * The private key for huge Boneh attestations.
      */
-    val identityPrivateKeyHuge: BonehPrivateKey? = null,
+    var identityPrivateKeyHuge: BonehPrivateKey? = null,
 
     ) {
     private var _lamportTimestamp = 0uL
