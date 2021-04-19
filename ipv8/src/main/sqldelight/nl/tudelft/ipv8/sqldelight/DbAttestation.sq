@@ -22,6 +22,9 @@ INSERT INTO attestations (hash, blob, key, id_format, meta_data, signature, atte
 getAttestationByHash:
 SELECT blob FROM attestations WHERE hash = ?;
 
+deleteAttestationByHash:
+DELETE FROM attestations WHERE hash = ?;
+
 getAllAuthorities:
 SELECT * FROM authorities;
 
@@ -33,3 +36,6 @@ SELECT public_key, hash FROM authorities WHERE public_key = ?;
 
 getAuthorityByHash:
 SELECT public_key, hash FROM authorities WHERE hash = ?;
+
+deleteAuthorityByHash:
+DELETE FROM authorities WHERE hash = ?;

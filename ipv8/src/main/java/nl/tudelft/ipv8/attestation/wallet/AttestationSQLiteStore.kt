@@ -70,6 +70,10 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
         return dao.getAttestationByHash(attestationHash).executeAsOneOrNull()
     }
 
+    override fun deleteAttestationByHash(attestationHash: ByteArray) {
+        return dao.deleteAttestationByHash(attestationHash)
+    }
+
     override fun getAllAuthorities(): List<Authority> {
         return dao.getAllAuthorities(authorityMapper).executeAsList()
     }
@@ -85,6 +89,10 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
 
     override fun getAuthorityByHash(hash: String): Authority? {
         return dao.getAuthorityByHash(hash, authorityMapper).executeAsOneOrNull()
+    }
+
+    override fun deleteAuthorityByHash(hash: String) {
+        return dao.deleteAuthorityByHash(hash)
     }
 
 }

@@ -38,7 +38,7 @@ class AttestationCommunity(val database: AttestationStore) : Community() {
     override val serviceId = "e5d116f803a916a84850b9057cc0f662163f71f5"
 
     private val receiveBlockLock = ReentrantLock()
-    private val schemaManager = SchemaManager()
+    val schemaManager = SchemaManager()
 
     private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> ByteArray
     private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attestationHash: ByteArray, idFormat: String, fromPeer: Peer?, metaData: String?, signature: ByteArray?) -> Unit

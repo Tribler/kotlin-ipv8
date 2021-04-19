@@ -17,39 +17,21 @@ import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeAdvertiser
 import nl.tudelft.ipv8.android.messaging.bluetooth.IPv8BluetoothLeScanner
 import nl.tudelft.ipv8.android.messaging.udp.AndroidUdpEndpoint
 import nl.tudelft.ipv8.android.service.IPv8Service
+import nl.tudelft.ipv8.android.util.AndroidEncodingUtils
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.peerdiscovery.Network
+import nl.tudelft.ipv8.util.defaultEncodingUtils
 import java.net.InetAddress
 
 object IPv8Android {
     private var ipv8: IPv8? = null
     internal var serviceClass: Class<out IPv8Service>? = null
-    private var identityKeySmall: BonehPrivateKey? = null
-    private var identityKeyBig: BonehPrivateKey? = null
-    private var identityKeyHuge: BonehPrivateKey? = null
-    private var identityKeyRange18Plus: BonehPrivateKey? = null
 
     fun getInstance(): IPv8 {
         return ipv8 ?: throw IllegalStateException("IPv8 is not initialized")
-    }
-
-    fun getIdentityKeySmall(): BonehPrivateKey {
-        return identityKeySmall!!
-    }
-
-    fun getIdentityKeyBig(): BonehPrivateKey {
-        return identityKeyBig!!
-    }
-
-    fun getIdentityKeyHuge(): BonehPrivateKey {
-        return identityKeyHuge!!
-    }
-
-    fun getIdentityKeyRange18Plus(): BonehPrivateKey {
-        return identityKeyRange18Plus!!
     }
 
     class Factory(
@@ -57,6 +39,10 @@ object IPv8Android {
     ) {
 
         private var privateKey: PrivateKey? = null
+        private var identityPrivateKeySmall: BonehPrivateKey? = null
+        private var identityPrivateKeyBig: BonehPrivateKey? = null
+        private var identityPrivateKeyHuge: BonehPrivateKey? = null
+
         private var configuration: IPv8Configuration? = null
         private var serviceClass: Class<out IPv8Service> = IPv8Service::class.java
 
@@ -66,22 +52,17 @@ object IPv8Android {
         }
 
         fun setIdentityKeySmall(key: BonehPrivateKey): Factory {
-            identityKeySmall = key
+            this.identityPrivateKeySmall = key
             return this
         }
 
         fun setIdentityKeyBig(key: BonehPrivateKey): Factory {
-            identityKeyBig = key
+            this.identityPrivateKeyBig = key
             return this
         }
 
         fun setIdentityKeyHuge(key: BonehPrivateKey): Factory {
-            identityKeyHuge = key
-            return this
-        }
-
-        fun setIdentityKeyRange18Plus(key: BonehPrivateKey): Factory {
-            identityKeyRange18Plus = key
+            this.identityPrivateKeyHuge = key
             return this
         }
 
@@ -107,6 +88,7 @@ object IPv8Android {
             IPv8Android.serviceClass = serviceClass
 
             defaultCryptoProvider = AndroidCryptoProvider
+            defaultEncodingUtils = AndroidEncodingUtils
 
             return ipv8
         }
@@ -127,7 +109,12 @@ object IPv8Android {
             val bluetoothManager = application.getSystemService<BluetoothManager>()
                 ?: throw IllegalStateException("BluetoothManager not found")
 
-            val myPeer = Peer(privateKey)
+            val myPeer = Peer(privateKey,
+                identityPrivateKeySmall = this.identityPrivateKeySmall,
+                identityPrivateKeyBig = this.identityPrivateKeyBig,
+                identityPrivateKeyHuge = this.identityPrivateKeyHuge
+            )
+
             val network = Network()
 
             val gattServer = GattServerManager(application, myPeer)

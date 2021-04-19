@@ -1,5 +1,6 @@
 package nl.tudelft.ipv8
 
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.keyvault.Key
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
@@ -41,8 +42,24 @@ data class Peer(
     /**
      * True if this peer signals support for TFTP.
      */
-    var supportsTFTP: Boolean = false
-) {
+    var supportsTFTP: Boolean = false,
+
+    /**
+     * The private key for small Boneh/ Peng & Bao attestations.
+     */
+    var identityPrivateKeySmall: BonehPrivateKey? = null,
+
+    /**
+     * The private key for big Boneh attestations.
+     */
+    var identityPrivateKeyBig: BonehPrivateKey? = null,
+
+    /**
+     * The private key for huge Boneh attestations.
+     */
+    var identityPrivateKeyHuge: BonehPrivateKey? = null,
+
+    ) {
     private var _lamportTimestamp = 0uL
     val lamportTimestamp: ULong
         get() = _lamportTimestamp
