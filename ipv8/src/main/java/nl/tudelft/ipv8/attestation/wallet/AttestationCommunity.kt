@@ -76,16 +76,6 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     val requestCache = RequestCache()
 
     init {
-        if (!this::myPeer.isInitialized) {
-            throw RuntimeException("MyPeer is not initialized!")
-        }
-        if (!this::endpoint.isInitialized) {
-            throw RuntimeException("Endpoint is not initialized!")
-        }
-        if (!this::network.isInitialized) {
-            throw RuntimeException("Network is not initialized!")
-        }
-
         authorityManager.loadTrustedAuthorities()
         schemaManager.registerDefaultSchemas()
         for (att in this.database.getAllAttestations()) {
