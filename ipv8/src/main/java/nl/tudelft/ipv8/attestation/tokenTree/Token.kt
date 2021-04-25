@@ -86,7 +86,7 @@ class Token(
             contentHash: ByteArray?,
             content: ByteArray?,
         ): Token {
-            val token = Token(previousTokenHash, signature, contentHash = contentHash)
+            val token = Token(previousTokenHash, contentHash = contentHash, signature = signature)
             if (content != null) {
                 token.receiveContent(content)
             }
