@@ -6,7 +6,7 @@ class AttestationChunkPayload(
     val hash: ByteArray,
     val sequenceNumber: Int,
     val data: ByteArray,
-    val metadata: ByteArray? = null,
+    val value: ByteArray? = null,
     val signature: ByteArray? = null,
 ) : Serializable {
     private val msgId = 2
@@ -15,7 +15,7 @@ class AttestationChunkPayload(
         return (
             hash + serializeUInt(sequenceNumber.toUInt()) + serializeVarLen(data) +
                 (
-                    if (metadata != null && signature != null) serializeVarLen(metadata) + serializeVarLen(signature)
+                    if (value != null && signature != null) serializeVarLen(value) + signature
                     else byteArrayOf()
                     )
             )
@@ -39,13 +39,13 @@ class AttestationChunkPayload(
             localoffset += dataSize
 
             return if (buffer.lastIndex > offset + localoffset) {
-                val (metadata, metadataSize) = deserializeVarLen(buffer, offset + localoffset)
-                localoffset += metadataSize
+                val (value, valueSize) = deserializeVarLen(buffer, offset + localoffset)
+                localoffset += valueSize
 
-                val (signature, signatureSize) = deserializeVarLen(buffer, offset + localoffset)
-                localoffset += signatureSize
+                val signature = buffer.copyOfRange(offset + localoffset, offset + localoffset + SIGNATURE_SIZE)
+                localoffset += SIGNATURE_SIZE
 
-                val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data, metadata, signature)
+                val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data, value, signature)
                 Pair(payload, localoffset)
             } else {
                 val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data)
