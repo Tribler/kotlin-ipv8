@@ -9,8 +9,8 @@ import nl.tudelft.ipv8.sqldelight.Database
 
 private val tokenMapper: (
     ByteArray,
-    ByteArray?,
-    ByteArray?,
+    ByteArray,
+    ByteArray,
     ByteArray?,
 ) -> Token = { previousTokenHash, signature, contentHash, content ->
     Token.fromDatabaseTuple(previousTokenHash, signature, contentHash, content)
@@ -18,7 +18,7 @@ private val tokenMapper: (
 
 private val metadataMapper: (
     ByteArray,
-    ByteArray?,
+    ByteArray,
     ByteArray,
 ) -> Metadata = { tokenPointer, signature, serializedMetadata ->
     Metadata.fromDatabaseTuple(tokenPointer, signature, serializedMetadata)

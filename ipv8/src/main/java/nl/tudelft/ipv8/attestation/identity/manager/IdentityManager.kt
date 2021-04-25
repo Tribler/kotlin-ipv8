@@ -24,7 +24,8 @@ class IdentityManager(internal val database: IdentityStore) {
             if (key is PrivateKey) {
                 this.pseudonyms[publicKeyMaterial.toKey()] = PseudonymManager(this.database, privateKey = key)
             } else {
-                this.pseudonyms[publicKeyMaterial.toKey()] = PseudonymManager(this.database, publicKey = key as PublicKey)
+                this.pseudonyms[publicKeyMaterial.toKey()] =
+                    PseudonymManager(this.database, publicKey = key as PublicKey)
             }
         }
         return this.pseudonyms[publicKeyMaterial.toKey()]!!
@@ -45,8 +46,10 @@ class IdentityManager(internal val database: IdentityStore) {
             val metadataSize = deserializeUInt(serializeMetadata, metadataOffset).toInt()
             metadataOffset += SERIALIZED_UINT_SIZE
             val metadata =
-                Metadata.deserialize(serializeMetadata.copyOfRange(metadataOffset, metadataOffset + metadataSize),
-                    publicKey)
+                Metadata.deserialize(
+                    serializeMetadata.copyOfRange(metadataOffset, metadataOffset + metadataSize),
+                    publicKey
+                )
             pseudonym.addMetadata(metadata)
             metadataOffset += metadataSize
         }
@@ -57,11 +60,17 @@ class IdentityManager(internal val database: IdentityStore) {
         while (authorityOffset < serializedAttestations.size) {
             val authoritySize = deserializeUShort(serializedAuthorities, authorityOffset)
             authorityOffset += SERIALIZED_USHORT_SIZE
-            val authority = defaultCryptoProvider.keyFromPublicBin(serializedAuthorities.copyOfRange(authorityOffset,
-                authorityOffset + authoritySize))
+            val authority = defaultCryptoProvider.keyFromPublicBin(
+                serializedAuthorities.copyOfRange(
+                    authorityOffset,
+                    authorityOffset + authoritySize
+                )
+            )
             authorityOffset += authoritySize
-            correct = correct && pseudonym.addAttestation(authority,
-                IdentityAttestation.deserialize(serializedAttestations, authority, attestationOffset))
+            correct = correct && pseudonym.addAttestation(
+                authority,
+                IdentityAttestation.deserialize(serializedAttestations, authority, attestationOffset)
+            )
             attestationOffset += 32 + authority.getSignatureLength()
         }
 

@@ -1,8 +1,8 @@
 CREATE TABLE tokens (
     public_key BLOB NOT NULL,
     previous_token_hash BLOB NOT NULL,
-    signature BLOB,
-    content_hash BLOB,
+    signature BLOB NOT NULL,
+    content_hash BLOB NOT NULL,
     content BLOB,
     PRIMARY KEY (public_key, previous_token_hash, content_hash)
 );
@@ -10,7 +10,7 @@ CREATE TABLE tokens (
 CREATE TABLE metadata (
     public_key BLOB NOT NULL,
     token_pointer BLOB NOT NULL,
-    signature BLOB,
+    signature BLOB NOT NULL,
     serialized_json BLOB NOT NULL,
     PRIMARY KEY (public_key, token_pointer)
 );
@@ -19,7 +19,7 @@ CREATE TABLE identity_attestations (
     public_key BLOB NOT NULL,
     authority_key BLOB NOT NULL,
     metadata_pointer BLOB NOT NULL,
-    signature BLOB,
+    signature BLOB NOT NULL,
     PRIMARY KEY (public_key, metadata_pointer)
 );
 
