@@ -11,9 +11,10 @@ class ReceiveAttestationRequestCache(
     val privateKey: BonehPrivateKey,
     val name: String,
     idFormat: String,
-    val signature: Boolean = false,
 ) : PeerCache(community.requestCache, ATTESTATION_REQUEST_PREFIX, mid, idFormat) {
 
+    var signature: ByteArray? = null
+    var value: ByteArray? = null
     val attestationMap: MutableSet<Pair<Int, ByteArray>> = mutableSetOf()
 
 }
