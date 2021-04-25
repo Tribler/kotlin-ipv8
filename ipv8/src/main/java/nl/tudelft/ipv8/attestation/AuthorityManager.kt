@@ -63,6 +63,10 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
         return this.authorityDatabase.getKnownAuthorities()
     }
 
+    fun getTrustedAuthorities(): List<Authority> {
+        return this.trustedAuthorities.values.toList()
+    }
+
     fun addTrustedAuthority(publicKey: PublicKey) {
         val hash = publicKey.keyToHash()
         if (!this.contains(hash)) {
