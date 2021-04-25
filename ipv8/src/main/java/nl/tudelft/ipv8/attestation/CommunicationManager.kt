@@ -194,7 +194,7 @@ class PrivateAttestationBlob(
     }
 }
 
-const val DEFAULT_TIME_OUT = 3000000
+const val DEFAULT_TIME_OUT = 30_000
 
 class CommunicationChannel(
     val attestationOverlay: AttestationCommunity,

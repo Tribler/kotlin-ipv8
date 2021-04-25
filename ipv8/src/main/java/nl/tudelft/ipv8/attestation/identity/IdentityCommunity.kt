@@ -19,6 +19,7 @@ import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.strategy.RandomWalk
 import nl.tudelft.ipv8.util.ByteArrayKey
+import nl.tudelft.ipv8.util.asMap
 import nl.tudelft.ipv8.util.padSHA1Hash
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
@@ -34,11 +35,11 @@ const val ATTEST_PAYLOAD = 2
 const val REQUEST_MISSING_PAYLOAD = 3
 const val MISSING_RESPONSE_PAYLOAD = 4
 
-// TODO: "clean up".
-val DEFAULT_METADATA = arrayOf("name", "date", "schema", "signature", "public_key", "attribute")
+val DEFAULT_METADATA = arrayOf("name", "date", "schema")
 
 class HashInformation(
     val name: String,
+    val value: ByteArray?,
     val time: Float,
     val publicKey: PublicKey,
     val metadata: HashMap<String, String>?,
@@ -116,18 +117,20 @@ class IdentityCommunity(
     fun addKnownHash(
         attributeHash: ByteArray,
         name: String,
+        value: ByteArray?,
         publicKey: PublicKey,
         metadata: HashMap<String, String>? = null,
     ) {
         val hash = if (attributeHash.size == 20) padSHA1Hash(attributeHash) else attributeHash
         this.knownAttestationHashes[ByteArrayKey(hash)] =
-            HashInformation(name, System.currentTimeMillis() / 1000F, publicKey, metadata)
+            HashInformation(name, value, System.currentTimeMillis() / 1000F, publicKey, metadata)
     }
 
     fun getAttestationByHash(attributeHash: ByteArray): Metadata? {
         val hash = if (attributeHash.size == 20) padSHA1Hash(attributeHash) else attributeHash
         for (credential in this.pseudonymManager.getCredentials()) {
-            val token = this.pseudonymManager.tree.elements.get(ByteArrayKey(credential.metadata.tokenPointer))
+            val token =
+                this.pseudonymManager.tree.elements.get(ByteArrayKey(credential.metadata.tokenPointer))
             if (token?.contentHash.contentEquals(hash)) {
                 return credential.metadata
             }
@@ -157,7 +160,10 @@ class IdentityCommunity(
             return false
         }
         // Refuse to sign blocks older than 5 minutes
-        if (System.currentTimeMillis() / 1000F > this.knownAttestationHashes[attributeHash.toKey()]?.time?.plus((DEFAULT_TIME_OUT)) ?: 0F) {
+        if (System.currentTimeMillis() / 1000F > this.knownAttestationHashes[attributeHash.toKey()]?.time?.plus(
+                (DEFAULT_TIME_OUT)
+            ) ?: 0F
+        ) {
             logger.debug("Not signing $metadata, timed out!")
             return false
         }
@@ -166,7 +172,7 @@ class IdentityCommunity(
             return false
         }
         if (this.knownAttestationHashes[attributeHash.toKey()]!!.metadata != null
-            && transaction.toMap().filterKeys { it !in DEFAULT_METADATA }
+            && transaction.asMap().filterKeys { it !in DEFAULT_METADATA }
             // TODO: Remove filter here.
             != this.knownAttestationHashes[attributeHash.toKey()]!!.metadata!!.filterKeys { it !in DEFAULT_METADATA }
         ) {
@@ -174,7 +180,9 @@ class IdentityCommunity(
             return false
         }
         for (attestation in pseudonym.database.getAttestationsOver(metadata)) {
-            if (this.myPeer.publicKey.keyToBin().contentEquals(pseudonym.database.getAuthority(attestation))) {
+            if (this.myPeer.publicKey.keyToBin()
+                    .contentEquals(pseudonym.database.getAuthority(attestation))
+            ) {
                 logger.debug("Not signing $metadata, already attested!")
                 return false
             }
@@ -218,8 +226,13 @@ class IdentityCommunity(
                 for (credential in pseudonym.getCredentials()) {
                     if (shouldSign(pseudonym, credential.metadata)) {
                         logger.info("Attesting to ${credential.metadata}.")
+                        val myPrivateKey = this.myPeer.key as PrivateKey
+
                         val attestation =
-                            pseudonym.createAttestation(credential.metadata, this.myPeer.key as PrivateKey)
+                            pseudonym.createAttestation(
+                                credential.metadata,
+                                myPrivateKey
+                            )
                         pseudonym.addAttestation(this.myPeer.publicKey, attestation)
                         val payload = AttestPayload(attestation.getPlaintextSigned())
                         this.endpoint.send(peer, serializePacket(ATTEST_PAYLOAD, payload))
@@ -263,7 +276,11 @@ class IdentityCommunity(
         val hash = if (attributeHash.size == 20) padSHA1Hash(attributeHash) else attributeHash
 
         val extendedMetadata =
-            hashMapOf<String, Any>("name" to name, "schema" to blockType, "date" to System.currentTimeMillis() / 1000F)
+            hashMapOf<String, Any>(
+                "name" to name,
+                "schema" to blockType,
+                "date" to System.currentTimeMillis() / 1000F
+            )
         if (metadata != null) {
             extendedMetadata.putAll(metadata)
         }
@@ -314,7 +331,10 @@ class IdentityCommunity(
     }
 
     private fun onMissingResponse(peer: Peer, payload: MissingResponsePayload) {
-        this.receivedDisclosureForAttest(peer, Disclosure(byteArrayOf(), payload.tokens, byteArrayOf(), byteArrayOf()))
+        this.receivedDisclosureForAttest(
+            peer,
+            Disclosure(byteArrayOf(), payload.tokens, byteArrayOf(), byteArrayOf())
+        )
     }
 
     override fun equals(other: Any?): Boolean {
