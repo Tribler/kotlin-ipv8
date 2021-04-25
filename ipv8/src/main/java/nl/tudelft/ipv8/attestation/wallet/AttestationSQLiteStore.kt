@@ -1,13 +1,11 @@
 package nl.tudelft.ipv8.attestation.wallet
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.attestation.Authority
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.sqldelight.Database
-
 
 private val attestationMapper: (
     ByteArray,
@@ -17,13 +15,13 @@ private val attestationMapper: (
     String?,
     ByteArray?,
     ByteArray?,
-) -> AttestationBlob = { hash, blob, key, id_format, metadata, signature, attestor_key ->
+) -> AttestationBlob = { hash, blob, key, id_format, value, signature, attestor_key ->
     AttestationBlob(
         hash,
         blob,
         key,
         id_format,
-        metadata,
+        value,
         signature,
         attestor_key?.let { defaultCryptoProvider.keyFromPublicBin(it) }
     )
@@ -43,27 +41,33 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
         attestationHash: ByteArray,
         privateKey: BonehPrivateKey,
         idFormat: String,
-        metadata: String?,
+        value: String?,
         signature: ByteArray?,
         attestorKey: PublicKey?,
     ) {
         val blob = attestation.serializePrivate(privateKey.publicKey())
-        logger.info(" *** Inserting to DB: $attestation: [${String(attestationHash)}, ${String(blob)}, ${privateKey.serialize()}, $idFormat]")
-        dao.insertAttestation(attestationHash,
+        dao.insertAttestation(
+            attestationHash,
             blob,
             privateKey.serialize(),
             idFormat,
-            metadata,
+            value,
             signature,
-            attestorKey?.keyToBin())
+            attestorKey?.keyToBin()
+        )
     }
 
-    override fun getAttestationByHash(attestationHash: ByteArray): ByteArray? {
+    override fun getAttestationBlobByHash(attestationHash: ByteArray): ByteArray? {
         return dao.getAttestationByHash(attestationHash).executeAsOneOrNull()
+    }
+
+    override fun getValueAndSignatureByHash(attestationHash: ByteArray): Pair<String, ByteArray>? {
+        val pair =
+            dao.getValueAndSignatureByHash(attestationHash).executeAsOneOrNull() ?: return null
+        return Pair(pair.value!!, pair.signature!!)
     }
 
     override fun deleteAttestationByHash(attestationHash: ByteArray) {
         return dao.deleteAttestationByHash(attestationHash)
     }
-
 }
