@@ -22,7 +22,7 @@ class Metadata(
         return this.tokenPointer + this.serializedMetadata
     }
 
-    fun toDatabaseTuple(): Triple<ByteArray, ByteArray?, ByteArray> {
+    fun toDatabaseTuple(): Triple<ByteArray, ByteArray, ByteArray> {
         return Triple(this.tokenPointer, this.signature, this.serializedMetadata)
     }
 
@@ -42,15 +42,19 @@ class Metadata(
 
             // Index on which signature start.
             val signIndex = data.size - publicKey.getSignatureLength()
-            return Metadata(data.copyOfRange(0, 32),
+            return Metadata(
+                data.copyOfRange(0, 32),
                 data.copyOfRange(32, signIndex),
-                signature = data.copyOfRange(signIndex, data.size))
+                signature = data.copyOfRange(signIndex, data.size)
+            )
         }
 
         fun create(token: Token, jsonObject: JSONObject, privateKey: PrivateKey): Metadata {
-            return Metadata(token.hash,
+            return Metadata(
+                token.hash,
                 jsonObject.toString().toByteArray(),
-                privateKey = privateKey)
+                privateKey = privateKey
+            )
         }
 
         fun fromDatabaseTuple(
@@ -61,6 +65,4 @@ class Metadata(
             return Metadata(tokenPointer, serializedJSONObject, signature = signature)
         }
     }
-
-
 }
