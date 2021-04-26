@@ -60,9 +60,9 @@ class Metadata(
         fun fromDatabaseTuple(
             tokenPointer: ByteArray,
             signature: ByteArray?,
-            serializedJSONObject: ByteArray,
+            serializedMetadata: ByteArray,
         ): Metadata {
-            return Metadata(tokenPointer, serializedJSONObject, signature = signature)
+            return Metadata(tokenPointer, serializedMetadata, signature = signature)
         }
     }
 }

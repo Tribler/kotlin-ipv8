@@ -23,7 +23,7 @@ import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
 import org.json.JSONObject
 
-const val DEFAULT_TIME_OUT = 30_000
+const val DEFAULT_TIME_OUT = 30_000L
 private val logger = KotlinLogging.logger {}
 
 class CommunicationChannel(
@@ -161,15 +161,18 @@ class CommunicationChannel(
                 attestors += Pair(attestor, attestation.signature)
             }
 
-            val attributeHash = pseudonym.tree.elements[credential.metadata.tokenPointer.toKey()]!!.contentHash
+            val attributeHash =
+                pseudonym.tree.elements[credential.metadata.tokenPointer.toKey()]!!.contentHash
             val jsonMetadata = JSONObject(String(credential.metadata.serializedMetadata))
 
             val attributeName = jsonMetadata.getString("name")
+            val attributeValue = jsonMetadata.getString("value")
             val idFormat = jsonMetadata.getString("schema")
             val signDate = jsonMetadata.getFloat("date")
             out += AttestationPresentation(
                 attributeHash,
                 attributeName,
+                attributeValue,
                 idFormat,
                 signDate,
                 credential.metadata,
@@ -215,7 +218,13 @@ class CommunicationChannel(
         val key = this.attestationOverlay.getIdAlgorithm(idFormat).generateSecretKey()
         this.attestationMetadata[AttributePointer(this.identityOverlay.myPeer, attributeName)] =
             metadata
-        this.attestationOverlay.requestAttestation(peer, attributeName, key, metadata, proposedValue)
+        this.attestationOverlay.requestAttestation(
+            peer,
+            attributeName,
+            key,
+            metadata,
+            proposedValue
+        )
     }
 
     fun attest(peer: Peer, attributeName: String, value: ByteArray) {
@@ -275,7 +284,8 @@ class CommunicationChannel(
         }
 
         if (!attestors.any { attestor ->
-                val authority = this.attestationOverlay.authorityManager.getAuthority(attestor.first)
+                val authority =
+                    this.attestationOverlay.authorityManager.getAuthority(attestor.first)
                 authority?.let {
                     it.publicKey!!.verify(attestor.second, metadata.hash)
                 } == true
@@ -295,6 +305,7 @@ class CommunicationChannel(
 class AttestationPresentation(
     val attributeHash: ByteArray,
     val attributeName: String,
+    val attributeValue: String,
     val idFormat: String,
     val signDate: Float,
     val metadata: Metadata,
