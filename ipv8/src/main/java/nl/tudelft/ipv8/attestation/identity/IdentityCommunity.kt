@@ -138,7 +138,7 @@ class IdentityCommunity(
         return null
     }
 
-    fun shouldSign(pseudonym: PseudonymManager, metadata: Metadata): Boolean {
+    private fun shouldSign(pseudonym: PseudonymManager, metadata: Metadata): Boolean {
         val transaction = JSONObject(String(metadata.serializedMetadata))
         val requestedKeys = transaction.keySet()
         if (!pseudonym.tree.elements.containsKey(metadata.tokenPointer.toKey())) {
@@ -227,12 +227,10 @@ class IdentityCommunity(
                     if (shouldSign(pseudonym, credential.metadata)) {
                         logger.info("Attesting to ${credential.metadata}.")
                         val myPrivateKey = this.myPeer.key as PrivateKey
-
-                        val attestation =
-                            pseudonym.createAttestation(
-                                credential.metadata,
-                                myPrivateKey
-                            )
+                        val attestation = pseudonym.createAttestation(
+                            credential.metadata,
+                            myPrivateKey
+                        )
                         pseudonym.addAttestation(this.myPeer.publicKey, attestation)
                         val payload = AttestPayload(attestation.getPlaintextSigned())
                         this.endpoint.send(peer, serializePacket(ATTEST_PAYLOAD, payload))

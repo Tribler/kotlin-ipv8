@@ -62,12 +62,12 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     private val receiveBlockLock = ReentrantLock()
     val schemaManager = SchemaManager()
 
-    private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String) -> Deferred<ByteArray?>
+    private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String, proposedValue: String?) -> Deferred<ByteArray?>
     private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attestationHash: ByteArray, idFormat: String, fromPeer: Peer?, value: ByteArray?, signature: ByteArray?) -> Unit
     private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Deferred<Boolean?>
     private lateinit var attestationChunkCallback: (peer: Peer, sequenceNumber: Int) -> Unit
 
-    val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
+    private val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
 
     private val cachedAttestationBlobs = mutableMapOf<ByteArrayKey, WalletAttestation>()
     private val allowedAttestations = mutableMapOf<String, Array<ByteArray>>()
@@ -133,7 +133,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         return this.schemaManager.getAlgorithmInstance(idFormat)
     }
 
-    fun setAttestationRequestCallback(f: (peer: Peer, attributeName: String, metaData: String) -> Deferred<ByteArray?>) {
+    fun setAttestationRequestCallback(f: (peer: Peer, attributeName: String, metaData: String, proposedValue: String?) -> Deferred<ByteArray?>) {
         this.attestationRequestCallback = f
     }
 
@@ -160,6 +160,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         attributeName: String,
         privateKey: BonehPrivateKey,
         metadata: HashMap<String, String> = hashMapOf(),
+        proposedValue: String? = null,
     ) {
         logger.info("Sending attestation request $attributeName to peer ${peer.mid}.")
         val publicKey = privateKey.publicKey()
@@ -168,9 +169,10 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
 
         val metadataJson = JSONObject()
         metadataJson.put("attribute", attributeName)
-        // Encode to UTF-8
         metadataJson.put("public_key", defaultEncodingUtils.encodeBase64ToString(publicKey.serialize()))
         metadataJson.put("id_format", idFormat)
+        // Will not be added if null.
+        metadataJson.put("proposed_value", proposedValue)
 
         inputMetadata.keys().forEach {
             metadataJson.put(it, inputMetadata.get(it))
@@ -212,11 +214,16 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         val attribute = metadata.remove("attribute") as String
         val pubkeyEncoded = metadata.remove("public_key") as String
         val idFormat = metadata.remove("id_format") as String
-        val metadataString = metadata.toString()
+        var proposedValue: String? = null
+        // We cannot cast null to string, hence member checking.
+        if (metadata.has("proposed_value")) {
+             proposedValue = metadata.remove("proposed_value") as String
+        }
 
+        val metadataString = metadata.toString()
         val idAlgorithm = this.getIdAlgorithm(idFormat)
 
-        val value = this.attestationRequestCallback(peer, attribute, metadataString).await()
+        val value = this.attestationRequestCallback(peer, attribute, metadataString, proposedValue).await()
         if (value == null) {
             logger.error("Failed to get value from callback")
             return
@@ -229,14 +236,14 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         val attestation =
             idAlgorithm.deserialize(attestationBlob, idFormat)
 
-        val stringifiedValue = when (idFormat) {
+        val valueAsString = when (idFormat) {
             ID_METADATA_RANGE_18PLUS -> ID_METADATA_RANGE_18PLUS_PUBLIC_VALUE
             ID_METADATA_RANGE_UNDERAGE -> ID_METADATA_RANGE_UNDERAGE_PUBLIC_VALUE
             else -> String(value)
         }
 
         val signableMetadata = JSONObject(metadataString)
-        signableMetadata.put("value", stringifiedValue)
+        signableMetadata.put("value", valueAsString)
         signableMetadata.put("subject", peer.publicKey.keyToHash().toHex())
 
         val signableData = attestation.getHash() + signableMetadata.toString().toByteArray()

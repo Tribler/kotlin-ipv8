@@ -10,7 +10,6 @@ class IdentityAttestation(
     privateKey: PrivateKey? = null,
     signature: ByteArray? = null,
 ) : SignedObject(privateKey, signature) {
-
     init {
         super.init()
     }
