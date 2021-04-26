@@ -168,7 +168,7 @@ class CommunicationChannel(
             val attributeName = jsonMetadata.getString("name")
             val attributeValue = jsonMetadata.getString("value")
             val idFormat = jsonMetadata.getString("schema")
-            val signDate = jsonMetadata.getFloat("date")
+            val signDate = jsonMetadata.getDouble("date").toFloat()
             out += AttestationPresentation(
                 attributeHash,
                 attributeName,
@@ -277,22 +277,25 @@ class CommunicationChannel(
 
         if (!subjectKey.verify(challengePair.first, challengePair.second.toByteArray())) {
             logger.info("Not accepting ${attestationHash.toHex()}, challenge not valid!")
+            return false
         }
 
         if (!subjectKey.verify(metadata.signature, metadata.getPlaintext())) {
             logger.info("Not accepting ${attestationHash.toHex()}, metadata signature not valid!")
+            return false
         }
 
+        // Check if authority is recognized and the corresponding signature is correct.
         if (!attestors.any { attestor ->
                 val authority =
-                    this.attestationOverlay.authorityManager.getAuthority(attestor.first)
+                    this.attestationOverlay.authorityManager.getTrustedAuthority(attestor.first)
                 authority?.let {
-                    it.publicKey!!.verify(attestor.second, metadata.hash)
+                    it.publicKey?.verify(attestor.second, metadata.hash)
                 } == true
             }) {
             logger.info("Not accepting ${attestationHash.toHex()}, no recognized authority or valid signature found.")
+            return false
         }
-
         return true
     }
 
