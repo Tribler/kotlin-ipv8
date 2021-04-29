@@ -20,10 +20,11 @@ import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.VERIFY_
 import nl.tudelft.ipv8.attestation.wallet.caches.*
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.payloads.*
-import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.Packet
+import nl.tudelft.ipv8.messaging.deserializeVarLen
 import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
+import nl.tudelft.ipv8.messaging.serializeVarLen
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.*
 import org.json.JSONObject
@@ -36,7 +37,8 @@ import kotlin.random.nextUBytes
 private val logger = KotlinLogging.logger {}
 private const val CHUNK_SIZE = 800
 
-class AttestationCommunity(val authorityManager: AuthorityManager, val database: AttestationStore) : Community() {
+class AttestationCommunity(val authorityManager: AuthorityManager, val database: AttestationStore) :
+    Community() {
 
     override lateinit var myPeer: Peer
     override lateinit var endpoint: EndpointAggregator
@@ -63,11 +65,12 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     val schemaManager = SchemaManager()
 
     private lateinit var attestationRequestCallback: (peer: Peer, attributeName: String, metaData: String, proposedValue: String?) -> Deferred<ByteArray?>
-    private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attestationHash: ByteArray, idFormat: String, fromPeer: Peer?, value: ByteArray?, signature: ByteArray?) -> Unit
+    private lateinit var attestationRequestCompleteCallback: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attestationHash: ByteArray, idFormat: String, fromPeer: Peer?, value: ByteArray?) -> Unit
     private lateinit var verifyRequestCallback: (peer: Peer, attributeHash: ByteArray) -> Deferred<Boolean?>
     private lateinit var attestationChunkCallback: (peer: Peer, sequenceNumber: Int) -> Unit
 
-    private val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> = mutableMapOf()
+    private val attestationKeys: MutableMap<ByteArrayKey, Pair<BonehPrivateKey, String>> =
+        mutableMapOf()
 
     private val cachedAttestationBlobs = mutableMapOf<ByteArrayKey, WalletAttestation>()
     private val allowedAttestations = mutableMapOf<String, Array<ByteArray>>()
@@ -81,7 +84,8 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
             val hash = att.attestationHash
             val key = att.key
             val idFormat = att.idFormat
-            this.attestationKeys[ByteArrayKey(hash)] = Pair(this.getIdAlgorithm(idFormat).loadSecretKey(key), idFormat)
+            this.attestationKeys[ByteArrayKey(hash)] =
+                Pair(this.getIdAlgorithm(idFormat).loadSecretKey(key), idFormat)
         }
 
         messageHandlers[VERIFY_ATTESTATION_REQUEST] = ::onVerifyAttestationRequestWrapper
@@ -137,7 +141,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         this.attestationRequestCallback = f
     }
 
-    fun setAttestationRequestCompleteCallback(f: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attributeHash: ByteArray, idFormat: String, fromPeer: Peer?, value: ByteArray?, Signature: ByteArray?) -> Unit) {
+    fun setAttestationRequestCompleteCallback(f: (forPeer: Peer, attributeName: String, attestation: WalletAttestation, attributeHash: ByteArray, idFormat: String, fromPeer: Peer?, value: ByteArray?) -> Unit) {
         this.attestationRequestCompleteCallback = f
     }
 
@@ -169,7 +173,10 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
 
         val metadataJson = JSONObject()
         metadataJson.put("attribute", attributeName)
-        metadataJson.put("public_key", defaultEncodingUtils.encodeBase64ToString(publicKey.serialize()))
+        metadataJson.put(
+            "public_key",
+            defaultEncodingUtils.encodeBase64ToString(publicKey.serialize())
+        )
         metadataJson.put("id_format", idFormat)
         // Will not be added if null.
         metadataJson.put("proposed_value", proposedValue)
@@ -217,37 +224,26 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         var proposedValue: String? = null
         // We cannot cast null to string, hence member checking.
         if (metadata.has("proposed_value")) {
-             proposedValue = metadata.remove("proposed_value") as String
+            proposedValue = metadata.remove("proposed_value") as String
         }
 
         val metadataString = metadata.toString()
         val idAlgorithm = this.getIdAlgorithm(idFormat)
 
-        val value = this.attestationRequestCallback(peer, attribute, metadataString, proposedValue).await()
+        val value =
+            this.attestationRequestCallback(peer, attribute, metadataString, proposedValue).await()
         if (value == null) {
             logger.error("Failed to get value from callback")
             return
         }
 
         // Decode as UTF-8 ByteArray
-        val publicKey = idAlgorithm.loadPublicKey(defaultEncodingUtils.decodeBase64FromString(pubkeyEncoded))
+        val publicKey =
+            idAlgorithm.loadPublicKey(defaultEncodingUtils.decodeBase64FromString(pubkeyEncoded))
 
         val attestationBlob = idAlgorithm.attest(publicKey, value)
         val attestation =
             idAlgorithm.deserialize(attestationBlob, idFormat)
-
-        val valueAsString = when (idFormat) {
-            ID_METADATA_RANGE_18PLUS -> ID_METADATA_RANGE_18PLUS_PUBLIC_VALUE
-            ID_METADATA_RANGE_UNDERAGE -> ID_METADATA_RANGE_UNDERAGE_PUBLIC_VALUE
-            else -> String(value)
-        }
-
-        val signableMetadata = JSONObject(metadataString)
-        signableMetadata.put("value", valueAsString)
-        signableMetadata.put("subject", peer.publicKey.keyToHash().toHex())
-
-        val signableData = attestation.getHash() + signableMetadata.toString().toByteArray()
-        val signature = (myPeer.key as PrivateKey).sign(signableData)
 
         if (this::attestationRequestCompleteCallback.isInitialized) {
             this.attestationRequestCompleteCallback(
@@ -257,17 +253,14 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                 attestation.getHash(),
                 idFormat,
                 null,
-                value,
-                signature,
+                value
             )
         }
 
         this.sendAttestation(
             peer.address,
-            attestationBlob,
+            attestationBlob + serializeVarLen(value),
             dist.globalTime,
-            value,
-            signature
         )
     }
 
@@ -279,7 +272,6 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         attestationHash: ByteArray,
         idFormat: String,
         value: ByteArray? = null,
-        signature: ByteArray? = null,
     ) {
         this.attestationKeys[ByteArrayKey(attestationHash)] = Pair(privateKey, idFormat)
         this.database.insertAttestation(
@@ -287,9 +279,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
             attestationHash,
             privateKey,
             idFormat,
-            value?.let { String(it, Charsets.US_ASCII) },
-            signature,
-            peer.publicKey
+            value
         )
 
         if (this::attestationRequestCompleteCallback.isInitialized) {
@@ -300,8 +290,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                 attestationHash,
                 idFormat,
                 peer,
-                value,
-                signature
+                value
             )
         }
     }
@@ -319,7 +308,14 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
             callback(attestationHash, values.map { algorithm.certainty(it, relativityMap) })
         }
 
-        this.requestCache.add(ProvingAttestationCache(this, attestationHash, idFormat, onComplete = ::onComplete))
+        this.requestCache.add(
+            ProvingAttestationCache(
+                this,
+                attestationHash,
+                idFormat,
+                onComplete = ::onComplete
+            )
+        )
         this.createVerifyAttestationRequest(socketAddress, attestationHash, idFormat)
     }
 
@@ -356,7 +352,8 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         }
 
         val (privateKey, idFormat) = this.attestationKeys[ByteArrayKey(payload.hash)]!!
-        val privateAttestation = schemaManager.deserializePrivate(privateKey, attestationBlob, idFormat)
+        val privateAttestation =
+            schemaManager.deserializePrivate(privateKey, attestationBlob, idFormat)
         val publicAttestationBlob = privateAttestation.serialize()
         this.cachedAttestationBlobs[ByteArrayKey(payload.hash)] = privateAttestation
         this.sendAttestation(peer.address, publicAttestationBlob)
@@ -366,8 +363,6 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         sockedAddress: IPv4Address,
         blob: ByteArray,
         globalTime: ULong? = null,
-        value: ByteArray? = null,
-        signature: ByteArray? = null,
     ) {
         var sequenceNumber = 0
         for (i in blob.indices step CHUNK_SIZE) {
@@ -376,19 +371,19 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
             val blobChunk = blob.copyOfRange(i, endIndex)
             logger.info("Sending attestation chunk $sequenceNumber to $sockedAddress")
 
-            // Only send metadata and signature on final package to reduce overhead.
-            val payload =
-                if (i + CHUNK_SIZE > blob.size)
-                    AttestationChunkPayload(sha1(blob), sequenceNumber, blobChunk, value, signature)
-                else
-                    AttestationChunkPayload(sha1(blob), sequenceNumber, blobChunk)
-            val packet = serializePacket(ATTESTATION, payload, prefix = this.prefix, timestamp = globalTime)
+            val payload = AttestationChunkPayload(sha1(blob), sequenceNumber, blobChunk)
+            val packet =
+                serializePacket(ATTESTATION, payload, prefix = this.prefix, timestamp = globalTime)
             this.endpoint.send(sockedAddress, packet)
             sequenceNumber += 1
         }
     }
 
-    private fun onAttestationChunk(peer: Peer, dist: GlobalTimeDistributionPayload, payload: AttestationChunkPayload) {
+    private fun onAttestationChunk(
+        peer: Peer,
+        dist: GlobalTimeDistributionPayload,
+        payload: AttestationChunkPayload
+    ) {
         if (this::attestationChunkCallback.isInitialized) {
             this.attestationChunkCallback(peer, payload.sequenceNumber)
         }
@@ -416,11 +411,11 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
             }
 
             if (sha1(serialized).contentEquals(payload.hash)) {
-                val deserialized = schemaManager.deserialize(serialized, cache.idFormat)
+                val attestation = schemaManager.deserialize(serialized, cache.idFormat)
                 this.requestCache.pop(prefix, number)
                 this.onReceivedAttestation(
                     peer,
-                    deserialized,
+                    attestation,
                     payload.hash
                 )
             }
@@ -430,14 +425,11 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
             var handled = false
             for (peerId in peerIds) {
                 if (this.requestCache.has(peerId.first, peerId.second)) {
-                    var cache = this.requestCache.get(peerId.first, peerId.second) as ReceiveAttestationRequestCache
+                    var cache = this.requestCache.get(
+                        peerId.first,
+                        peerId.second
+                    ) as ReceiveAttestationRequestCache
                     cache.attestationMap.add(Pair(payload.sequenceNumber, payload.data))
-                    if (payload.value != null) {
-                        cache.value = payload.value
-                    }
-                    if (payload.signature != null) {
-                        cache.signature = payload.signature
-                    }
 
                     var serialized = byteArrayOf()
                     for ((_, chunk) in cache.attestationMap.sortedBy { attestation -> attestation.first }) {
@@ -445,13 +437,30 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                     }
 
                     if (sha1(serialized).contentEquals(payload.hash)) {
-                        val deserialized =
-                            schemaManager.deserializePrivate(cache.privateKey, serialized, cache.idFormat)
-                        cache = (this.requestCache.pop(peerId.first, peerId.second) as ReceiveAttestationRequestCache)
+                        val attestation =
+                            schemaManager.deserializePrivate(
+                                cache.privateKey,
+                                serialized,
+                                cache.idFormat
+                            )
+                        val value = deserializeVarLen(
+                            serialized.copyOfRange(
+                                attestation.serialize().size,
+                                serialized.size
+                            )
+                        ).first
+                        cache = (this.requestCache.pop(
+                            peerId.first,
+                            peerId.second
+                        ) as ReceiveAttestationRequestCache)
 
-                        this.allowedAttestations[peer.mid] = this.allowedAttestations[peer.mid]!!.mapNotNull {
-                            if (!it.contentEquals(dist.globalTime.toString().toByteArray())) it else null
-                        }.toTypedArray()
+                        this.allowedAttestations[peer.mid] =
+                            this.allowedAttestations[peer.mid]!!.mapNotNull {
+                                if (!it.contentEquals(
+                                        dist.globalTime.toString().toByteArray()
+                                    )
+                                ) it else null
+                            }.toTypedArray()
                         if (this.allowedAttestations[peer.mid].isNullOrEmpty()) {
                             this.allowedAttestations.remove(peer.mid)
                         }
@@ -459,14 +468,13 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                         // TODO: Verify received signature and value
 
                         this.onAttestationComplete(
-                            deserialized,
+                            attestation,
                             cache.privateKey,
                             peer,
                             cache.name,
-                            deserialized.getHash(),
+                            attestation.getHash(),
                             cache.idFormat,
-                            cache.value,
-                            cache.signature
+                            value,
                         )
                     }
 
@@ -515,7 +523,14 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
             }
 
             remaining -= 1
-            this.requestCache.add(PendingChallengesCache(this, sha1(challenge), cache, cache.idFormat))
+            this.requestCache.add(
+                PendingChallengesCache(
+                    this,
+                    sha1(challenge),
+                    cache,
+                    cache.idFormat
+                )
+            )
 
             val payload = ChallengePayload(attestationHash, challenge)
             val packet = serializePacket(CHALLENGE, payload, prefix = this.prefix)
@@ -547,7 +562,10 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         payload: ChallengeResponsePayload,
     ) {
         synchronized(receiveBlockLock) {
-            val (prefix, number) = HashCache.idFromHash(PENDING_CHALLENGES_PREFIX, payload.challengeHash)
+            val (prefix, number) = HashCache.idFromHash(
+                PENDING_CHALLENGES_PREFIX,
+                payload.challengeHash
+            )
             if (this.requestCache.has(prefix, number)) {
                 val cache = this.requestCache.pop(prefix, number) as PendingChallengesCache
                 val provingCache = cache.provingCache
@@ -558,12 +576,17 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                 var challenge: ByteArray? = null
 
                 // TODO: Come up with more elegant solution for ByteArray checking.
-                val hashElement = provingCache.hashedChallenges.find { x -> x.contentEquals(payload.challengeHash) }
+                val hashElement =
+                    provingCache.hashedChallenges.find { x -> x.contentEquals(payload.challengeHash) }
                 if (hashElement != null) {
                     provingCache.hashedChallenges.remove(hashElement)
                     for (c in provingCache.challenges) {
                         if (sha1(c).contentEquals(payload.challengeHash)) {
-                            provingCache.challenges.remove(provingCache.challenges.first { x -> x.contentEquals(c) })
+                            provingCache.challenges.remove(provingCache.challenges.first { x ->
+                                x.contentEquals(
+                                    c
+                                )
+                            })
                             challenge = c
                             break
                         }
@@ -571,13 +594,24 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                 }
                 val algorithm = this.getIdAlgorithm(provingCache.idFormat)
                 if (cache.honestyCheck < 0) {
-                    algorithm.processChallengeResponse(provingCache.relativityMap, challenge, payload.response)
-                } else if (!algorithm.processHonestyChallenge(cache.honestyCheck, payload.response)) {
+                    algorithm.processChallengeResponse(
+                        provingCache.relativityMap,
+                        challenge,
+                        payload.response
+                    )
+                } else if (!algorithm.processHonestyChallenge(
+                        cache.honestyCheck,
+                        payload.response
+                    )
+                ) {
                     logger.error("${peer.address} attempted to cheat in the ZKP!")
                     if (this.requestCache.has(provingCachePrefix, provingCacheId)) {
                         this.requestCache.pop(provingCachePrefix, provingCacheId)
                     }
-                    provingCache.attestationCallbacks(provingCache.cacheHash, algorithm.createCertaintyAggregate(null))
+                    provingCache.attestationCallbacks(
+                        provingCache.cacheHash,
+                        algorithm.createCertaintyAggregate(null)
+                    )
                 }
 
                 if (provingCache.hashedChallenges.isEmpty()) {
@@ -586,10 +620,14 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                     if (this.requestCache.has(provingCachePrefix, provingCacheId)) {
                         this.requestCache.pop(provingCachePrefix, provingCacheId)
                     }
-                    provingCache.attestationCallbacks(provingCache.cacheHash, provingCache.relativityMap)
+                    provingCache.attestationCallbacks(
+                        provingCache.cacheHash,
+                        provingCache.relativityMap
+                    )
                 } else {
                     // TODO: Add secure random.
-                    val honestyCheck = algorithm.honestCheck && (Random.nextUBytes(1)[0].toInt() < 38)
+                    val honestyCheck =
+                        algorithm.honestCheck && (Random.nextUBytes(1)[0].toInt() < 38)
                     var honestyCheckByte = if (honestyCheck) arrayOf(0, 1, 2).random() else -1
                     challenge = null
                     if (honestyCheck) {
@@ -600,7 +638,10 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                                 )
                             )
                         ) {
-                            challenge = algorithm.createHonestyChallenge(provingCache.publicKey!!, honestyCheckByte)
+                            challenge = algorithm.createHonestyChallenge(
+                                provingCache.publicKey!!,
+                                honestyCheckByte
+                            )
                         }
                     }
                     if (!honestyCheck || (challenge != null && this.requestCache.has(
