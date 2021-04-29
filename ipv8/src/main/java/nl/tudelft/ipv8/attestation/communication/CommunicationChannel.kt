@@ -18,6 +18,9 @@ import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.util.ByteArrayKey
 import nl.tudelft.ipv8.util.SettableDeferred
 import nl.tudelft.ipv8.util.asMap
+import nl.tudelft.ipv8.util.defaultEncodingUtils
+import nl.tudelft.ipv8.util.sha3_256
+import nl.tudelft.ipv8.util.stripSHA1Padding
 import nl.tudelft.ipv8.util.toByteArray
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
@@ -77,11 +80,10 @@ class CommunicationChannel(
         attributeHash: ByteArray,
         idFormat: String,
         fromPeer: Peer?,
-        value: ByteArray?,
-        Signature: ByteArray?,
+        value: ByteArray?
     ) {
         val metadata = this.attestationMetadata[AttributePointer(forPeer, attributeName)]!!
-        value?.let { metadata["value"] = String(it) }
+        value?.let { metadata["value"] = defaultEncodingUtils.encodeBase64ToString(sha3_256(it)) }
 
         if (forPeer == myPeer) {
             if (fromPeer == myPeer) {
@@ -166,7 +168,10 @@ class CommunicationChannel(
             val jsonMetadata = JSONObject(String(credential.metadata.serializedMetadata))
 
             val attributeName = jsonMetadata.getString("name")
-            val attributeValue = jsonMetadata.getString("value")
+            val attributeValue =
+                this.attestationOverlay.database.getValueByHash(
+                    stripSHA1Padding(attributeHash)
+                )!!
             val idFormat = jsonMetadata.getString("schema")
             val signDate = jsonMetadata.getDouble("date").toFloat()
             out += AttestationPresentation(
@@ -265,6 +270,7 @@ class CommunicationChannel(
 
     fun verifyLocally(
         attestationHash: ByteArray,
+        proposedAttestationValue: ByteArray,
         metadata: Metadata,
         subjectKey: PublicKey,
         challengePair: Pair<ByteArray, Long>,
@@ -282,6 +288,15 @@ class CommunicationChannel(
 
         if (!subjectKey.verify(metadata.signature, metadata.getPlaintext())) {
             logger.info("Not accepting ${attestationHash.toHex()}, metadata signature not valid!")
+            return false
+        }
+
+        val parsedMD = JSONObject(String(metadata.serializedMetadata))
+        val valueHash = parsedMD.getString("value")
+        val proposedHash =
+            defaultEncodingUtils.encodeBase64ToString(sha3_256(proposedAttestationValue))
+        if (valueHash != proposedHash) {
+            logger.info("Not accepting ${attestationHash.toHex()}, value not valid!")
             return false
         }
 
@@ -308,7 +323,7 @@ class CommunicationChannel(
 class AttestationPresentation(
     val attributeHash: ByteArray,
     val attributeName: String,
-    val attributeValue: String,
+    val attributeValue: ByteArray,
     val idFormat: String,
     val signDate: Float,
     val metadata: Metadata,
