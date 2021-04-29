@@ -142,6 +142,7 @@ class IdentityCommunity(
         val transaction = JSONObject(String(metadata.serializedMetadata))
         val requestedKeys = transaction.keySet()
         if (!pseudonym.tree.elements.containsKey(metadata.tokenPointer.toKey())) {
+            logger.debug("Not signing $metadata, unknown token!")
             return false
         }
         val attributeHash = pseudonym.tree.elements[metadata.tokenPointer.toKey()]!!.contentHash
