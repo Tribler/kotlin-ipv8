@@ -12,18 +12,14 @@ private val attestationMapper: (
     ByteArray,
     ByteArray,
     String,
-    String?,
     ByteArray?,
-    ByteArray?,
-) -> AttestationBlob = { hash, blob, key, id_format, value, signature, attestor_key ->
+) -> AttestationBlob = { hash, blob, key, id_format, value ->
     AttestationBlob(
         hash,
         blob,
         key,
         id_format,
-        value,
-        signature,
-        attestor_key?.let { defaultCryptoProvider.keyFromPublicBin(it) }
+        value
     )
 }
 
@@ -41,9 +37,7 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
         attestationHash: ByteArray,
         privateKey: BonehPrivateKey,
         idFormat: String,
-        value: String?,
-        signature: ByteArray?,
-        attestorKey: PublicKey?,
+        value: ByteArray?,
     ) {
         val blob = attestation.serializePrivate(privateKey.publicKey())
         dao.insertAttestation(
@@ -51,9 +45,7 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
             blob,
             privateKey.serialize(),
             idFormat,
-            value,
-            signature,
-            attestorKey?.keyToBin()
+            value
         )
     }
 
@@ -61,10 +53,8 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
         return dao.getAttestationByHash(attestationHash).executeAsOneOrNull()
     }
 
-    override fun getValueAndSignatureByHash(attestationHash: ByteArray): Pair<String, ByteArray>? {
-        val pair =
-            dao.getValueAndSignatureByHash(attestationHash).executeAsOneOrNull() ?: return null
-        return Pair(pair.value!!, pair.signature!!)
+    override fun getValueByHash(attestationHash: ByteArray): ByteArray? {
+        return dao.getValueByHash(attestationHash).executeAsOneOrNull()?.value
     }
 
     override fun deleteAttestationByHash(attestationHash: ByteArray) {

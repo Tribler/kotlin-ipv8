@@ -6,19 +6,10 @@ class AttestationChunkPayload(
     val hash: ByteArray,
     val sequenceNumber: Int,
     val data: ByteArray,
-    val value: ByteArray? = null,
-    val signature: ByteArray? = null,
 ) : Serializable {
-    private val msgId = 2
 
     override fun serialize(): ByteArray {
-        return (
-            hash + serializeUInt(sequenceNumber.toUInt()) + serializeVarLen(data) +
-                (
-                    if (value != null && signature != null) serializeVarLen(value) + signature
-                    else byteArrayOf()
-                    )
-            )
+        return hash + serializeUInt(sequenceNumber.toUInt()) + serializeVarLen(data)
     }
 
     companion object Deserializer : Deserializable<AttestationChunkPayload> {
@@ -28,8 +19,10 @@ class AttestationChunkPayload(
         ): Pair<AttestationChunkPayload, Int> {
             var localoffset = 0
 
-            val hash = buffer.copyOfRange(offset + localoffset,
-                offset + localoffset + SERIALIZED_SHA1_HASH_SIZE)
+            val hash = buffer.copyOfRange(
+                offset + localoffset,
+                offset + localoffset + SERIALIZED_SHA1_HASH_SIZE
+            )
             localoffset += SERIALIZED_SHA1_HASH_SIZE
 
             val sequenceNumber = deserializeUInt(buffer, offset + localoffset)
@@ -38,21 +31,8 @@ class AttestationChunkPayload(
             val (data, dataSize) = deserializeVarLen(buffer, offset + localoffset)
             localoffset += dataSize
 
-            return if (buffer.lastIndex > offset + localoffset) {
-                val (value, valueSize) = deserializeVarLen(buffer, offset + localoffset)
-                localoffset += valueSize
-
-                val signature = buffer.copyOfRange(offset + localoffset, offset + localoffset + SIGNATURE_SIZE)
-                localoffset += SIGNATURE_SIZE
-
-                val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data, value, signature)
-                Pair(payload, localoffset)
-            } else {
-                val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data)
-                Pair(payload, localoffset)
-            }
-
+            val payload = AttestationChunkPayload(hash, sequenceNumber.toInt(), data)
+            return Pair(payload, localoffset)
         }
-
     }
 }

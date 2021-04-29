@@ -13,8 +13,6 @@ class ReceiveAttestationRequestCache(
     idFormat: String,
 ) : PeerCache(community.requestCache, ATTESTATION_REQUEST_PREFIX, mid, idFormat) {
 
-    var signature: ByteArray? = null
-    var value: ByteArray? = null
     val attestationMap: MutableSet<Pair<Int, ByteArray>> = mutableSetOf()
 
 }

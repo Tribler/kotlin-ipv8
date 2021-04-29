@@ -9,9 +9,7 @@ class AttestationBlob(
     val blob: ByteArray,
     val key: ByteArray,
     val idFormat: String,
-    val value: String?,
-    val signature: ByteArray?,
-    val attestorKey: PublicKey?,
+    val value: ByteArray?,
 )
 
 interface AttestationStore {
@@ -22,14 +20,12 @@ interface AttestationStore {
         attestationHash: ByteArray,
         privateKey: BonehPrivateKey,
         idFormat: String,
-        value: String? = null,
-        signature: ByteArray? = null,
-        attestorKey: PublicKey? = null,
+        value: ByteArray? = null,
     )
 
     fun getAttestationBlobByHash(attestationHash: ByteArray): ByteArray?
 
-    fun getValueAndSignatureByHash(attestationHash: ByteArray): Pair<String, ByteArray>?
+    fun getValueByHash(attestationHash: ByteArray): ByteArray?
 
     fun deleteAttestationByHash(attestationHash: ByteArray)
 }
