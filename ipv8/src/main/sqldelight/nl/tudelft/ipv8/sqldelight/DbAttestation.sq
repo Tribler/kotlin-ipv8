@@ -3,9 +3,7 @@ CREATE TABLE attestations (
     blob BLOB NOT NULL,
     key  BLOB NOT NULL,
     id_format TEXT NOT NULL,
-    value TEXT,
-    signature BLOB,
-    attestor_key BLOB,
+    value BLOB,
     PRIMARY KEY(hash)
 );
 
@@ -13,13 +11,13 @@ getAllAttestations:
 SELECT * FROM attestations;
 
 insertAttestation:
-INSERT INTO attestations (hash, blob, key, id_format, value, signature, attestor_key) VALUES(?, ?, ?, ?, ?, ?, ?);
+INSERT INTO attestations (hash, blob, key, id_format, value) VALUES(?, ?, ?, ?, ?);
 
 getAttestationByHash:
 SELECT blob FROM attestations WHERE hash = ?;
 
-getValueAndSignatureByHash:
-SELECT value, signature FROM attestations WHERE hash = ?;
+getValueByHash:
+SELECT value FROM attestations WHERE hash = ?;
 
 deleteAttestationByHash:
 DELETE FROM attestations WHERE hash = ?;
