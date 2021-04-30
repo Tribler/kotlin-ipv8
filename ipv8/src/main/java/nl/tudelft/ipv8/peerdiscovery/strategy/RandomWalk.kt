@@ -12,7 +12,7 @@ private val logger = KotlinLogging.logger {}
  * an introduction to another community member.
  */
 class RandomWalk(
-    private val overlay: Overlay,
+    override val overlay: Overlay,
     private val timeout: Double,
     private val windowSize: Int,
     private val resetChance: Int,

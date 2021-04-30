@@ -16,7 +16,7 @@ private val logger = KotlinLogging.logger {}
  */
 class NetworkServiceDiscovery(
     private val nsdManager: NsdManager,
-    private val overlay: Overlay
+    override val overlay: Overlay
 ) : DiscoveryStrategy {
     private var serviceName: String? = null
 

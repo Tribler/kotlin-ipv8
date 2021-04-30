@@ -46,6 +46,9 @@ class CommunicationChannel(
         this.attestationOverlay.setVerifyRequestCallback(this::onVerifyRequestAsync)
     }
 
+    val publicKeyBin
+        get() = this.identityOverlay.myPeer.publicKey.keyToBin()
+
     val peers
         get() = this.identityOverlay.getPeers()
 

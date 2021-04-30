@@ -6,6 +6,8 @@ import nl.tudelft.ipv8.Overlay
  * Strategy for discovering peers in a network.
  */
 interface DiscoveryStrategy {
+    val overlay: Overlay
+
     /**
      * It is called when the IPv8 service is started.
      */

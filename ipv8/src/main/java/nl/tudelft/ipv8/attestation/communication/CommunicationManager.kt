@@ -88,9 +88,14 @@ class CommunicationManager(
         return this.nameToChannel[name]!!
     }
 
-    @Suppress("UNUSED_PARAMETER")
     fun unload(name: String) {
-        TODO()
+        if (this.nameToChannel.containsKey(name)) {
+            val communicationChannel = this.nameToChannel.remove(name)!!
+            this.channels.remove(communicationChannel.publicKeyBin.toKey())
+            this.iPv8Instance.unloadSecondaryOverlayStrategy(communicationChannel.identityOverlay.serviceId)
+            communicationChannel.attestationOverlay.unload()
+            // TODO: Endpoint close?
+        }
     }
 
     fun listPseudonyms(): List<String> {
@@ -103,7 +108,9 @@ class CommunicationManager(
     }
 
     fun shutdown() {
-        TODO()
+        for (name in this.nameToChannel.keys) {
+            this.unload(name)
+        }
     }
 
     fun getAllPeers(): List<Peer> {
