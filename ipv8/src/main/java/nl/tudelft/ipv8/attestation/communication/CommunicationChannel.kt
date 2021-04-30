@@ -333,7 +333,7 @@ class AttestationPresentation(
     val attestors: List<Pair<ByteArray, ByteArray>>
 ) {
     override fun equals(other: Any?): Boolean {
-        return other is AttestationPresentation && this.attributeHash.contentEquals(other.attributeHash)
+        return other is AttestationPresentation && this.attributeHash.contentEquals(other.attributeHash) && this.attestors.size == other.attestors.size
     }
 }
 
