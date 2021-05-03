@@ -1,4 +1,4 @@
-package nl.tudelft.ipv8.attestation
+ package nl.tudelft.ipv8.attestation
 
 import nl.tudelft.ipv8.attestation.revocation.AuthorityStore
 import nl.tudelft.ipv8.attestation.revocation.RevocationBlob
@@ -34,7 +34,12 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
         }
     }
 
-    fun insertRevocations(publicKeyHash: ByteArray, versionNumber: Long, signature: ByteArray, revokedHashes: List<ByteArray>) {
+    fun insertRevocations(
+        publicKeyHash: ByteArray,
+        versionNumber: Long,
+        signature: ByteArray,
+        revokedHashes: List<ByteArray>
+    ) {
         authorityDatabase.insertRevocations(publicKeyHash, versionNumber, signature, revokedHashes)
         if (this.trustedAuthorities.containsKey(publicKeyHash.toKey())) {
             this.trustedAuthorities[publicKeyHash.toKey()]!!.version = versionNumber
@@ -72,7 +77,7 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
         if (!this.contains(hash)) {
             val localAuthority = authorityDatabase.getAuthorityByHash(hash)
             if (localAuthority == null) {
-                authorityDatabase.insertAuthority(publicKey)
+                authorityDatabase.insertTrustedAuthority(publicKey)
                 synchronized(lock) {
                     this.trustedAuthorities[hash.toKey()] = Authority(publicKey, hash)
                 }
@@ -97,7 +102,9 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
     }
 
     fun getAuthority(hash: ByteArray): Authority? {
-        return this.trustedAuthorities.get(hash.toKey()) ?: authorityDatabase.getAuthorityByHash(hash)
+        return this.trustedAuthorities.get(hash.toKey()) ?: authorityDatabase.getAuthorityByHash(
+            hash
+        )
     }
 
     fun deleteTrustedAuthority(publicKey: PublicKey) {
@@ -107,6 +114,4 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
     fun contains(hash: ByteArray): Boolean {
         return this.trustedAuthorities.containsKey(hash.toKey())
     }
-
-
 }

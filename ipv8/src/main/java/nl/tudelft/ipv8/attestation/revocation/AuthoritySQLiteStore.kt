@@ -6,7 +6,6 @@ import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.sqldelight.Database
 import nl.tudelft.ipv8.sqldelight.GetAllRevocations
-import nl.tudelft.ipv8.util.toHex
 
 private val authorityMapper: (
     ByteArray?,
@@ -14,10 +13,12 @@ private val authorityMapper: (
     Long?,
     Long?,
 ) -> Authority = { public_key, hash, version, recognized ->
-    Authority(public_key?.let { defaultCryptoProvider.keyFromPublicBin(it) },
+    Authority(
+        public_key?.let { defaultCryptoProvider.keyFromPublicBin(it) },
         hash,
         version ?: 0L,
-        recognized?.toInt() == 1)
+        recognized?.toInt() == 1
+    )
 }
 
 private val logger = KotlinLogging.logger {}
@@ -49,6 +50,10 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
         return dao.insertAuthority(publicKey.keyToBin(), publicKey.keyToHash(), null, null)
     }
 
+    override fun insertTrustedAuthority(publicKey: PublicKey) {
+        return dao.insertAuthority(publicKey.keyToBin(), publicKey.keyToHash(), null, 1)
+    }
+
     override fun insertAuthority(hash: ByteArray) {
         return dao.insertAuthority(null, hash, null, null)
     }
@@ -67,19 +72,21 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
 
         if (version >= 2L) {
             val previousId =
-                dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L).executeAsOneOrNull()?.version_id
+                dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L)
+                    .executeAsOneOrNull()?.version_id
             if (previousId == null) {
                 logger.warn("Received revocations out of order, skipping!")
                 return
             }
-
         }
 
         var versionId =
-            dao.getVersionByAuthorityIDandVersionNumber(authorityId, version).executeAsOneOrNull()?.version_id
+            dao.getVersionByAuthorityIDandVersionNumber(authorityId, version)
+                .executeAsOneOrNull()?.version_id
         if (versionId == null) {
             dao.insertVersion(authorityId, version, signature)
-            versionId = dao.getVersionByAuthorityIDandVersionNumber(authorityId, version).executeAsOne().version_id
+            versionId = dao.getVersionByAuthorityIDandVersionNumber(authorityId, version)
+                .executeAsOne().version_id
         }
 
         revokedHashes.forEach { dao.insertRevocation(authorityId, versionId, it) }
@@ -103,15 +110,16 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
             dao.getVersionsByAuthorityIDandVersionNumbers(authorityId, versions).executeAsList()
 
         return versionEntries.map {
-            RevocationBlob(publicKeyHash, it.version_number,
+            RevocationBlob(
+                publicKeyHash, it.version_number,
                 it.signature,
                 dao.getRevocationsByAuthorityIdAndVersionId(authorityId, it.version_id)
-                    .executeAsList())
+                    .executeAsList()
+            )
         }
     }
 
     override fun getAllRevocations(): List<GetAllRevocations> {
         return dao.getAllRevocations().executeAsList()
     }
-
 }

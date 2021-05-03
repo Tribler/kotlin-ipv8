@@ -209,8 +209,8 @@ class IdentityCommunity(
     }
 
     private fun receivedDisclosureForAttest(peer: Peer, disclosure: Disclosure) {
-        val solicited = this.knownAttestationHashes.values.filter { it.publicKey == peer.publicKey }
-        if (solicited.isNotEmpty()) {
+        val solicited = this.knownAttestationHashes.values.any { it.publicKey == peer.publicKey }
+        if (solicited) {
             val (correct, pseudonym) = this.identityManager.substantiate(
                 peer.publicKey,
                 disclosure.metadata,

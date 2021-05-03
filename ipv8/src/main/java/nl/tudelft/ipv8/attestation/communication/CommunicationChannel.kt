@@ -190,6 +190,10 @@ class CommunicationChannel(
         return out.sortedBy { it.attributeName }
     }
 
+    fun getAttestationsSignedBy(peer: Peer) {
+        this.identityOverlay.identityManager.database.getAttestationsBy(peer.publicKey)
+    }
+
     @Deprecated("This should not be used.")
     fun getAttributes(peer: Peer): HashMap<ByteArrayKey, Triple<String, HashMap<String, Any?>, List<ByteArray>>> {
         val pseudonym = this.identityOverlay.identityManager.getPseudonym(peer.publicKey)
