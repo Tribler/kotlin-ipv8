@@ -1,4 +1,4 @@
-package nl.tudelft.ipv8.attestation.identity
+package nl.tudelft.ipv8.attestation.tokenTree
 
 import nl.tudelft.ipv8.attestation.SignedObject
 import nl.tudelft.ipv8.keyvault.PrivateKey
@@ -7,14 +7,14 @@ import nl.tudelft.ipv8.util.sha3_256
 import nl.tudelft.ipv8.util.toHex
 
 class Token(
-    private val previousTokenHash: ByteArray,
+    val previousTokenHash: ByteArray,
     content: ByteArray? = null,
     contentHash: ByteArray? = null,
     privateKey: PrivateKey? = null,
-    signature: ByteArray? = null
+    signature: ByteArray? = null,
 ) : SignedObject(privateKey, signature) {
 
-    private var content: ByteArray? = null
+    var content: ByteArray? = null
     var contentHash: ByteArray
 
     init {
@@ -24,6 +24,7 @@ class Token(
         } else if (content == null && contentHash != null) {
             this.contentHash = contentHash
         } else throw RuntimeException("Specify either `content` or `content_hash`.")
+        super.init()
     }
 
     override fun getPlaintext(): ByteArray {
@@ -36,7 +37,7 @@ class Token(
 
     fun receiveContent(content: ByteArray): Boolean {
         contentHash = sha3_256(content)
-        if (this.contentHash == contentHash) {
+        if (this.contentHash.contentEquals(contentHash)) {
             this.content = content
             return true
         }
@@ -51,12 +52,28 @@ class Token(
         return "Token[${this.hash.toHex()}](${this.previousTokenHash.toHex()}, ${contentHash.toHex()})"
     }
 
+    operator fun component1(): ByteArray {
+        return this.previousTokenHash
+    }
+
+    operator fun component2(): ByteArray {
+        return this.signature
+    }
+
+    operator fun component3(): ByteArray {
+        return this.contentHash
+    }
+
+    operator fun component4(): ByteArray? {
+        return this.content
+    }
+
     companion object {
         fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int = 0): Token {
             val sigLength = publicKey.getSignatureLength()
             return Token(data.copyOfRange(offset, offset + 32),
-                data.copyOfRange(offset + 32, offset + 64),
-                data.copyOfRange(offset + 64, offset + 64 + sigLength))
+                contentHash = data.copyOfRange(offset + 32, offset + 64),
+                signature = data.copyOfRange(offset + 64, offset + 64 + sigLength))
         }
 
         fun create(previousToken: Token, content: ByteArray, privateKey: PrivateKey): Token {
@@ -65,9 +82,9 @@ class Token(
 
         fun fromDatabaseTuple(
             previousTokenHash: ByteArray,
-            signature: ByteArray,
-            contentHash: ByteArray,
-            content: ByteArray?
+            signature: ByteArray?,
+            contentHash: ByteArray?,
+            content: ByteArray?,
         ): Token {
             val token = Token(previousTokenHash, signature, contentHash = contentHash)
             if (content != null) {

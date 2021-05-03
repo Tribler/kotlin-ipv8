@@ -2,7 +2,7 @@
 
 buildscript {
     ext.kotlin_version = '1.4.21'
-    ext.ktlint_version = '0.36.0'
+    ext.ktlint_version = '0.41.0'
     ext.coroutines_version = '1.4.2'
     ext.ktlint_gradle_version = '9.1.1'
     // https://github.com/cashapp/sqldelight/issues/1574

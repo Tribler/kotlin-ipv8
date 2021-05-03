@@ -1,5 +1,7 @@
 package nl.tudelft.ipv8.attestation.trustchain.validation
 
+import java.security.PublicKey
+
 /**
  * Contains the various results that the validator can return.
  */
@@ -36,6 +38,21 @@ sealed class ValidationResult {
         override fun toString(): String {
             return "Invalid(" + errors.joinToString(", ") + ")"
         }
+    }
+
+    /**
+     * The block validation depends on specific information
+     */
+    class MissingBlocks(val blockRanges: List<BlockRange>) : ValidationResult() {
+        override fun toString(): String {
+            return "MissingBlocks (" + blockRanges.joinToString(", ") + ")"
+        }
+    }
+}
+
+data class BlockRange(val publicKey: ByteArray, val range: LongRange) {
+    override fun toString(): String {
+        return "${publicKey}:${range.first}-${range.last}"
     }
 }
 

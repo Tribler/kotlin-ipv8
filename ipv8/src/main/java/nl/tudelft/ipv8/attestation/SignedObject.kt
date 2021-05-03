@@ -6,15 +6,14 @@ import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.deserializeULong
 import nl.tudelft.ipv8.util.sha3_256
 
-abstract class SignedObject(val privateKey: PrivateKey? = null, signature: ByteArray? = null) {
+abstract class SignedObject(val privateKey: PrivateKey? = null, private val knownSignature: ByteArray? = null) {
 
     var hash = byteArrayOf()
     open lateinit var signature: ByteArray
     private val crypto = defaultCryptoProvider
 
-
-    init {
-        this.sign(privateKey, signature)
+    fun init() {
+        this.sign(privateKey, knownSignature)
     }
 
     fun verify(publicKey: PublicKey): Boolean {
@@ -23,15 +22,13 @@ abstract class SignedObject(val privateKey: PrivateKey? = null, signature: ByteA
 
     private fun sign(privateKey: PrivateKey? = null, signature: ByteArray? = null) {
         if (privateKey != null && signature == null) {
-            privateKey.sign(this.getPlaintext())
+            this.signature = privateKey.sign(this.getPlaintext())
         } else if (privateKey == null && signature != null) {
             this.signature = signature
         } else {
             throw RuntimeException("Specify either a private key or a signature.")
         }
-
         this.hash = sha3_256(this.getPlaintextSigned())
-
     }
 
     abstract fun getPlaintext(): ByteArray
@@ -43,7 +40,7 @@ abstract class SignedObject(val privateKey: PrivateKey? = null, signature: ByteA
     abstract fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int = 0): SignedObject
 
     override fun equals(other: Any?): Boolean {
-        if (other !is SignedObject){
+        if (other !is SignedObject) {
             return false
         }
         return this.getPlaintextSigned().contentEquals(other.getPlaintextSigned())

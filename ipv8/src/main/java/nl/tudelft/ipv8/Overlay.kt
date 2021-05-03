@@ -22,7 +22,7 @@ interface Overlay : EndpointListener {
         get() = myPeer.lamportTimestamp
 
     /**
-     * Called to inintialize this overlay.
+     * Called to initialize this overlay.
      */
     fun load() {
         endpoint.addListener(this)
@@ -84,7 +84,7 @@ interface Overlay : EndpointListener {
     /**
      * Get a peer for introduction.
      *
-     * @param Optionally specify a peer that is not considered eligible for introduction.
+     * @param exclude Optionally specify a peer that is not considered eligible for introduction.
      * @return A peer to send an introduction request to, or null if are none available.
      */
     fun getPeerForIntroduction(exclude: Peer? = null): Peer?

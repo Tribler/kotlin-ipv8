@@ -1,30 +1,33 @@
 package nl.tudelft.ipv8.attestation.identity
 
 import nl.tudelft.ipv8.attestation.SignedObject
+import nl.tudelft.ipv8.attestation.tokenTree.Token
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.util.toHex
 import org.json.JSONObject
 
 class Metadata(
-    private val tokenPointer: ByteArray,
-    private val serializedJSONObject: ByteArray,
+    val tokenPointer: ByteArray,
+    val serializedMetadata: ByteArray,
     privateKey: PrivateKey? = null,
-    signature: ByteArray? = null
+    signature: ByteArray? = null,
 ) : SignedObject(privateKey, signature) {
 
+    init {
+        super.init()
+    }
 
     override fun getPlaintext(): ByteArray {
-        return this.tokenPointer + this.serializedJSONObject
+        return this.tokenPointer + this.serializedMetadata
     }
 
-    fun toDatabaseTuple(): Array<ByteArray> {
-        return arrayOf(this.tokenPointer, this.signature, this.serializedJSONObject)
+    fun toDatabaseTuple(): Triple<ByteArray, ByteArray?, ByteArray> {
+        return Triple(this.tokenPointer, this.signature, this.serializedMetadata)
     }
 
-    @ExperimentalStdlibApi
     override fun toString(): String {
-        return "Metadata(${this.tokenPointer.toHex()},\n${this.serializedJSONObject.toString(Charsets.UTF_8)}"
+        return "Metadata(${this.tokenPointer.toHex()},\n${String(this.serializedMetadata)}"
     }
 
     override fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int): Metadata {
@@ -38,7 +41,7 @@ class Metadata(
             }
 
             // Index on which signature start.
-            val signIndex = data.lastIndex - publicKey.getSignatureLength()
+            val signIndex = data.size - publicKey.getSignatureLength()
             return Metadata(data.copyOfRange(0, 32),
                 data.copyOfRange(32, signIndex),
                 signature = data.copyOfRange(signIndex, data.size))
@@ -52,8 +55,8 @@ class Metadata(
 
         fun fromDatabaseTuple(
             tokenPointer: ByteArray,
-            signature: ByteArray,
-            serializedJSONObject: ByteArray
+            signature: ByteArray?,
+            serializedJSONObject: ByteArray,
         ): Metadata {
             return Metadata(tokenPointer, serializedJSONObject, signature = signature)
         }

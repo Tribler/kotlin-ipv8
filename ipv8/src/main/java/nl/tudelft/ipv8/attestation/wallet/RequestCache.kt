@@ -1,8 +1,13 @@
 package nl.tudelft.ipv8.attestation.wallet
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import nl.tudelft.ipv8.attestation.wallet.caches.NumberCache
 import java.math.BigInteger
+
+private val logger = KotlinLogging.logger {}
 
 class RequestCache {
 
@@ -21,6 +26,7 @@ class RequestCache {
             } else {
                 this.logger.debug("Add cache $cache")
                 this.identifiers[identifier] = cache
+                GlobalScope.launch { cache.start(calleeCallback = { pop(cache.prefix, cache.number) }) }
                 cache
             }
         }
@@ -34,18 +40,27 @@ class RequestCache {
         return this.has(identifierPair.first, identifierPair.second)
     }
 
+    fun pop(identifierPair: Pair<String, BigInteger>): NumberCache? {
+        return this.pop(identifierPair.first, identifierPair.second)
+    }
+
     fun pop(prefix: String, number: BigInteger): NumberCache? {
         val identifier = this.createIdentifier(prefix, number)
-        return this.identifiers.remove(identifier)
+        val cache = this.identifiers.remove(identifier)
+        cache?.stop()
+        return cache
     }
 
     fun get(prefix: String, number: BigInteger): NumberCache? {
         return this.identifiers.get(this.createIdentifier(prefix, number))
     }
 
+    fun get(identifierPair: Pair<String, BigInteger>): NumberCache? {
+        return this.get(identifierPair.first, identifierPair.second)
+    }
+
     private fun createIdentifier(prefix: String, number: BigInteger): String {
         return "$prefix:$number"
     }
-
 
 }

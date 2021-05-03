@@ -1,0 +1,1 @@
+{"databases":[{"packageName":"nl.tudelft.ipv8.sqldelight","compilationUnits":[{"name":"main","sourceFolders":[{"path":"src/main/sqldelight","dependency":false}]}],"outputDirectory":"build/generated/sqldelight/code/Database","className":"Database","dependencies":[]}]}

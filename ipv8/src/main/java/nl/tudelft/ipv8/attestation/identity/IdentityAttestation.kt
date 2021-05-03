@@ -11,6 +11,10 @@ class IdentityAttestation(
     signature: ByteArray? = null,
 ) : SignedObject(privateKey, signature) {
 
+    init {
+        super.init()
+    }
+
     override fun getPlaintext(): ByteArray {
         return this.metadataPointer
     }
@@ -39,7 +43,7 @@ class IdentityAttestation(
             return IdentityAttestation(metadata.hash, privateKey = privateKey)
         }
 
-        fun fromDatabaseTuple(metadataPointer: ByteArray, signature: ByteArray): IdentityAttestation {
+        fun fromDatabaseTuple(metadataPointer: ByteArray, signature: ByteArray?): IdentityAttestation {
             return IdentityAttestation(metadataPointer, signature = signature)
         }
     }
