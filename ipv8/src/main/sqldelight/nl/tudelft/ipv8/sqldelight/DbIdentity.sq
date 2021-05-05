@@ -52,3 +52,6 @@ SELECT authority_key FROM identity_attestations WHERE signature = ?;
 
 getKnownIdentities:
 SELECT public_key FROM tokens;
+
+getKnownSubjects:
+SELECT DISTINCT public_key FROM metadata;

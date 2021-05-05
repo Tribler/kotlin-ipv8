@@ -97,4 +97,9 @@ class IdentitySQLiteStore(database: Database) : IdentityStore {
         return dao.getKnownIdentities().executeAsList()
             .map { defaultCryptoProvider.keyFromPublicBin(it) }
     }
+
+    override fun getKnownSubjects(): List<PublicKey> {
+        return dao.getKnownSubjects().executeAsList()
+            .map { defaultCryptoProvider.keyFromPublicBin(it) }
+    }
 }
