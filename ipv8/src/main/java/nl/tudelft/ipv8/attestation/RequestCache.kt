@@ -1,4 +1,4 @@
-package nl.tudelft.ipv8.attestation.wallet
+package nl.tudelft.ipv8.attestation
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
@@ -6,8 +6,6 @@ import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import nl.tudelft.ipv8.attestation.wallet.caches.NumberCache
 import java.math.BigInteger
-
-private val logger = KotlinLogging.logger {}
 
 class RequestCache {
 
