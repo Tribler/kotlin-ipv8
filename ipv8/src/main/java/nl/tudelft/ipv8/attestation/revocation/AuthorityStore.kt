@@ -34,5 +34,5 @@ interface AuthorityStore {
 
     fun getVersionsSince(publicKeyHash: ByteArray, sinceVersion: Long): List<Long>
 
-    fun getAllRevocations(): List<GetAllRevocations>
+    fun getAllRevocations(): List<ByteArray>
 }
