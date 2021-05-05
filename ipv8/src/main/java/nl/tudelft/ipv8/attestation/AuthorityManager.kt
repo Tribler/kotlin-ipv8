@@ -1,4 +1,4 @@
- package nl.tudelft.ipv8.attestation
+package nl.tudelft.ipv8.attestation
 
 import nl.tudelft.ipv8.attestation.revocation.AuthorityStore
 import nl.tudelft.ipv8.attestation.revocation.RevocationBlob
@@ -34,6 +34,10 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
         }
     }
 
+    fun verify(signature: ByteArray): Boolean {
+        return !getAllRevocations().any { it.contentEquals(signature) }
+    }
+
     fun insertRevocations(
         publicKeyHash: ByteArray,
         versionNumber: Long,
@@ -58,6 +62,10 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
     fun getRevocations(publicKeyHash: ByteArray, fromVersion: Long = 0): List<RevocationBlob> {
         val versions = authorityDatabase.getVersionsSince(publicKeyHash, fromVersion)
         return authorityDatabase.getRevocations(publicKeyHash, versions)
+    }
+
+    fun getAllRevocations(): List<ByteArray> {
+        return authorityDatabase.getAllRevocations()
     }
 
     fun loadDefaultAuthorities() {

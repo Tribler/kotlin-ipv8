@@ -11,7 +11,7 @@ import nl.tudelft.ipv8.attestation.revocation.caches.PendingRevocationUpdateCach
 import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdateChunkPayload
 import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdatePreviewPayload
 import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdateRequestPayload
-import nl.tudelft.ipv8.attestation.wallet.RequestCache
+import nl.tudelft.ipv8.attestation.RequestCache
 import nl.tudelft.ipv8.attestation.wallet.caches.PeerCache
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.*
@@ -250,9 +250,9 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
 
                     val authority = this.authorityManager.getAuthority(revocationBlob.publicKeyHash)
                     if (authority?.publicKey != null) {
-                        var signable = serializeULong(revocationBlob.version.toULong())
+                        var signable = revocationBlob.version.toByteArray()
                         revocationBlob.revocations.forEach { signable += it }
-                        if (!authority.publicKey.verify(revocationBlob.signature, signable)) {
+                        if (!authority.publicKey.verify(revocationBlob.signature, sha3_256(signable))) {
                             logger.warn("Peer ${peer.mid} might have altered the revoked signatures, skipping!")
                         }
                     } else {

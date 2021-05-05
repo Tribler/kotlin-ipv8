@@ -308,16 +308,23 @@ class CommunicationChannel(
         }
 
         // Check if authority is recognized and the corresponding signature is correct.
-        if (!attestors.any { attestor ->
+        if (attestors.any { attestor ->
                 val authority =
                     this.attestationOverlay.authorityManager.getTrustedAuthority(attestor.first)
                 authority?.let {
                     it.publicKey?.verify(attestor.second, metadata.hash)
-                } == true
+                } == false
             }) {
             logger.info("Not accepting ${attestationHash.toHex()}, no recognized authority or valid signature found.")
             return false
         }
+
+        // Check if any authority has not revoked a signature
+        if (!this.attestationOverlay.authorityManager.verify(metadata.hash)) {
+            logger.info("Not accepting ${attestationHash.toHex()}, signature was revoked.")
+            return false
+        }
+
         return true
     }
 
