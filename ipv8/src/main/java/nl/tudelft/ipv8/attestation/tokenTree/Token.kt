@@ -36,8 +36,8 @@ class Token(
     }
 
     fun receiveContent(content: ByteArray): Boolean {
-        contentHash = sha3_256(content)
-        if (this.contentHash.contentEquals(contentHash)) {
+        val contentHash = sha3_256(content)
+        if (contentHash.contentEquals(this.contentHash)) {
             this.content = content
             return true
         }
