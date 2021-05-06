@@ -14,7 +14,7 @@ import nl.tudelft.ipv8.messaging.deserializeUShort
 import nl.tudelft.ipv8.util.ByteArrayKey
 import nl.tudelft.ipv8.util.toKey
 
-class IdentityManager(internal val database: IdentityStore) {
+class IdentityManager(internal var database: IdentityStore) {
 
     val pseudonyms = hashMapOf<ByteArrayKey, PseudonymManager>()
 
@@ -57,7 +57,7 @@ class IdentityManager(internal val database: IdentityStore) {
         var attestationOffset = 0
         var authorityOffset = 0
 
-        while (authorityOffset < serializedAttestations.size) {
+        while (authorityOffset < serializedAuthorities.size) {
             val authoritySize = deserializeUShort(serializedAuthorities, authorityOffset)
             authorityOffset += SERIALIZED_USHORT_SIZE
             val authority = defaultCryptoProvider.keyFromPublicBin(
