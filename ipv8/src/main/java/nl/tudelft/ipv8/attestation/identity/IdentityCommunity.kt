@@ -2,6 +2,9 @@ package nl.tudelft.ipv8.attestation.identity
 
 import mu.KotlinLogging
 import nl.tudelft.ipv8.*
+import nl.tudelft.ipv8.attestation.RequestCache
+import nl.tudelft.ipv8.attestation.communication.caches.DisclosureRequestCache
+import nl.tudelft.ipv8.attestation.communication.caches.TokenRequestCache
 import nl.tudelft.ipv8.attestation.identity.database.Credential
 import nl.tudelft.ipv8.attestation.identity.database.IdentityStore
 import nl.tudelft.ipv8.attestation.identity.manager.Disclosure
@@ -20,6 +23,7 @@ import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.strategy.RandomWalk
 import nl.tudelft.ipv8.util.ByteArrayKey
 import nl.tudelft.ipv8.util.asMap
+import nl.tudelft.ipv8.util.hexToBytes
 import nl.tudelft.ipv8.util.padSHA1Hash
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
@@ -56,6 +60,10 @@ class IdentityCommunity(
 ) : Community() {
 
     var identityManager: IdentityManager = identityManager ?: IdentityManager(database)
+    val requestCache = RequestCache()
+
+    private lateinit var attestationPresentationCallback: (peer: Peer, attributeHash: ByteArray, value: ByteArray, metadata: Metadata, attestations: List<IdentityAttestation>) -> Unit
+
     private val knownAttestationHashes = hashMapOf<ByteArrayKey, HashInformation>()
     private val pseudonymManager = this.identityManager.getPseudonym(this.myPeer.key)
 
@@ -90,9 +98,13 @@ class IdentityCommunity(
         messageHandlers[MISSING_RESPONSE_PAYLOAD] = ::onMissingResponseWrapper
     }
 
+    fun setAttestationPresentationCallback(f: (peer: Peer, attributeHash: ByteArray, value: ByteArray, metadata: Metadata, attestations: List<IdentityAttestation>) -> Unit) {
+        this.attestationPresentationCallback = f
+    }
+
     private fun onDisclosureWrapper(packet: Packet) {
         val (peer, payload) = packet.getAuthPayload(DisclosePayload.Deserializer)
-        logger.info("Received Disclose payload from ${peer.mid}.")
+        logger.info("  Disclose payload from ${peer.mid}.")
         this.onDisclosure(peer, payload)
     }
 
@@ -209,60 +221,127 @@ class IdentityCommunity(
     }
 
     private fun receivedDisclosureForAttest(peer: Peer, disclosure: Disclosure) {
-        val solicited = this.knownAttestationHashes.values.any { it.publicKey == peer.publicKey }
-        if (solicited) {
-            val (correct, pseudonym) = this.identityManager.substantiate(
-                peer.publicKey,
-                disclosure.metadata,
-                disclosure.tokens,
-                disclosure.attestations,
-                disclosure.authorities
-            )
-            val requiredAttributes =
-                this.knownAttestationHashes.filter { it.value.publicKey == peer.publicKey }.keys.toTypedArray()
-            val knownAttributes: List<ByteArrayKey> =
-                pseudonym.tree.elements.values.map { ByteArrayKey(it.contentHash) }
+        val (correct, pseudonym) = this.identityManager.substantiate(
+            peer.publicKey,
+            disclosure.metadata,
+            disclosure.tokens,
+            disclosure.attestations,
+            disclosure.authorities
+        )
+        val requiredAttributes =
+            this.knownAttestationHashes.filter { it.value.publicKey == peer.publicKey }.keys.toTypedArray()
+        val knownAttributes: List<ByteArrayKey> =
+            pseudonym.tree.elements.values.map { ByteArrayKey(it.contentHash) }
 
-            if (correct && requiredAttributes.any { knownAttributes.contains(it) }) {
-                for (credential in pseudonym.getCredentials()) {
-                    if (shouldSign(pseudonym, credential.metadata)) {
-                        logger.info("Attesting to ${credential.metadata}.")
-                        val myPrivateKey = this.myPeer.key as PrivateKey
-                        val attestation = pseudonym.createAttestation(
-                            credential.metadata,
-                            myPrivateKey
-                        )
-                        pseudonym.addAttestation(this.myPeer.publicKey, attestation)
-                        val payload = AttestPayload(attestation.getPlaintextSigned())
-                        this.endpoint.send(peer, serializePacket(ATTEST_PAYLOAD, payload))
-                    }
+        if (correct && requiredAttributes.any { knownAttributes.contains(it) }) {
+            for (credential in pseudonym.getCredentials()) {
+                if (shouldSign(pseudonym, credential.metadata)) {
+                    logger.info("Attesting to ${credential.metadata}.")
+                    val myPrivateKey = this.myPeer.key as PrivateKey
+                    val attestation = pseudonym.createAttestation(
+                        credential.metadata,
+                        myPrivateKey
+                    )
+                    pseudonym.addAttestation(this.myPeer.publicKey, attestation)
+                    val payload = AttestPayload(attestation.getPlaintextSigned())
+                    this.endpoint.send(peer, serializePacket(ATTEST_PAYLOAD, payload))
                 }
             }
+        }
 
-            for (attributeHash in requiredAttributes) {
-                if (!knownAttributes.contains(attributeHash)) {
-                    logger.info("Missing information for attestation ${attributeHash.bytes.toHex()}, requesting more.")
-                    val payload = RequestMissingPayload(pseudonym.tree.elements.size)
-                    this.endpoint.send(peer, serializePacket(REQUEST_MISSING_PAYLOAD, payload))
-                }
+        for (attributeHash in requiredAttributes) {
+            if (!knownAttributes.contains(attributeHash)) {
+                logger.info("Missing information for attestation ${attributeHash.bytes.toHex()}, requesting more.")
+                val payload = RequestMissingPayload(pseudonym.tree.elements.size)
+                this.endpoint.send(peer, serializePacket(REQUEST_MISSING_PAYLOAD, payload))
             }
-        } else {
-            logger.warn("Received unsolicited disclosure from $peer, dropping.")
         }
     }
 
-    fun requestAttestationAdvertisement(
+    // TODO: remove parameters from disclosureInformation.
+    private fun receivedDisclosureForPresentation(
+        peer: Peer,
+        disclosure: Disclosure,
+        attributeName: String,
+        disclosureInformation: String
+    ) {
+        val (correct, pseudonym) = this.identityManager.substantiate(
+            peer.publicKey,
+            disclosure.metadata,
+            disclosure.tokens,
+            disclosure.attestations,
+            disclosure.authorities
+        )
+
+        val disclosureJSON = JSONObject(disclosureInformation)
+        val requiredAttributes = listOf(disclosureJSON.getString("attributeHash").hexToBytes().toKey())
+        val knownAttributes: List<ByteArrayKey> =
+            pseudonym.tree.elements.values.map { ByteArrayKey(it.contentHash) }
+
+        if (correct && requiredAttributes.any { knownAttributes.contains(it) }) {
+            for (credential in pseudonym.getCredentials()) {
+                if (shouldSign(pseudonym, credential.metadata)) {
+                    val presentedAttributeName =
+                        JSONObject(String(credential.metadata.serializedMetadata)).getString("name")
+                    if (presentedAttributeName != attributeName) {
+                        logger.warn("Client sent wrong attestation. Requested: $attributeName, received: $presentedAttributeName")
+                        return
+                    }
+                    logger.info("Received valid attestation presentation ${String(credential.metadata.serializedMetadata)}")
+                    val value = disclosureJSON.getString("value").hexToBytes()
+                    this.attestationPresentationCallback(
+                        peer, requiredAttributes[0].bytes, value, credential.metadata,
+                        credential.attestations.toList()
+                    )
+                }
+            }
+        }
+
+        for (attributeHash in requiredAttributes) {
+            if (!knownAttributes.contains(attributeHash)) {
+                logger.info("Missing information for attestation ${attributeHash.bytes.toHex()}, requesting more.")
+                // TODO: add second parameter for uniqueness.
+                requestCache.add(TokenRequestCache(requestCache, peer.mid, attributeName, disclosureInformation))
+                val payload = RequestMissingPayload(pseudonym.tree.elements.size)
+                this.endpoint.send(peer, serializePacket(REQUEST_MISSING_PAYLOAD, payload))
+            }
+        }
+    }
+
+    fun presentAttestationAdvertisement(
+        peer: Peer,
+        requestId: String,
+        attributeHash: ByteArray,
+        attributeName: String,
+        attributeValue: ByteArray,
+        blockType: String = ID_METADATA,
+        metadata: HashMap<String, String>?
+    ) {
+        val credential = this.selfAdvertise(attributeHash, attributeName, blockType, metadata)
+        this.permissions[peer] = this.tokenChain.size
+        val disclosure = this.pseudonymManager.discloseCredentials(listOf(credential), setOf())
+        val (metadataObj, tokens, attestations, authorities) = this.fitDisclosure(disclosure)
+        val presentationMetadata = JSONObject()
+        presentationMetadata.put("id", requestId)
+        presentationMetadata.put("attestationHash", attributeHash)
+        presentationMetadata.put("value", attributeValue)
+        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities, presentationMetadata.toString())
+        this.endpoint.send(peer, serializePacket(DISCLOSURE_PAYLOAD, payload))
+    }
+
+    fun advertiseAttestation(
         peer: Peer,
         attributeHash: ByteArray,
         name: String,
         blockType: String = ID_METADATA,
         metadata: HashMap<String, String>?,
+        advertisementInformation: String? = null,
     ) {
         val credential = this.selfAdvertise(attributeHash, name, blockType, metadata)
         this.permissions[peer] = this.tokenChain.size
         val disclosure = this.pseudonymManager.discloseCredentials(listOf(credential), setOf())
         val (metadataObj, tokens, attestations, authorities) = this.fitDisclosure(disclosure)
-        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities)
+        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities, advertisementInformation)
         this.endpoint.send(peer, serializePacket(DISCLOSURE_PAYLOAD, payload))
     }
 
@@ -298,10 +377,33 @@ class IdentityCommunity(
     }
 
     private fun onDisclosure(peer: Peer, payload: DisclosePayload) {
-        this.receivedDisclosureForAttest(
-            peer,
-            Disclosure(payload.metadata, payload.tokens, payload.attestations, payload.authorities)
-        )
+        val isAttestationRequest = this.knownAttestationHashes.values.any { it.publicKey == peer.publicKey }
+        val disclosureMD = JSONObject(payload.advertisementInformation ?: "{}")
+        val id = disclosureMD.optString("id")
+        val idPair = DisclosureRequestCache.idFromUUID(id)
+        val isAttestationPresentation = this.requestCache.has(idPair)
+
+        when {
+            // Presentation takes precedence, as id should not be set otherwise.
+            isAttestationPresentation -> {
+                val cache = this.requestCache.pop(idPair)!! as DisclosureRequestCache
+                this.receivedDisclosureForPresentation(
+                    peer,
+                    Disclosure(payload.metadata, payload.tokens, payload.attestations, payload.authorities),
+                    cache.disclosureRequest.attributeName,
+                    payload.advertisementInformation!!
+                )
+            }
+            isAttestationRequest -> {
+                this.receivedDisclosureForAttest(
+                    peer,
+                    Disclosure(payload.metadata, payload.tokens, payload.attestations, payload.authorities)
+                )
+            }
+            else -> {
+                logger.warn("Received unsolicited disclosure from $peer, dropping.")
+            }
+        }
     }
 
     private fun onAttest(peer: Peer, payload: AttestPayload) {
@@ -325,15 +427,38 @@ class IdentityCommunity(
                 out += serialized
             }
         }
+
         val responsePayload = MissingResponsePayload(out)
         this.endpoint.send(peer, serializePacket(MISSING_RESPONSE_PAYLOAD, responsePayload))
     }
 
     private fun onMissingResponse(peer: Peer, payload: MissingResponsePayload) {
-        this.receivedDisclosureForAttest(
-            peer,
-            Disclosure(byteArrayOf(), payload.tokens, byteArrayOf(), byteArrayOf())
-        )
+        val solicitedAttestationRequest = this.knownAttestationHashes.values.any { it.publicKey == peer.publicKey }
+        val idPair = TokenRequestCache.generateId(peer.mid)
+        val solicitedAttestationPresentation = this.requestCache.has(idPair)
+
+        when {
+            solicitedAttestationPresentation -> {
+                val cache = (this.requestCache.get(idPair)!! as TokenRequestCache)
+                val disclosureMD = JSONObject(cache.disclosureInformation)
+                this.receivedDisclosureForPresentation(
+                    peer,
+                    Disclosure(byteArrayOf(), payload.tokens, byteArrayOf(), byteArrayOf()),
+                    cache.requestedAttributeName,
+                    cache.disclosureInformation
+                )
+            }
+            solicitedAttestationRequest -> {
+                this.receivedDisclosureForAttest(
+                    peer,
+                    Disclosure(byteArrayOf(), payload.tokens, byteArrayOf(), byteArrayOf())
+                )
+            }
+
+            else -> {
+                logger.warn("Received unsolicited disclosure from $peer, dropping.")
+            }
+        }
     }
 
     override fun equals(other: Any?): Boolean {

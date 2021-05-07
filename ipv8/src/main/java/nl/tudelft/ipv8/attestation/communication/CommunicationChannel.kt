@@ -12,6 +12,8 @@ import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.identity.IdentityCommunity
 import nl.tudelft.ipv8.attestation.identity.Metadata
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
+import nl.tudelft.ipv8.attestation.communication.caches.DisclosureRequestCache
+import nl.tudelft.ipv8.attestation.identity.IdentityAttestation
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
@@ -25,6 +27,7 @@ import nl.tudelft.ipv8.util.toByteArray
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
 import org.json.JSONObject
+import java.util.UUID
 
 const val DEFAULT_TIME_OUT = 30_000L
 private val logger = KotlinLogging.logger {}
@@ -33,7 +36,6 @@ class CommunicationChannel(
     val attestationOverlay: AttestationCommunity,
     val identityOverlay: IdentityCommunity
 ) {
-
     val attestationRequests =
         hashMapOf<AttributePointer, Triple<SettableDeferred<ByteArray?>, String, String?>>()
     val verifyRequests = hashMapOf<AttributePointer, SettableDeferred<Boolean>>()
@@ -44,6 +46,7 @@ class CommunicationChannel(
         this.attestationOverlay.setAttestationRequestCallback(this::onRequestAttestationAsync)
         this.attestationOverlay.setAttestationRequestCompleteCallback(this::onAttestationComplete)
         this.attestationOverlay.setVerifyRequestCallback(this::onVerifyRequestAsync)
+        this.identityOverlay.setAttestationPresentationCallback(this::onAttestationPresentationComplete)
     }
 
     val publicKeyBin
@@ -57,6 +60,9 @@ class CommunicationChannel(
 
     val schemas
         get() = this.attestationOverlay.schemaManager.getSchemaNames()
+
+    val authorityManager
+        get() = this.attestationOverlay.authorityManager
 
     private fun onRequestAttestationAsync(
         peer: Peer,
@@ -97,7 +103,7 @@ class CommunicationChannel(
                 )
             } else {
                 @Suppress("UNCHECKED_CAST")
-                this.identityOverlay.requestAttestationAdvertisement(
+                this.identityOverlay.advertiseAttestation(
                     fromPeer!!, attributeHash, attributeName, idFormat,
                     metadata as HashMap<String, String>?
                 )
@@ -135,6 +141,20 @@ class CommunicationChannel(
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
+    private fun onAttestationPresentationComplete(
+        peer: Peer,
+        attributeHash: ByteArray,
+        value: ByteArray,
+        metadata: Metadata,
+        attestations: List<IdentityAttestation>
+    ) {
+        logger.info("Received correct attestation presentation with hash ${attributeHash.toHex()}.")
+        val parsedMD = JSONObject(metadata.serializedMetadata)
+        val idFormat = parsedMD.getString("schema")
+        this.verify(peer, attributeHash, listOf(value), idFormat)
+    }
+
     private fun dropIdentityTableData() {
         TODO("")
     }
@@ -145,79 +165,6 @@ class CommunicationChannel(
 
     fun remove() {
         TODO("")
-    }
-
-    fun getOfflineVerifiableAttributes(): List<AttestationPresentation> {
-        val out = mutableListOf<AttestationPresentation>()
-        val peer = this.myPeer
-        val pseudonym = this.identityOverlay.identityManager.getPseudonym(peer.publicKey)
-
-        for (credential in pseudonym.getCredentials()) {
-            val attestations = credential.attestations.toList()
-
-            val attestors = mutableListOf<Pair<ByteArray, ByteArray>>()
-
-            for (attestation in attestations) {
-                val attestor = defaultCryptoProvider.keyFromPublicBin(
-                    this.identityOverlay.identityManager.database.getAuthority(
-                        attestation
-                    )
-                ).keyToHash()
-                attestors += Pair(attestor, attestation.signature)
-            }
-
-            val attributeHash =
-                pseudonym.tree.elements[credential.metadata.tokenPointer.toKey()]!!.contentHash
-            val jsonMetadata = JSONObject(String(credential.metadata.serializedMetadata))
-
-            val attributeName = jsonMetadata.getString("name")
-            val attributeValue =
-                this.attestationOverlay.database.getValueByHash(
-                    stripSHA1Padding(attributeHash)
-                )!!
-            val idFormat = jsonMetadata.getString("schema")
-            val signDate = jsonMetadata.getDouble("date").toFloat()
-            out += AttestationPresentation(
-                attributeHash,
-                attributeName,
-                attributeValue,
-                idFormat,
-                signDate,
-                credential.metadata,
-                attestors
-            )
-        }
-        return out.sortedBy { it.attributeName }
-    }
-
-    fun getAttestationsSignedBy(peer: Peer) {
-        this.identityOverlay.identityManager.database.getAttestationsBy(peer.publicKey)
-    }
-
-    @Deprecated("This should not be used.")
-    fun getAttributes(peer: Peer): HashMap<ByteArrayKey, Triple<String, HashMap<String, Any?>, List<ByteArray>>> {
-        val pseudonym = this.identityOverlay.identityManager.getPseudonym(peer.publicKey)
-        val out: HashMap<ByteArrayKey, Triple<String, HashMap<String, Any?>, List<ByteArray>>> =
-            hashMapOf()
-
-        for (credential in pseudonym.getCredentials()) {
-            val attestations = credential.attestations.toList()
-            val attestors = mutableListOf<ByteArray>()
-
-            for (attestation in attestations) {
-                attestors += this.identityOverlay.identityManager.database.getAuthority(attestation)
-            }
-            val attributeHash =
-                pseudonym.tree.elements[credential.metadata.tokenPointer.toKey()]!!.contentHash
-            val jsonMetadata = JSONObject(String(credential.metadata.serializedMetadata))
-            out[attributeHash.toKey()] =
-                Triple(
-                    jsonMetadata.getString("name"),
-                    jsonMetadata.asMap() as HashMap<String, Any?>,
-                    attestors
-                )
-        }
-        return out
     }
 
     fun requestAttestation(
@@ -259,6 +206,20 @@ class CommunicationChannel(
         GlobalScope.launch { outstanding.setResult(false) }
     }
 
+    fun generateDisclosureRequest(
+        attributeName: String
+    ): String {
+        val id = UUID.randomUUID().toString()
+        this.identityOverlay.requestCache.add(
+            DisclosureRequestCache(
+                this.identityOverlay.requestCache,
+                id,
+                DisclosureRequest(attributeName),
+            )
+        )
+        return id
+    }
+
     fun verify(
         peer: Peer,
         attestationHash: ByteArray,
@@ -273,6 +234,19 @@ class CommunicationChannel(
             this::onVerificationResults,
             idFormat
         )
+    }
+
+    fun revoke(signature: ByteArray) {
+        return revoke(listOf(signature))
+    }
+
+    fun revoke(signatures: List<ByteArray>) {
+        val keyHash = myPeer.publicKey.keyToHash()
+        val latestVersion = authorityManager.getAuthority(keyHash)?.version?.plus(1) ?: 1L
+        var signableData = latestVersion.toByteArray()
+        signatures.forEach { signableData += it }
+        val versionSignature = (myPeer.key as PrivateKey).sign(sha3_256(signableData))
+        authorityManager.insertRevocations(myPeer.publicKey.keyToHash(), latestVersion, versionSignature, signatures)
     }
 
     fun verifyLocally(
@@ -332,9 +306,123 @@ class CommunicationChannel(
         val timestamp = System.currentTimeMillis()
         return Pair(timestamp, (this.myPeer.key as PrivateKey).sign(timestamp.toByteArray()))
     }
+
+    fun getOfflineVerifiableAttributes(publicKey: PublicKey = this.myPeer.publicKey): List<AttestationPresentation> {
+        val out = mutableListOf<AttestationPresentation>()
+        val pseudonym = this.identityOverlay.identityManager.getPseudonym(publicKey)
+
+        for (credential in pseudonym.getCredentials()) {
+            val attestations = credential.attestations.toList()
+
+            val attestors = mutableListOf<Pair<ByteArray, ByteArray>>()
+
+            for (attestation in attestations) {
+                val attestor = defaultCryptoProvider.keyFromPublicBin(
+                    this.identityOverlay.identityManager.database.getAuthority(
+                        attestation
+                    )
+                ).keyToHash()
+                attestors += Pair(attestor, attestation.signature)
+            }
+
+            val attributeHash =
+                pseudonym.tree.elements[credential.metadata.tokenPointer.toKey()]!!.contentHash
+            val jsonMetadata = JSONObject(String(credential.metadata.serializedMetadata))
+
+            val attributeName = jsonMetadata.getString("name")
+            val attributeValue =
+                this.attestationOverlay.database.getValueByHash(
+                    stripSHA1Padding(attributeHash)
+                )!!
+            val idFormat = jsonMetadata.getString("schema")
+            val signDate = jsonMetadata.getDouble("date").toFloat()
+            out += AttestationPresentation(
+                publicKey,
+                attributeHash,
+                attributeName,
+                attributeValue,
+                idFormat,
+                signDate,
+                credential.metadata,
+                attestors
+            )
+        }
+        return out.sortedBy { it.attributeName }
+    }
+
+    fun getAttributesSignedBy(peer: Peer): List<SubjectAttestationPresentation> {
+        val db = this.identityOverlay.identityManager.database
+        // Exclude own public key
+        val subjects = db.getKnownSubjects() - peer.publicKey
+        val out = mutableListOf<SubjectAttestationPresentation>()
+        for (subject in subjects) {
+            val mdList = db.getMetadataFor(subject)
+            for (metadata in mdList) {
+                val md = JSONObject(String(metadata.serializedMetadata))
+                out.add(
+                    SubjectAttestationPresentation(
+                        subject,
+                        metadata.hash,
+                        metadata,
+                        md.getString("name"),
+                        md.getDouble("date").toFloat()
+                    )
+                )
+            }
+        }
+        return out.sortedBy { it.publicKey.keyToHash().toHex() }
+    }
+
+    @Deprecated("This should not be used.")
+    fun getAttributes(peer: Peer): HashMap<ByteArrayKey, Triple<String, HashMap<String, Any?>, List<ByteArray>>> {
+        val pseudonym = this.identityOverlay.identityManager.getPseudonym(peer.publicKey)
+        val out: HashMap<ByteArrayKey, Triple<String, HashMap<String, Any?>, List<ByteArray>>> =
+            hashMapOf()
+
+        for (credential in pseudonym.getCredentials()) {
+            val attestations = credential.attestations.toList()
+            val attestors = mutableListOf<ByteArray>()
+
+            for (attestation in attestations) {
+                attestors += this.identityOverlay.identityManager.database.getAuthority(attestation)
+            }
+            val attributeHash =
+                pseudonym.tree.elements[credential.metadata.tokenPointer.toKey()]!!.contentHash
+            val jsonMetadata = JSONObject(String(credential.metadata.serializedMetadata))
+            out[attributeHash.toKey()] =
+                Triple(
+                    jsonMetadata.getString("name"),
+                    jsonMetadata.asMap() as HashMap<String, Any?>,
+                    attestors
+                )
+        }
+        return out
+    }
+}
+
+class SubjectAttestationPresentation(
+    val publicKey: PublicKey,
+    val metadataHash: ByteArray,
+    val metadata: Metadata,
+    val attributeName: String,
+    val signDate: Float,
+) {
+    override fun equals(other: Any?): Boolean {
+        return other is SubjectAttestationPresentation && this.publicKey == other.publicKey && this.metadata == other.metadata
+    }
+
+    override fun hashCode(): Int {
+        var result = publicKey.hashCode()
+        result = 31 * result + metadataHash.contentHashCode()
+        result = 31 * result + metadata.hashCode()
+        result = 31 * result + attributeName.hashCode()
+        result = 31 * result + signDate.hashCode()
+        return result
+    }
 }
 
 class AttestationPresentation(
+    val publicKey: PublicKey,
     val attributeHash: ByteArray,
     val attributeName: String,
     val attributeValue: ByteArray,
@@ -344,24 +432,24 @@ class AttestationPresentation(
     val attestors: List<Pair<ByteArray, ByteArray>>
 ) {
     override fun equals(other: Any?): Boolean {
-        return other is AttestationPresentation && this.attributeHash.contentEquals(other.attributeHash) && this.attestors.size == other.attestors.size
+        return other is AttestationPresentation && this.publicKey == other.publicKey && this.attributeHash.contentEquals(
+            other.attributeHash
+        ) && this.attestors.size == other.attestors.size
+    }
+
+    override fun hashCode(): Int {
+        var result = publicKey.hashCode()
+        result = 31 * result + attributeHash.contentHashCode()
+        result = 31 * result + attributeName.hashCode()
+        result = 31 * result + attributeValue.contentHashCode()
+        result = 31 * result + idFormat.hashCode()
+        result = 31 * result + signDate.hashCode()
+        result = 31 * result + metadata.hashCode()
+        result = 31 * result + attestors.hashCode()
+        return result
     }
 }
 
-// class PrivateAttestationBlob(
-//     val attributeName: String,
-//     val attributeHash: ByteArray,
-//     val metadataString: String,
-//     val idFormat: String,
-//     val attributeValue: String,
-//     val signature: ByteArray,
-//     val attestorKeys: List<String>
-// ) {
-//     override fun equals(other: Any?): Boolean {
-//         return other is PrivateAttestationBlob && this.attributeName == other.attributeName && this.attributeHash.contentEquals(
-//             other.attributeHash
-//         ) && this.metadataString == other.metadataString && this.idFormat == other.idFormat && this.attributeValue == other.attributeValue && this.signature.contentEquals(
-//             other.signature
-//         ) && this.attestorKeys == other.attestorKeys
-//     }
-// }
+class DisclosureRequest(
+    val attributeName: String
+)
