@@ -11,6 +11,7 @@ import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.AuthorityManager
+import nl.tudelft.ipv8.attestation.RequestCache
 import nl.tudelft.ipv8.attestation.schema.*
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION_REQUEST
