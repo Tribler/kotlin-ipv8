@@ -336,27 +336,28 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         peer: Peer,
         payload: VerifyAttestationRequestPayload,
     ) {
-        val attestationBlob = this.database.getAttestationBlobByHash(payload.hash)
+        val hash = stripSHA1Padding(payload.hash)
+        val attestationBlob = this.database.getAttestationBlobByHash(hash)
         if (attestationBlob == null) {
-            logger.warn("Dropping verification request of unknown hash ${payload.hash}!")
+            logger.warn("Dropping verification request of unknown hash ${payload.hash.toHex()}!")
             return
         }
 
         if (attestationBlob.isEmpty()) {
-            logger.warn("Attestation blob for verification is empty: ${payload.hash}!")
+            logger.warn("Attestation blob for verification is empty: ${payload.hash.toHex()}!")
         }
 
-        val value = verifyRequestCallback(peer, payload.hash).await()
+        val value = verifyRequestCallback(peer, hash).await()
         if (value == null || !value) {
             logger.info("Verify request callback returned false for $peer, ${payload.hash}")
             return
         }
 
-        val (privateKey, idFormat) = this.attestationKeys[ByteArrayKey(payload.hash)]!!
+        val (privateKey, idFormat) = this.attestationKeys[ByteArrayKey(hash)]!!
         val privateAttestation =
             schemaManager.deserializePrivate(privateKey, attestationBlob, idFormat)
         val publicAttestationBlob = privateAttestation.serialize()
-        this.cachedAttestationBlobs[ByteArrayKey(payload.hash)] = privateAttestation
+        this.cachedAttestationBlobs[ByteArrayKey(hash)] = privateAttestation
         this.sendAttestation(peer.address, publicAttestationBlob)
     }
 

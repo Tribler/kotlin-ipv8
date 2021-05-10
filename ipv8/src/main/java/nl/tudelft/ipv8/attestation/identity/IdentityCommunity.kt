@@ -310,22 +310,14 @@ class IdentityCommunity(
 
     fun presentAttestationAdvertisement(
         peer: Peer,
-        requestId: String,
-        attributeHash: ByteArray,
-        attributeName: String,
-        attributeValue: ByteArray,
-        blockType: String = ID_METADATA,
-        metadata: HashMap<String, String>?
+        credential: Credential,
+        presentationMetadata: String,
     ) {
-        val credential = this.selfAdvertise(attributeHash, attributeName, blockType, metadata)
+        // val credential = this.selfAdvertise(attributeHash, attributeName, blockType, metadata)
         this.permissions[peer] = this.tokenChain.size
         val disclosure = this.pseudonymManager.discloseCredentials(listOf(credential), setOf())
         val (metadataObj, tokens, attestations, authorities) = this.fitDisclosure(disclosure)
-        val presentationMetadata = JSONObject()
-        presentationMetadata.put("id", requestId)
-        presentationMetadata.put("attestationHash", attributeHash)
-        presentationMetadata.put("value", attributeValue)
-        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities, presentationMetadata.toString())
+        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities, presentationMetadata)
         this.endpoint.send(peer, serializePacket(DISCLOSURE_PAYLOAD, payload))
     }
 
@@ -335,13 +327,12 @@ class IdentityCommunity(
         name: String,
         blockType: String = ID_METADATA,
         metadata: HashMap<String, String>?,
-        advertisementInformation: String? = null,
     ) {
         val credential = this.selfAdvertise(attributeHash, name, blockType, metadata)
         this.permissions[peer] = this.tokenChain.size
         val disclosure = this.pseudonymManager.discloseCredentials(listOf(credential), setOf())
         val (metadataObj, tokens, attestations, authorities) = this.fitDisclosure(disclosure)
-        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities, advertisementInformation)
+        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities)
         this.endpoint.send(peer, serializePacket(DISCLOSURE_PAYLOAD, payload))
     }
 
@@ -416,6 +407,7 @@ class IdentityCommunity(
     }
 
     private fun onRequestMissing(peer: Peer, payload: RequestMissingPayload) {
+        logger.info("Received missing request from ${peer.mid} for ${payload.known} tokens")
         var out = byteArrayOf()
         val permitted = this.tokenChain.subList(0, this.permissions.get(peer) ?: 0)
         permitted.forEachIndexed { index, token ->
@@ -440,7 +432,6 @@ class IdentityCommunity(
         when {
             solicitedAttestationPresentation -> {
                 val cache = (this.requestCache.get(idPair)!! as TokenRequestCache)
-                val disclosureMD = JSONObject(cache.disclosureInformation)
                 this.receivedDisclosureForPresentation(
                     peer,
                     Disclosure(byteArrayOf(), payload.tokens, byteArrayOf(), byteArrayOf()),
