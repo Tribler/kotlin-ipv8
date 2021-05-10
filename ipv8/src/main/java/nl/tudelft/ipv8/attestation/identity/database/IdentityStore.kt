@@ -11,7 +11,12 @@ interface IdentityStore {
 
     fun insertToken(publicKey: PublicKey, token: Token)
     fun insertMetadata(publicKey: PublicKey, metadata: Metadata)
-    fun insertAttestation(publicKey: PublicKey, authorityKey: PublicKey, attestation: IdentityAttestation)
+    fun insertAttestation(
+        publicKey: PublicKey,
+        authorityKey: PublicKey,
+        attestation: IdentityAttestation
+    )
+
     fun getTokensFor(publicKey: PublicKey): List<Token>
     fun getMetadataFor(publicKey: PublicKey): List<Metadata>
     fun getAttestationsFor(publicKey: PublicKey): Set<IdentityAttestation>
@@ -21,5 +26,5 @@ interface IdentityStore {
     fun getCredentialOver(metadata: Metadata): Credential
     fun getCredentialsFor(publicKey: PublicKey): List<Credential>
     fun getKnownIdentities(): List<PublicKey>
-
+    fun getKnownSubjects(): List<PublicKey>
 }

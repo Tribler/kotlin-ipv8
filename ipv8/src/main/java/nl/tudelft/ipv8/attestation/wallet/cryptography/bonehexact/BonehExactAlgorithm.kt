@@ -5,7 +5,6 @@ import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.*
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
 import nl.tudelft.ipv8.messaging.*
-import java.math.BigDecimal
 import java.math.BigInteger
 
 const val ALGORITHM_NAME = "bonehexact"
@@ -49,7 +48,6 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
             }
             else -> throw RuntimeException("Unknown hashing mode $hashMode")
         }
-
     }
 
     override fun deserialize(serialized: ByteArray, idFormat: String): WalletAttestation {

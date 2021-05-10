@@ -11,9 +11,11 @@ class RequestMissingPayload(
 
     companion object Deserializer : Deserializable<RequestMissingPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<RequestMissingPayload, Int> {
-            val known = deserializeUInt(buffer, offset)
-            return Pair(RequestMissingPayload(known.toInt()), offset + SERIALIZED_UINT_SIZE)
+            var localOffset = offset
+            val known = deserializeUInt(buffer, localOffset)
+            localOffset += SERIALIZED_UINT_SIZE
+
+            return Pair(RequestMissingPayload(known.toInt()), localOffset)
         }
     }
-
 }

@@ -1,7 +1,7 @@
 CREATE TABLE revocations (
     authority_id INTEGER NOT NULL,
     version_id INTEGER NOT NULL,
-    attestation_hash BLOB NOT NULL,
+    revoked_hash BLOB NOT NULL,
     FOREIGN KEY(authority_id) REFERENCES authorities(authority_id),
     FOREIGN KEY(version_id) REFERENCES versions(version_id)
 );
@@ -23,7 +23,7 @@ CREATE TABLE authorities (
 );
 
 insertRevocation:
-INSERT INTO revocations (authority_id, version_id, attestation_hash) VALUES (?, ?, ?);
+INSERT INTO revocations (authority_id, version_id, revoked_hash) VALUES (?, ?, ?);
 
 insertVersion:
 INSERT INTO versions (authority_id, version_number, signature) VALUES (?, ?, ?);
@@ -50,10 +50,10 @@ disregardAuthority:
 UPDATE authorities SET recognized = 0 WHERE public_key_hash = ?;
 
 getRevocationsByAuthorityId:
-SELECT attestation_hash FROM revocations WHERE authority_id = ?;
+SELECT revoked_hash FROM revocations WHERE authority_id = ?;
 
 getRevocationsByAuthorityIdAndVersionId:
-SELECT attestation_hash FROM revocations WHERE authority_id = ? AND version_id = ?;
+SELECT revoked_hash FROM revocations WHERE authority_id = ? AND version_id = ?;
 
 updateVersionFor:
 UPDATE authorities SET latest_version_id = ? WHERE public_key_hash = ?;
@@ -68,4 +68,7 @@ getVersionsSince:
 SELECT version_number FROM versions WHERE authority_id = ? AND version_number > ?;
 
 getAllRevocations:
-SELECT authorities.public_key_hash, versions.version_number, versions.signature, revocations.attestation_hash FROM authorities LEFT JOIN versions ON authorities.latest_version_id = versions.version_id LEFT JOIN revocations ON authorities.authority_id = revocations.authority_id;
+SELECT authorities.public_key_hash, versions.version_number, versions.signature, revocations.revoked_hash FROM authorities LEFT JOIN versions ON authorities.latest_version_id = versions.version_id LEFT JOIN revocations ON authorities.authority_id = revocations.authority_id;
+
+getRevocations:
+SELECT revoked_hash FROM revocations;

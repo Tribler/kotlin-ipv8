@@ -110,6 +110,17 @@ class IPv8(
         }
     }
 
+    fun unloadSecondaryOverlayStrategy(serviceId: String) {
+        synchronized(overlayLock) {
+            val overlay = this.secondaryOverlays.remove(serviceId)
+            for (strategy in strategies) {
+                if (strategy.overlay == overlay) {
+                    this.strategies.remove(strategy)
+                }
+            }
+        }
+    }
+
     private fun onTick() {
         if (endpoint.isOpen()) {
             synchronized(overlayLock) {

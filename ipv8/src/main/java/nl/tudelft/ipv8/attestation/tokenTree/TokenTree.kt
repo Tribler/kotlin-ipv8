@@ -8,14 +8,16 @@ import nl.tudelft.ipv8.util.sha3_256
 import nl.tudelft.ipv8.util.toKey
 
 const val UNCHAINED_MAX_SIZE = 100
-const val DEFAULT_CHUNK_SUZE = 64
+const val DEFAULT_CHUNK_SIZE = 64
 
 private val logger = KotlinLogging.logger {}
 
 class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
 
+    var unchainedLimit = UNCHAINED_MAX_SIZE
+
     val elements = hashMapOf<ByteArrayKey, Token>()
-    val unchained = mutableMapOf<Token, ByteArray?>()
+    val unchained = linkedMapOf<Token, ByteArray?>()
 
     var publicKey: PublicKey
     var privateKey: PrivateKey?
@@ -56,8 +58,8 @@ class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
                     token.previousTokenHash))
             ) {
                 this.unchained[token] = null
-                if (this.unchained.size > UNCHAINED_MAX_SIZE) {
-                    this.unchained.remove(this.unchained.keys.last())
+                if (this.unchained.size > unchainedLimit) {
+                    this.unchained.remove(this.unchained.keys.first())
                 }
                 logger.info("Delaying unchained token $token!")
                 return null
@@ -143,7 +145,7 @@ class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
 
     fun deserializePublic(serialized: ByteArray): Boolean {
         val signatureLength = this.publicKey.getSignatureLength()
-        val chunkSize = DEFAULT_CHUNK_SUZE + signatureLength
+        val chunkSize = DEFAULT_CHUNK_SIZE + signatureLength
         var isCorrect = true
         for (i in serialized.indices step chunkSize) {
             isCorrect = isCorrect && this.gatherToken(Token.deserialize(serialized, this.publicKey, offset = i)) != null

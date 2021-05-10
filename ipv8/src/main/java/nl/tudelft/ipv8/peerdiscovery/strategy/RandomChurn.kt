@@ -15,7 +15,7 @@ private val logger = KotlinLogging.logger {}
  * from the network graph.
  */
 class RandomChurn(
-    private val overlay: PingOverlay,
+    override val overlay: PingOverlay,
     private val sampleSize: Int,
     private val pingInterval: Double,
     private val inactiveTime: Double,
