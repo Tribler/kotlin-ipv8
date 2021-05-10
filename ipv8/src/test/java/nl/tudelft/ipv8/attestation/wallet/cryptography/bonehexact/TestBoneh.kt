@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact
 
-import nl.tudelft.ipv8.attestation.wallet.primitives.FP2Value
+import nl.tudelft.ipv8.attestation.wallet.cryptography.primitives.FP2Value
 import nl.tudelft.ipv8.util.hexToBytes
 import org.junit.Assert.*
 import org.junit.Test

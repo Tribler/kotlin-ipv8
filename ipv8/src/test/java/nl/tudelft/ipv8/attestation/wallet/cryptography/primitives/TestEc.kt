@@ -1,8 +1,5 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.primitives
 
-import nl.tudelft.ipv8.attestation.wallet.primitives.FP2Value
-import nl.tudelft.ipv8.attestation.wallet.primitives.eSum
-import nl.tudelft.ipv8.attestation.wallet.primitives.weilParing
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.math.BigInteger

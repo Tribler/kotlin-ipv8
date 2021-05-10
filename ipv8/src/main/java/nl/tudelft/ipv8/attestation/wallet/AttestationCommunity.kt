@@ -8,19 +8,25 @@ import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.attestation.WalletAttestation
-import nl.tudelft.ipv8.attestation.IdentityAlgorithm
-import nl.tudelft.ipv8.attestation.AuthorityManager
-import nl.tudelft.ipv8.attestation.RequestCache
-import nl.tudelft.ipv8.attestation.schema.*
-import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION
-import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION_REQUEST
-import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.CHALLENGE
-import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.CHALLENGE_RESPONSE
-import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.VERIFY_ATTESTATION_REQUEST
+import nl.tudelft.ipv8.attestation.wallet.cryptography.IdentityAlgorithm
+import nl.tudelft.ipv8.attestation.common.AuthorityManager
+import nl.tudelft.ipv8.attestation.common.RequestCache
+import nl.tudelft.ipv8.attestation.common.SchemaManager
+import nl.tudelft.ipv8.attestation.common.consts.SchemaConstants.ID_METADATA
 import nl.tudelft.ipv8.attestation.wallet.caches.*
+import nl.tudelft.ipv8.attestation.wallet.consts.Metadata.ATTRIBUTE
+import nl.tudelft.ipv8.attestation.wallet.consts.Metadata.ID_FORMAT
+import nl.tudelft.ipv8.attestation.wallet.consts.Metadata.PROPOSED_VALUE
+import nl.tudelft.ipv8.attestation.wallet.consts.Metadata.PUBLIC_KEY
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.payloads.*
+import nl.tudelft.ipv8.attestation.wallet.consts.PayloadIds.ATTESTATION
+import nl.tudelft.ipv8.attestation.wallet.consts.PayloadIds.ATTESTATION_REQUEST
+import nl.tudelft.ipv8.attestation.wallet.consts.PayloadIds.CHALLENGE
+import nl.tudelft.ipv8.attestation.wallet.consts.PayloadIds.CHALLENGE_RESPONSE
+import nl.tudelft.ipv8.attestation.wallet.consts.PayloadIds.VERIFY_ATTESTATION_REQUEST
+import nl.tudelft.ipv8.attestation.wallet.cryptography.WalletAttestation
+import nl.tudelft.ipv8.attestation.wallet.store.AttestationStore
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.deserializeVarLen
@@ -119,17 +125,17 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         logger.info("Sending attestation request $attributeName to peer ${peer.mid}.")
         val publicKey = privateKey.publicKey()
         val inputMetadata = JSONObject(metadata)
-        val idFormat = (inputMetadata.remove("id_format") ?: ID_METADATA) as String
+        val idFormat = (inputMetadata.remove(ID_FORMAT) ?: ID_METADATA) as String
 
         val metadataJson = JSONObject()
-        metadataJson.put("attribute", attributeName)
+        metadataJson.put(ATTRIBUTE, attributeName)
         metadataJson.put(
-            "public_key",
+            PUBLIC_KEY,
             defaultEncodingUtils.encodeBase64ToString(publicKey.serialize())
         )
-        metadataJson.put("id_format", idFormat)
+        metadataJson.put(ID_FORMAT, idFormat)
         // Will not be added if null.
-        metadataJson.put("proposed_value", proposedValue)
+        metadataJson.put(PROPOSED_VALUE, proposedValue)
 
         inputMetadata.keys().forEach {
             metadataJson.put(it, inputMetadata.get(it))
@@ -197,13 +203,13 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     ) {
         val metadata = JSONObject(payload.metadata)
 
-        val attribute = metadata.remove("attribute") as String
-        val encodedPK = metadata.remove("public_key") as String
-        val idFormat = metadata.remove("id_format") as String
+        val attribute = metadata.remove(ATTRIBUTE) as String
+        val encodedPK = metadata.remove(PUBLIC_KEY) as String
+        val idFormat = metadata.remove(ID_FORMAT) as String
         var proposedValue: String? = null
         // We cannot cast null to string, hence member checking.
-        if (metadata.has("proposed_value")) {
-            proposedValue = metadata.remove("proposed_value") as String
+        if (metadata.has(PROPOSED_VALUE)) {
+            proposedValue = metadata.remove(PROPOSED_VALUE) as String
         }
 
         val metadataString = metadata.toString()
@@ -303,7 +309,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
 
         val value = verifyRequestCallback(peer, hash).await()
         if (value == null || !value) {
-            logger.info("Verify request callback returned false for $peer, ${payload.hash}")
+            logger.info("Verify request callback returned false for $peer, ${payload.hash.toHex()}")
             return
         }
 
@@ -375,7 +381,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                 )
             }
 
-            logger.info("Received attestation chunk ${payload.sequenceNumber} for proving by $peer")
+            logger.info("Received attestation chunk ${payload.sequenceNumber} for proving by ${peer.mid}")
         } else {
             var handled = false
             for (peerId in peerIds) {
@@ -464,7 +470,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         cache.relativityMap = relativityMap
         cache.hashedChallenges = hashedChallenges
         cache.challenges = challenges
-        logger.info("Sending ${challenges.size} challenges to $peer.")
+        logger.info("Sending ${challenges.size} challenges to ${peer.mid}.")
 
         var remaining = 10
         for (challenge in challenges) {
@@ -493,7 +499,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
 
     private fun onChallenge(peer: Peer, payload: ChallengePayload) {
         if (!this.attestationKeys.containsKey(payload.attestationHash.toKey())) {
-            logger.error("Received ChallengePayload $payload for unknown attestation hash ${payload.attestationHash}.")
+            logger.error("Received ChallengePayload $payload for unknown attestation hash ${payload.attestationHash.toHex()}.")
             return
         }
 
@@ -568,7 +574,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
                 }
 
                 if (provingCache.hashedChallenges.isEmpty()) {
-                    logger.info("Completed attestation verification")
+                    logger.info("Completed attestation verification.")
                     // TODO: We can most likely directly call pop.
                     if (this.requestCache.has(provingCachePrefix, provingCacheId)) {
                         this.requestCache.pop(provingCachePrefix, provingCacheId)
@@ -651,7 +657,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     private fun onChallengeResponseWrapper(packet: Packet) {
         val (peer, payload) = packet.getAuthPayload(ChallengeResponsePayload.Deserializer)
         logger.info(
-            "Received ChallengeResponse from ${peer.mid} for hash ${String(payload.challengeHash)} with response ${
+            "Received ChallengeResponse from ${peer.mid} for hash ${payload.challengeHash.toHex()} with response ${
                 String(payload.response)
             }."
         )
@@ -661,7 +667,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     private fun onChallengeWrapper(packet: Packet) {
         val (peer, payload) = packet.getAuthPayload(ChallengePayload.Deserializer)
         logger.info(
-            "Received Challenge from ${peer.mid} for hash ${String(payload.attestationHash)} with challenge ${
+            "Received Challenge from ${peer.mid} for hash ${payload.attestationHash.toHex()} with challenge ${
                 String(payload.challenge)
             }."
         )
@@ -676,7 +682,7 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
 
     private fun onVerifyAttestationRequestWrapper(packet: Packet) {
         val (peer, payload) = packet.getAuthPayload(VerifyAttestationRequestPayload.Deserializer)
-        logger.info("Received VerifyAttestationRequest from ${peer.mid} for hash ${String(payload.hash)}.")
+        logger.info("Received VerifyAttestationRequest from ${peer.mid} for hash ${payload.hash.toHex()}.")
         GlobalScope.launch { onVerifyAttestationRequest(peer, payload) }
     }
 
@@ -699,14 +705,6 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
 
     fun getIdAlgorithm(idFormat: String): IdentityAlgorithm {
         return this.schemaManager.getAlgorithmInstance(idFormat)
-    }
-
-    object MessageId {
-        const val VERIFY_ATTESTATION_REQUEST = 1
-        const val ATTESTATION = 2
-        const val CHALLENGE = 3
-        const val CHALLENGE_RESPONSE = 4
-        const val ATTESTATION_REQUEST = 5
     }
 
     class Factory(

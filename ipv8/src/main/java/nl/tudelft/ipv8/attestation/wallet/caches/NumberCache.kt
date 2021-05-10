@@ -2,7 +2,7 @@ package nl.tudelft.ipv8.attestation.wallet.caches
 
 import kotlinx.coroutines.*
 import mu.KotlinLogging
-import nl.tudelft.ipv8.attestation.RequestCache
+import nl.tudelft.ipv8.attestation.common.RequestCache
 import java.math.BigInteger
 
 private val logger = KotlinLogging.logger {}

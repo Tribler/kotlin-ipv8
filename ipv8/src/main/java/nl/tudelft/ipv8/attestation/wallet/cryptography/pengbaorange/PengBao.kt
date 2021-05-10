@@ -1,10 +1,12 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange
 
-import nl.tudelft.ipv8.attestation.IdentityAlgorithm
-import nl.tudelft.ipv8.attestation.WalletAttestation
+import nl.tudelft.ipv8.attestation.common.consts.AlgorithmNames.PENG_BAO_RANGE
+import nl.tudelft.ipv8.attestation.wallet.cryptography.IdentityAlgorithm
+import nl.tudelft.ipv8.attestation.wallet.cryptography.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.generateKeypair
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.attestations.PengBaoAttestation
 import nl.tudelft.ipv8.messaging.deserializeBool
 import nl.tudelft.ipv8.messaging.deserializeRecursively
 import nl.tudelft.ipv8.messaging.serializeVarLen
@@ -15,21 +17,7 @@ import java.security.SecureRandom
 
 const val LARGE_INTEGER = 32765
 
-private fun safeRandomNumber(keySize: Int, mod: BigInteger): BigInteger {
-    val random = SecureRandom()
-    val largeBigInteger = LARGE_INTEGER.toBigInteger()
-    fun randomNumber(): BigInteger {
-        return BigInteger(keySize, random).mod(mod)
-    }
-
-    var out = randomNumber()
-    while (out < largeBigInteger) {
-        out = randomNumber()
-    }
-    return out
-}
-
-class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, Any>>) :
+class PengBaoRange(idFormat: String, formats: HashMap<String, HashMap<String, Any>>) :
     IdentityAlgorithm(idFormat, formats) {
 
     private val keySize: Int
@@ -37,22 +25,22 @@ class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, An
     private val b: Int
 
     init {
-        if (formats.get(idFormat) == null) {
+        if (formats[idFormat] == null) {
             throw RuntimeException("Unknown identity format.")
         }
         val format = formats[idFormat]!!
-        if (format.get("algorithm") != "pengbaorange") {
+        if (format["algorithm"] != PENG_BAO_RANGE) {
             throw RuntimeException("Identity format linked to wrong algorithm.")
         }
 
-        keySize = formats[idFormat]!!.get("key_size") as Int
+        keySize = formats[idFormat]!!["key_size"] as Int
 
         if (this.keySize < 32 || this.keySize > 512) {
             throw RuntimeException("Illegal key size specified.")
         }
 
-        a = format.get("min") as Int
-        b = format.get("max") as Int
+        a = format["min"] as Int
+        b = format["max"] as Int
     }
 
     override fun generateSecretKey(): BonehPrivateKey {
@@ -85,9 +73,11 @@ class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, An
 
     override fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray> {
         val mod = publicKey.g.mod - BigInteger.ONE
-        return arrayListOf(serializeVarLen(safeRandomNumber(this.keySize, mod).toByteArray()) + serializeVarLen(
-            safeRandomNumber(this.keySize, mod).toByteArray()))
-
+        return arrayListOf(
+            serializeVarLen(safeRandomNumber(this.keySize, mod).toByteArray()) + serializeVarLen(
+                safeRandomNumber(this.keySize, mod).toByteArray()
+            )
+        )
     }
 
     override fun createChallengeResponse(
@@ -118,7 +108,6 @@ class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, An
         return hashMapOf("attestation" to (attestation as PengBaoAttestation)) as HashMap<Any, Any>
     }
 
-
     override fun processChallengeResponse(
         aggregate: HashMap<Any, Any>,
         challenge: ByteArray?,
@@ -132,7 +121,6 @@ class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, An
         return aggregate
     }
 
-
     override fun createHonestyChallenge(publicKey: BonehPublicKey, value: Int): ByteArray {
         throw NotImplementedError("This method has not been implemented for this algorithm.")
     }
@@ -145,4 +133,17 @@ class Pengbaorange(idFormat: String, formats: HashMap<String, HashMap<String, An
         return PengBaoAttestation.deserialize(serialized, idFormat)
     }
 
+    private fun safeRandomNumber(keySize: Int, mod: BigInteger): BigInteger {
+        val random = SecureRandom()
+        val largeBigInteger = LARGE_INTEGER.toBigInteger()
+        fun randomNumber(): BigInteger {
+            return BigInteger(keySize, random).mod(mod)
+        }
+
+        var out = randomNumber()
+        while (out < largeBigInteger) {
+            out = randomNumber()
+        }
+        return out
+    }
 }

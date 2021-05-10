@@ -1,7 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact
 
-import nl.tudelft.ipv8.attestation.IdentityAlgorithm
-import nl.tudelft.ipv8.attestation.WalletAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.wallet.cryptography.*
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
 import nl.tudelft.ipv8.messaging.*
@@ -33,7 +32,7 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
             throw RuntimeException("Illegal key size specified!")
         }
 
-        when (val hashMode = format.get("hash")) {
+        when (val hashMode = format["hash"]) {
             "sha256" -> {
                 this.attestationFunction = ::attestSHA256
                 this.aggregateReference = ::binaryRelativitySHA256

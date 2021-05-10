@@ -1,7 +1,9 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange
 
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
-import nl.tudelft.ipv8.attestation.wallet.primitives.FP2Value
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.boudot.primitives.EL
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.boudot.primitives.SQR
+import nl.tudelft.ipv8.attestation.wallet.cryptography.primitives.FP2Value
 import nl.tudelft.ipv8.util.hexToBytes
 import org.junit.Assert.*
 import org.junit.Test

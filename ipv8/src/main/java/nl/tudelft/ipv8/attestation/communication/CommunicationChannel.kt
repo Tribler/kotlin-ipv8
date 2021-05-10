@@ -8,14 +8,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.identity.IdentityCommunity
-import nl.tudelft.ipv8.attestation.identity.Metadata
+import nl.tudelft.ipv8.attestation.identity.datastructures.Metadata
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
 import nl.tudelft.ipv8.attestation.communication.caches.DisclosureRequestCache
-import nl.tudelft.ipv8.attestation.identity.IdentityAttestation
-import nl.tudelft.ipv8.attestation.identity.database.Credential
-import nl.tudelft.ipv8.attestation.schema.ID_METADATA
+import nl.tudelft.ipv8.attestation.identity.datastructures.IdentityAttestation
+import nl.tudelft.ipv8.attestation.identity.store.Credential
+import nl.tudelft.ipv8.attestation.wallet.cryptography.WalletAttestation
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
@@ -29,7 +28,6 @@ import nl.tudelft.ipv8.util.toByteArray
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
 import org.json.JSONObject
-import java.util.Locale
 import java.util.UUID
 
 const val DEFAULT_TIME_OUT = 30_000L

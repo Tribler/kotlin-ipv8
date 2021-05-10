@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.communication.caches
 
-import nl.tudelft.ipv8.attestation.RequestCache
+import nl.tudelft.ipv8.attestation.common.RequestCache
 import nl.tudelft.ipv8.attestation.communication.DisclosureRequest
 import nl.tudelft.ipv8.attestation.wallet.caches.DEFAULT_TIMEOUT
 import nl.tudelft.ipv8.attestation.wallet.caches.HashCache

@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations
 
-import nl.tudelft.ipv8.attestation.wallet.primitives.FP2Value
+import nl.tudelft.ipv8.attestation.wallet.cryptography.primitives.FP2Value
 import nl.tudelft.ipv8.messaging.deserializeVarLen
 import nl.tudelft.ipv8.messaging.serializeVarLen
 import java.math.BigInteger
