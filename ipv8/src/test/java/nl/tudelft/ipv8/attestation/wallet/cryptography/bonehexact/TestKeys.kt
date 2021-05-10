@@ -23,5 +23,4 @@ class TestKeys {
         assertEquals(keyRecovHex, keyHex)
         assertEquals(key, keyRecov)
     }
-
 }
