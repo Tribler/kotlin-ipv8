@@ -147,12 +147,13 @@ class CommunicationChannel(
         attributeHash: ByteArray,
         value: ByteArray,
         metadata: Metadata,
-        attestations: List<IdentityAttestation>
+        attestations: List<IdentityAttestation>,
+        disclosureInformation: String,
     ) {
         logger.info("Received correct attestation presentation with hash ${attributeHash.toHex()}.")
-        val parsedMD = JSONObject(metadata.serializedMetadata)
+        val parsedMD = JSONObject(String(metadata.serializedMetadata))
         val idFormat = parsedMD.getString("schema")
-        this.verify(peer, attributeHash, listOf(value), idFormat)
+        this.verify(peer, stripSHA1Padding(attributeHash), listOf(value), idFormat)
     }
 
     private fun dropIdentityTableData() {
