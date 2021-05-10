@@ -9,8 +9,8 @@ import nl.tudelft.ipv8.sqldelight.Database
 
 private val tokenMapper: (
     ByteArray,
-    ByteArray?,
-    ByteArray?,
+    ByteArray,
+    ByteArray,
     ByteArray?,
 ) -> Token = { previousTokenHash, signature, contentHash, content ->
     Token.fromDatabaseTuple(previousTokenHash, signature, contentHash, content)
@@ -18,7 +18,7 @@ private val tokenMapper: (
 
 private val metadataMapper: (
     ByteArray,
-    ByteArray?,
+    ByteArray,
     ByteArray,
 ) -> Metadata = { tokenPointer, signature, serializedMetadata ->
     Metadata.fromDatabaseTuple(tokenPointer, signature, serializedMetadata)
@@ -44,9 +44,18 @@ class IdentitySQLiteStore(database: Database) : IdentityStore {
         dao.insertMetadata(publicKey.keyToBin(), tokenPointer, signature, serializedMetadata)
     }
 
-    override fun insertAttestation(publicKey: PublicKey, authorityKey: PublicKey, attestation: IdentityAttestation) {
+    override fun insertAttestation(
+        publicKey: PublicKey,
+        authorityKey: PublicKey,
+        attestation: IdentityAttestation
+    ) {
         val (metadataPointer, signature) = attestation.toDatabaseTuple()
-        dao.insertIdentityAttestation(publicKey.keyToBin(), authorityKey.keyToBin(), metadataPointer, signature)
+        dao.insertIdentityAttestation(
+            publicKey.keyToBin(),
+            authorityKey.keyToBin(),
+            metadataPointer,
+            signature
+        )
     }
 
     override fun getTokensFor(publicKey: PublicKey): List<Token> {
@@ -58,15 +67,18 @@ class IdentitySQLiteStore(database: Database) : IdentityStore {
     }
 
     override fun getAttestationsFor(publicKey: PublicKey): Set<IdentityAttestation> {
-        return dao.getAttestationsFor(publicKey.keyToBin(), identityAttestationMapper).executeAsList().toSet()
+        return dao.getAttestationsFor(publicKey.keyToBin(), identityAttestationMapper)
+            .executeAsList().toSet()
     }
 
     override fun getAttestationsBy(publicKey: PublicKey): Set<IdentityAttestation> {
-        return dao.getAttestationsBy(publicKey.keyToBin(), identityAttestationMapper).executeAsList().toSet()
+        return dao.getAttestationsBy(publicKey.keyToBin(), identityAttestationMapper)
+            .executeAsList().toSet()
     }
 
     override fun getAttestationsOver(metadata: Metadata): Set<IdentityAttestation> {
-        return dao.getAttestationsOver(metadata.hash, identityAttestationMapper).executeAsList().toSet()
+        return dao.getAttestationsOver(metadata.hash, identityAttestationMapper).executeAsList()
+            .toSet()
     }
 
     override fun getAuthority(attestation: IdentityAttestation): ByteArray {
@@ -82,6 +94,12 @@ class IdentitySQLiteStore(database: Database) : IdentityStore {
     }
 
     override fun getKnownIdentities(): List<PublicKey> {
-        return dao.getKnownIdentities().executeAsList().map { defaultCryptoProvider.keyFromPublicBin(it) }
+        return dao.getKnownIdentities().executeAsList()
+            .map { defaultCryptoProvider.keyFromPublicBin(it) }
+    }
+
+    override fun getKnownSubjects(): List<PublicKey> {
+        return dao.getKnownSubjects().executeAsList()
+            .map { defaultCryptoProvider.keyFromPublicBin(it) }
     }
 }

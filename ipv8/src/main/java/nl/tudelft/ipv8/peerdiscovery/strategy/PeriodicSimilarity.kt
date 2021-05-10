@@ -6,7 +6,7 @@ import nl.tudelft.ipv8.peerdiscovery.DiscoveryCommunity
  * On every step, it sends a similarity request to a random peer.
  */
 class PeriodicSimilarity(
-    private val overlay: DiscoveryCommunity
+    override val overlay: DiscoveryCommunity
 ) : DiscoveryStrategy {
     override fun takeStep() {
         val peer = overlay.network.getRandomPeer()

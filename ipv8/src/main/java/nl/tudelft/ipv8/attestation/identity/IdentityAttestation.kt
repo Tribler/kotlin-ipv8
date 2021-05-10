@@ -10,7 +10,6 @@ class IdentityAttestation(
     privateKey: PrivateKey? = null,
     signature: ByteArray? = null,
 ) : SignedObject(privateKey, signature) {
-
     init {
         super.init()
     }
@@ -27,7 +26,6 @@ class IdentityAttestation(
         return "Attestation${metadataPointer.toHex()})"
     }
 
-
     override fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int): IdentityAttestation {
         return Companion.deserialize(data, publicKey, offset)
     }
@@ -35,8 +33,10 @@ class IdentityAttestation(
     companion object {
         fun deserialize(data: ByteArray, publicKey: PublicKey, offset: Int = 0): IdentityAttestation {
             val signLength = publicKey.getSignatureLength()
-            return IdentityAttestation(data.copyOfRange(offset, offset + 32),
-                signature = data.copyOfRange(offset + 32, offset + 32 + signLength))
+            return IdentityAttestation(
+                data.copyOfRange(offset, offset + 32),
+                signature = data.copyOfRange(offset + 32, offset + 32 + signLength)
+            )
         }
 
         fun create(metadata: Metadata, privateKey: PrivateKey): IdentityAttestation {
@@ -47,6 +47,4 @@ class IdentityAttestation(
             return IdentityAttestation(metadataPointer, signature = signature)
         }
     }
-
-
 }

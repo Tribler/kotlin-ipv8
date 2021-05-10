@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.caches
 
-import nl.tudelft.ipv8.attestation.wallet.RequestCache
+import nl.tudelft.ipv8.attestation.RequestCache
 import java.math.BigInteger
 
 open class PeerCache(cache: RequestCache, prefix: String, val mid: String, val idFormat: String) :

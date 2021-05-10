@@ -7,7 +7,7 @@ const val PENDING_CHALLENGES_PREFIX = "proving-hash"
 
 class PendingChallengesCache(
     community: AttestationCommunity,
-    val cacheHash: ByteArray,
+    cacheHash: ByteArray,
     val provingCache: ProvingAttestationCache,
     idFormat: String,
     val honestyCheck: Int = -1,

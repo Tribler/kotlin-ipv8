@@ -5,7 +5,12 @@ import nl.tudelft.ipv8.attestation.Revocations
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.sqldelight.GetAllRevocations
 
-class RevocationBlob(val publicKeyHash: ByteArray, val version: Long, val signature: ByteArray, val revocations: List<ByteArray>)
+class RevocationBlob(
+    val publicKeyHash: ByteArray,
+    val version: Long,
+    val signature: ByteArray,
+    val revocations: List<ByteArray>
+)
 
 interface AuthorityStore {
 
@@ -14,6 +19,7 @@ interface AuthorityStore {
     fun getAuthorityByHash(hash: ByteArray): Authority?
     fun recognizeAuthority(hash: ByteArray)
     fun disregardAuthority(hash: ByteArray)
+    fun insertTrustedAuthority(publicKey: PublicKey)
     fun insertAuthority(publicKey: PublicKey)
     fun insertAuthority(hash: ByteArray)
 
@@ -28,6 +34,5 @@ interface AuthorityStore {
 
     fun getVersionsSince(publicKeyHash: ByteArray, sinceVersion: Long): List<Long>
 
-    fun getAllRevocations(): List<GetAllRevocations>
-
+    fun getAllRevocations(): List<ByteArray>
 }

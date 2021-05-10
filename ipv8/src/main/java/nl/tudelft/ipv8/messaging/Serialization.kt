@@ -13,6 +13,7 @@ const val SERIALIZED_PUBLIC_KEY_SIZE = 74
 const val HASH_SIZE = 32
 const val SIGNATURE_SIZE = 64
 const val SERIALIZED_SHA1_HASH_SIZE = 20
+const val SERIALIZED_SHA3_256_SIZE = 32
 
 interface Serializable {
     fun serialize(): ByteArray
@@ -101,14 +102,20 @@ fun deserializeUChar(buffer: ByteArray, offset: Int = 0): UByte {
     return ubuffer[offset]
 }
 
+fun deserializeSHA3_256(buffer: ByteArray, offset: Int = 0): Pair<ByteArray, Int> {
+    return Pair(buffer.copyOfRange(offset, offset + SERIALIZED_SHA3_256_SIZE), SERIALIZED_SHA3_256_SIZE)
+}
+
 fun serializeVarLen(bytes: ByteArray): ByteArray {
     return serializeUInt(bytes.size.toUInt()) + bytes
 }
 
 fun deserializeVarLen(buffer: ByteArray, offset: Int = 0): Pair<ByteArray, Int> {
     val len = deserializeUInt(buffer, offset).toInt()
-    val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
-        offset + SERIALIZED_UINT_SIZE + len)
+    val payload = buffer.copyOfRange(
+        offset + SERIALIZED_UINT_SIZE,
+        offset + SERIALIZED_UINT_SIZE + len
+    )
     return Pair(payload, SERIALIZED_UINT_SIZE + len)
 }
 
@@ -117,19 +124,31 @@ fun deserializeRecursively(buffer: ByteArray, offset: Int = 0): Array<ByteArray>
         return arrayOf()
     }
     val len = deserializeUInt(buffer, offset).toInt()
-    val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
-        offset + SERIALIZED_UINT_SIZE + len)
-    return arrayOf(payload) + deserializeRecursively(buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE + len,
-        buffer.size), offset)
+    val payload = buffer.copyOfRange(
+        offset + SERIALIZED_UINT_SIZE,
+        offset + SERIALIZED_UINT_SIZE + len
+    )
+    return arrayOf(payload) + deserializeRecursively(
+        buffer.copyOfRange(
+            offset + SERIALIZED_UINT_SIZE + len,
+            buffer.size
+        ), offset
+    )
 }
 
-fun deserializeAmount(buffer: ByteArray, amount: Int, offset: Int = 0): Pair<Array<ByteArray>, ByteArray> {
+fun deserializeAmount(
+    buffer: ByteArray,
+    amount: Int,
+    offset: Int = 0
+): Pair<Array<ByteArray>, ByteArray> {
     val returnValues = arrayListOf<ByteArray>()
     var localOffset = offset
     for (i in 0 until amount) {
         val len = deserializeUInt(buffer, localOffset).toInt()
-        val payload = buffer.copyOfRange(localOffset + SERIALIZED_UINT_SIZE,
-            localOffset + SERIALIZED_UINT_SIZE + len)
+        val payload = buffer.copyOfRange(
+            localOffset + SERIALIZED_UINT_SIZE,
+            localOffset + SERIALIZED_UINT_SIZE + len
+        )
         localOffset += SERIALIZED_UINT_SIZE + len
         returnValues.add(payload)
     }

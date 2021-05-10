@@ -14,7 +14,7 @@ import nl.tudelft.ipv8.messaging.deserializeUShort
 import nl.tudelft.ipv8.util.ByteArrayKey
 import nl.tudelft.ipv8.util.toKey
 
-class IdentityManager(internal val database: IdentityStore) {
+class IdentityManager(internal var database: IdentityStore) {
 
     val pseudonyms = hashMapOf<ByteArrayKey, PseudonymManager>()
 
@@ -24,7 +24,8 @@ class IdentityManager(internal val database: IdentityStore) {
             if (key is PrivateKey) {
                 this.pseudonyms[publicKeyMaterial.toKey()] = PseudonymManager(this.database, privateKey = key)
             } else {
-                this.pseudonyms[publicKeyMaterial.toKey()] = PseudonymManager(this.database, publicKey = key as PublicKey)
+                this.pseudonyms[publicKeyMaterial.toKey()] =
+                    PseudonymManager(this.database, publicKey = key as PublicKey)
             }
         }
         return this.pseudonyms[publicKeyMaterial.toKey()]!!
@@ -45,8 +46,10 @@ class IdentityManager(internal val database: IdentityStore) {
             val metadataSize = deserializeUInt(serializeMetadata, metadataOffset).toInt()
             metadataOffset += SERIALIZED_UINT_SIZE
             val metadata =
-                Metadata.deserialize(serializeMetadata.copyOfRange(metadataOffset, metadataOffset + metadataSize),
-                    publicKey)
+                Metadata.deserialize(
+                    serializeMetadata.copyOfRange(metadataOffset, metadataOffset + metadataSize),
+                    publicKey
+                )
             pseudonym.addMetadata(metadata)
             metadataOffset += metadataSize
         }
@@ -54,14 +57,20 @@ class IdentityManager(internal val database: IdentityStore) {
         var attestationOffset = 0
         var authorityOffset = 0
 
-        while (authorityOffset < serializedAttestations.size) {
+        while (authorityOffset < serializedAuthorities.size) {
             val authoritySize = deserializeUShort(serializedAuthorities, authorityOffset)
             authorityOffset += SERIALIZED_USHORT_SIZE
-            val authority = defaultCryptoProvider.keyFromPublicBin(serializedAuthorities.copyOfRange(authorityOffset,
-                authorityOffset + authoritySize))
+            val authority = defaultCryptoProvider.keyFromPublicBin(
+                serializedAuthorities.copyOfRange(
+                    authorityOffset,
+                    authorityOffset + authoritySize
+                )
+            )
             authorityOffset += authoritySize
-            correct = correct && pseudonym.addAttestation(authority,
-                IdentityAttestation.deserialize(serializedAttestations, authority, attestationOffset))
+            correct = correct && pseudonym.addAttestation(
+                authority,
+                IdentityAttestation.deserialize(serializedAttestations, authority, attestationOffset)
+            )
             attestationOffset += 32 + authority.getSignatureLength()
         }
 

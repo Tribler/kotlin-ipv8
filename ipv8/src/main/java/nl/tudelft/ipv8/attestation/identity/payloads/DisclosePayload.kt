@@ -7,10 +7,12 @@ class DisclosePayload(
     val tokens: ByteArray,
     val attestations: ByteArray,
     val authorities: ByteArray,
+    val advertisementInformation: String? = null,
 ) : Serializable {
     override fun serialize(): ByteArray {
-        return serializeVarLen(metadata) + serializeVarLen(tokens) + serializeVarLen(attestations) + serializeVarLen(
-            authorities)
+        return serializeVarLen(metadata) + serializeVarLen(tokens) + serializeVarLen(attestations) +
+            serializeVarLen(authorities) + if (advertisementInformation != null)
+            serializeVarLen(advertisementInformation.toByteArray()) else byteArrayOf()
     }
 
     companion object Deserializer : Deserializable<DisclosePayload> {
@@ -28,8 +30,17 @@ class DisclosePayload(
             val (authorities, offset4) = deserializeVarLen(buffer, localOffset)
             localOffset += offset4
 
-            return Pair(DisclosePayload(metadata, tokens, attestations, authorities), localOffset)
+            var disclosureMetadata: String? = null
+            if (buffer.size > localOffset) {
+                val deserializedMetadataPair = deserializeVarLen(buffer, localOffset)
+                disclosureMetadata = String(deserializedMetadataPair.first)
+                localOffset += deserializedMetadataPair.second
+            }
+
+            return Pair(
+                DisclosePayload(metadata, tokens, attestations, authorities, disclosureMetadata),
+                localOffset
+            )
         }
     }
-
 }
