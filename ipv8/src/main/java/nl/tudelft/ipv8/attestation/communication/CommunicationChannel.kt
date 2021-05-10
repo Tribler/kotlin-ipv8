@@ -14,6 +14,8 @@ import nl.tudelft.ipv8.attestation.identity.Metadata
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
 import nl.tudelft.ipv8.attestation.communication.caches.DisclosureRequestCache
 import nl.tudelft.ipv8.attestation.identity.IdentityAttestation
+import nl.tudelft.ipv8.attestation.identity.database.Credential
+import nl.tudelft.ipv8.attestation.schema.ID_METADATA
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
@@ -27,6 +29,7 @@ import nl.tudelft.ipv8.util.toByteArray
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
 import org.json.JSONObject
+import java.util.Locale
 import java.util.UUID
 
 const val DEFAULT_TIME_OUT = 30_000L
@@ -206,7 +209,7 @@ class CommunicationChannel(
         GlobalScope.launch { outstanding.setResult(false) }
     }
 
-    fun generateDisclosureRequest(
+    fun generateAttestationPresentationRequest(
         attributeName: String
     ): String {
         val id = UUID.randomUUID().toString()
@@ -218,6 +221,25 @@ class CommunicationChannel(
             )
         )
         return id
+    }
+
+    fun presentAttestation(
+        peer: Peer,
+        requestId: String,
+        attributeHash: ByteArray,
+        attributeValue: ByteArray,
+        credential: Credential,
+    ) {
+        val presentationMetadata = JSONObject()
+        presentationMetadata.put("id", requestId)
+        presentationMetadata.put("attestationHash", attributeHash.toHex())
+        presentationMetadata.put("value", attributeValue.toHex())
+
+        this.identityOverlay.presentAttestationAdvertisement(
+            peer,
+            credential,
+            presentationMetadata.toString(),
+        )
     }
 
     fun verify(
@@ -246,7 +268,12 @@ class CommunicationChannel(
         var signableData = latestVersion.toByteArray()
         signatures.forEach { signableData += it }
         val versionSignature = (myPeer.key as PrivateKey).sign(sha3_256(signableData))
-        authorityManager.insertRevocations(myPeer.publicKey.keyToHash(), latestVersion, versionSignature, signatures)
+        authorityManager.insertRevocations(
+            myPeer.publicKey.keyToHash(),
+            latestVersion,
+            versionSignature,
+            signatures
+        )
     }
 
     fun verifyLocally(
@@ -282,12 +309,12 @@ class CommunicationChannel(
         }
 
         // Check if authority is recognized and the corresponding signature is correct.
-        if (attestors.any { attestor ->
+        if (!attestors.any { attestor ->
                 val authority =
                     this.attestationOverlay.authorityManager.getTrustedAuthority(attestor.first)
                 authority?.let {
                     it.publicKey?.verify(attestor.second, metadata.hash)
-                } == false
+                } == true
             }) {
             logger.info("Not accepting ${attestationHash.toHex()}, no recognized authority or valid signature found.")
             return false
@@ -305,6 +332,32 @@ class CommunicationChannel(
     fun generateChallenge(): Pair<Long, ByteArray> {
         val timestamp = System.currentTimeMillis()
         return Pair(timestamp, (this.myPeer.key as PrivateKey).sign(timestamp.toByteArray()))
+    }
+
+    // Hash, Metadata, Value
+    fun getAttributeByName(attributeName: String): Triple<ByteArray, Credential, ByteArray>? {
+        val pseudonym = this.identityOverlay.identityManager.getPseudonym(myPeer.publicKey)
+
+        for (credential in pseudonym.getCredentials()) {
+            val attestations = credential.attestations.toList()
+            val attestors = mutableListOf<ByteArray>()
+
+            for (attestation in attestations) {
+                attestors += this.identityOverlay.identityManager.database.getAuthority(attestation)
+            }
+            val attributeHash =
+                pseudonym.tree.elements[credential.metadata.tokenPointer.toKey()]!!.contentHash
+            val jsonMetadata = JSONObject(String(credential.metadata.serializedMetadata))
+            val attributeValue =
+                this.attestationOverlay.database.getValueByHash(
+                    stripSHA1Padding(attributeHash)
+                )!!
+
+            if (jsonMetadata.getString("name").equals(attributeName, ignoreCase = true)) {
+                return Triple(attributeHash, credential, attributeValue)
+            }
+        }
+        return null
     }
 
     fun getOfflineVerifiableAttributes(publicKey: PublicKey = this.myPeer.publicKey): List<AttestationPresentation> {
