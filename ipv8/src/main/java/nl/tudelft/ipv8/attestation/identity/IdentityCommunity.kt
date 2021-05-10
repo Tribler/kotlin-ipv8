@@ -62,7 +62,7 @@ class IdentityCommunity(
     var identityManager: IdentityManager = identityManager ?: IdentityManager(database)
     val requestCache = RequestCache()
 
-    private lateinit var attestationPresentationCallback: (peer: Peer, attributeHash: ByteArray, value: ByteArray, metadata: Metadata, attestations: List<IdentityAttestation>) -> Unit
+    private lateinit var attestationPresentationCallback: (peer: Peer, attributeHash: ByteArray, value: ByteArray, metadata: Metadata, attestations: List<IdentityAttestation>, disclosureInformation: String) -> Unit
 
     private val knownAttestationHashes = hashMapOf<ByteArrayKey, HashInformation>()
     private val pseudonymManager = this.identityManager.getPseudonym(this.myPeer.key)
@@ -98,7 +98,7 @@ class IdentityCommunity(
         messageHandlers[MISSING_RESPONSE_PAYLOAD] = ::onMissingResponseWrapper
     }
 
-    fun setAttestationPresentationCallback(f: (peer: Peer, attributeHash: ByteArray, value: ByteArray, metadata: Metadata, attestations: List<IdentityAttestation>) -> Unit) {
+    fun setAttestationPresentationCallback(f: (peer: Peer, attributeHash: ByteArray, value: ByteArray, metadata: Metadata, attestations: List<IdentityAttestation>, disclosureInformation: String) -> Unit) {
         this.attestationPresentationCallback = f
     }
 
@@ -150,7 +150,7 @@ class IdentityCommunity(
         return null
     }
 
-    private fun shouldSign(pseudonym: PseudonymManager, metadata: Metadata): Boolean {
+    private fun shouldSign(pseudonym: PseudonymManager, metadata: Metadata, isVerification: Boolean = false): Boolean {
         val transaction = JSONObject(String(metadata.serializedMetadata))
         val requestedKeys = transaction.keySet()
         if (!pseudonym.tree.elements.containsKey(metadata.tokenPointer.toKey())) {
@@ -173,7 +173,7 @@ class IdentityCommunity(
             return false
         }
         // Refuse to sign blocks older than 5 minutes
-        if (System.currentTimeMillis() / 1000F > this.knownAttestationHashes[attributeHash.toKey()]?.time?.plus(
+        if (!isVerification && System.currentTimeMillis() / 1000F > this.knownAttestationHashes[attributeHash.toKey()]?.time?.plus(
                 (DEFAULT_TIME_OUT)
             ) ?: 0F
         ) {
@@ -192,12 +192,14 @@ class IdentityCommunity(
             logger.debug("Not signing $metadata, metadata does not match!")
             return false
         }
-        for (attestation in pseudonym.database.getAttestationsOver(metadata)) {
-            if (this.myPeer.publicKey.keyToBin()
-                    .contentEquals(pseudonym.database.getAuthority(attestation))
-            ) {
-                logger.debug("Not signing $metadata, already attested!")
-                return false
+        if (!isVerification) {
+            for (attestation in pseudonym.database.getAttestationsOver(metadata)) {
+                if (this.myPeer.publicKey.keyToBin()
+                        .contentEquals(pseudonym.database.getAuthority(attestation))
+                ) {
+                    logger.debug("Not signing $metadata, already attested!")
+                    return false
+                }
             }
         }
         return true
@@ -274,12 +276,21 @@ class IdentityCommunity(
         )
 
         val disclosureJSON = JSONObject(disclosureInformation)
-        val requiredAttributes = listOf(disclosureJSON.getString("attributeHash").hexToBytes().toKey())
+        val requiredAttributes = listOf(disclosureJSON.getString("attestationHash").hexToBytes().toKey())
         val knownAttributes: List<ByteArrayKey> =
             pseudonym.tree.elements.values.map { ByteArrayKey(it.contentHash) }
 
         if (correct && requiredAttributes.any { knownAttributes.contains(it) }) {
             for (credential in pseudonym.getCredentials()) {
+                val value = disclosureJSON.getString("value").hexToBytes()
+                @Suppress("UNCHECKED_CAST")
+                this.addKnownHash(
+                    requiredAttributes[0].bytes,
+                    attributeName,
+                    value,
+                    peer.publicKey,
+                    JSONObject(String(credential.metadata.serializedMetadata)).toMap() as HashMap<String, String>
+                )
                 if (shouldSign(pseudonym, credential.metadata)) {
                     val presentedAttributeName =
                         JSONObject(String(credential.metadata.serializedMetadata)).getString("name")
@@ -288,10 +299,11 @@ class IdentityCommunity(
                         return
                     }
                     logger.info("Received valid attestation presentation ${String(credential.metadata.serializedMetadata)}")
-                    val value = disclosureJSON.getString("value").hexToBytes()
+
                     this.attestationPresentationCallback(
                         peer, requiredAttributes[0].bytes, value, credential.metadata,
-                        credential.attestations.toList()
+                        credential.attestations.toList(),
+                        disclosureInformation
                     )
                 }
             }
@@ -431,7 +443,7 @@ class IdentityCommunity(
 
         when {
             solicitedAttestationPresentation -> {
-                val cache = (this.requestCache.get(idPair)!! as TokenRequestCache)
+                val cache = (this.requestCache.pop(idPair)!! as TokenRequestCache)
                 this.receivedDisclosureForPresentation(
                     peer,
                     Disclosure(byteArrayOf(), payload.tokens, byteArrayOf(), byteArrayOf()),
