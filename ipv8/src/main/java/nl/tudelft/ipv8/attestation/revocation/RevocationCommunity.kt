@@ -12,7 +12,7 @@ import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdateChunkPayl
 import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdatePreviewPayload
 import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdateRequestPayload
 import nl.tudelft.ipv8.attestation.RequestCache
-import nl.tudelft.ipv8.attestation.revocation.caches.AllowedUpdateRequestCache
+import nl.tudelft.ipv8.attestation.revocation.caches.AllowedRevocationUpdateRequestCache
 import nl.tudelft.ipv8.attestation.wallet.caches.PeerCache
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.*
@@ -223,7 +223,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                 sequenceNumber += 1
             }
         } else {
-            val solicited = this.requestCache.has(AllowedUpdateRequestCache.generateId(peer))
+            val solicited = this.requestCache.has(AllowedRevocationUpdateRequestCache.generateId(peer))
             if (solicited) {
                 val revocations = mutableListOf<RevocationBlob>()
 
@@ -474,10 +474,10 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         val payload = RevocationUpdatePreviewPayload(revocations)
         val packet = serializePacket(REVOCATION_PRESENTATION_PAYLOAD, payload)
         peers.forEach {
-            if (!requestCache.has(AllowedUpdateRequestCache.generateId(it))) {
+            if (!requestCache.has(AllowedRevocationUpdateRequestCache.generateId(it))) {
                 logger.info("Sending revocation preview to ${it.mid}.")
                 endpoint.send(it, packet)
-                this.requestCache.add(AllowedUpdateRequestCache(this.requestCache, it))
+                this.requestCache.add(AllowedRevocationUpdateRequestCache(this.requestCache, it))
             }
         }
     }

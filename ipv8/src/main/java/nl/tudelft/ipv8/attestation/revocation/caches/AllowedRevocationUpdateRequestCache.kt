@@ -6,18 +6,17 @@ import nl.tudelft.ipv8.attestation.wallet.caches.HashCache
 import nl.tudelft.ipv8.attestation.wallet.caches.NumberCache
 import java.math.BigInteger
 
-const val ALLOWED_UPDATE_REQUEST_CACHE_PREFIX = "allowed-update-request"
+const val ALLOWED_REVOCATION_UPDATE_REQUEST_CACHE_PREFIX = "allowed-update-request"
 
-class AllowedUpdateRequestCache(
+class AllowedRevocationUpdateRequestCache(
     requestCache: RequestCache,
     peer: Peer
 ) :
-    NumberCache(requestCache, ALLOWED_UPDATE_REQUEST_CACHE_PREFIX, this.generateId(peer).second) {
-
+    NumberCache(requestCache, ALLOWED_REVOCATION_UPDATE_REQUEST_CACHE_PREFIX, this.generateId(peer).second) {
 
     companion object {
         fun generateId(peer: Peer): Pair<String, BigInteger> {
-            return HashCache.idFromHash(ALLOWED_UPDATE_REQUEST_CACHE_PREFIX, peer.publicKey.keyToHash())
+            return HashCache.idFromHash(ALLOWED_REVOCATION_UPDATE_REQUEST_CACHE_PREFIX, peer.publicKey.keyToHash())
         }
     }
 }
