@@ -5,7 +5,6 @@ import nl.tudelft.ipv8.attestation.Authority
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.sqldelight.Database
-import nl.tudelft.ipv8.sqldelight.GetAllRevocations
 
 private val authorityMapper: (
     ByteArray?,
@@ -70,15 +69,15 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
             authorityId = dao.getAuthorityIdByHash(publicKeyHash).executeAsOne()
         }
 
-        if (version >= 2L) {
-            val previousId =
-                dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L)
-                    .executeAsOneOrNull()?.version_id
-            if (previousId == null) {
-                logger.warn("Received revocations out of order, skipping!")
-                return
-            }
-        }
+        // if (version >= 2L) {
+        //     val previousId =
+        //         dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L)
+        //             .executeAsOneOrNull()?.version_id
+        //     if (previousId == null) {
+        //         logger.error("Received revocations out of order, skipping!")
+        //         throw IllegalStateException("Encountered out-of-order revocation version.")
+        //     }
+        // }
 
         var versionId =
             dao.getVersionByAuthorityIDandVersionNumber(authorityId, version)
@@ -121,5 +120,18 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
 
     override fun getAllRevocations(): List<ByteArray> {
         return dao.getRevocations().executeAsList()
+    }
+
+    override fun getNumberOfRevocations(): Long {
+        return dao.getNumberOfRevocations().executeAsOne()
+    }
+
+    override fun getMissingVersion(authorityKeyHash: ByteArray): Long? {
+        val authorityId = dao.getAuthorityIdByHash(authorityKeyHash).executeAsOneOrNull()
+        return authorityId?.let { dao.getMissingVersionByAuthorityID(it).executeAsOneOrNull()?.MIN }
+    }
+
+    override fun isRevoked(signature: ByteArray): Boolean {
+        return dao.isRevoked(signature).executeAsOneOrNull()?.toInt() == 1
     }
 }
