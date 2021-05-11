@@ -13,11 +13,13 @@ class PendingRevocationUpdateCache(
     requestCache: RequestCache,
     senderHash: ByteArray,
     signeeHash: ByteArray,
-    version: Long,
-        override val timeout: Int = 10,
+    version: Long
 ) :
-    NumberCache(requestCache, PENDING_REVOCATION_UPDATE_CACHE_PREFIX, this.generateId(
-        senderHash, signeeHash, version).second) {
+    NumberCache(
+        requestCache, PENDING_REVOCATION_UPDATE_CACHE_PREFIX, this.generateId(
+            senderHash, signeeHash, version
+        ).second
+    ) {
 
     val revocationMap = hashMapOf<Int, ByteArray>()
 
