@@ -302,7 +302,7 @@ class CommunicationChannel(
         // Check if authority is recognized and the corresponding signature is correct.
         if (!attestors.any { attestor ->
                 val authority =
-                    this.revocationOverlay.authorityManager.getTrustedAuthority(attestor.first)
+                    this.authorityManager.getTrustedAuthority(attestor.first)
                 authority?.let {
                     it.publicKey?.verify(attestor.second, metadata.hash)
                 } == true
