@@ -19,7 +19,7 @@ import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.*
 
-const val DELAY = 30000L
+const val DELAY = 10000L
 const val DEFAULT_GOSSIP_AMOUNT = 5
 private const val CHUNK_SIZE = 800
 
@@ -42,30 +42,29 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
     override lateinit var network: Network
 
     // Possibility to override the getPeers method when using shared network between Communities.
-    private lateinit var fetchPeers: () -> List<Peer>
+    private var fetchPeers: () -> List<Peer> = ::getPeers
+
+    private lateinit var revocationUpdateCallback: (publicKeyHash: ByteArray, version: Long, amount: Int) -> Unit
 
     constructor(
         myPeer: Peer,
         endpoint: EndpointAggregator,
         network: Network,
         authorityManager: AuthorityManager,
-        getPeers: (() -> List<Peer>)?
+        onGetPeers: (() -> List<Peer>)? = null
     ) : this(
         authorityManager
     ) {
         this.myPeer = myPeer
         this.endpoint = endpoint
         this.network = network
-        this.fetchPeers = getPeers ?: this::getPeers
+        if (onGetPeers != null) {
+            this.fetchPeers = onGetPeers
+        }
     }
 
     private lateinit var gossipRoutine: Job
-
-    private val lock = Object()
     private val requestCache = RequestCache()
-
-//    private lateinit var onRevocationUpdatePreviewCallback: (List<Pair<String, Long>>) -> Unit
-//    private lateinit var onRevocationUpdateRequestCallback: (Map<String, List<Long>>) -> Unit
 
     init {
         messageHandlers[REVOCATION_PRESENTATION_PAYLOAD] = ::onRevocationUpdatePreviewPayloadWrapper
@@ -108,14 +107,12 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
             signature,
             attestationHashes
         )
-//        this.gossipMyRevocations()
     }
 
     private fun onRevocationUpdatePreviewPayloadWrapper(packet: Packet) {
         val (peer, payload) = packet.getAuthPayload(RevocationUpdatePreviewPayload.Deserializer)
         logger.info("Received RevocationPresentationPayload from ${peer.mid}.")
         this.onRevocationUpdatePreviewPayload(peer, payload)
-//        this.onRevocationUpdatePreviewCallback(payload.revocationRefs)
     }
 
     private fun onRevocationUpdateRequestPayloadWrapper(packet: Packet) {
@@ -134,7 +131,8 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         peer: Peer,
         payload: RevocationUpdatePreviewPayload
     ) {
-        val remoteRefs = payload.revocationRefs.filter { authorityManager.containsAuthority(it.key.bytes) }
+        val remoteRefs =
+            payload.revocationRefs.filter { authorityManager.containsAuthority(it.key.bytes) }
         val localRefs = this.authorityManager.getMissingRevocationPreviews()
         val requestedRefs = hashMapOf<ByteArrayKey, Long>()
 
@@ -223,7 +221,8 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                 sequenceNumber += 1
             }
         } else {
-            val solicited = this.requestCache.has(AllowedRevocationUpdateRequestCache.generateId(peer))
+            val solicited =
+                this.requestCache.has(AllowedRevocationUpdateRequestCache.generateId(peer))
             if (solicited) {
                 val revocations = mutableListOf<RevocationBlob>()
 
@@ -306,6 +305,9 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                                 blob.signature,
                                 blob.revocations
                             )
+                            if (this::revocationUpdateCallback.isInitialized) {
+                                this.revocationUpdateCallback(hash.bytes, blob.version, blob.revocations.size)
+                            }
                         }
                     }
                 }
@@ -355,6 +357,9 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                         revocationBlob.signature,
                         revocationBlob.revocations
                     )
+                    if (this::revocationUpdateCallback.isInitialized) {
+                        this.revocationUpdateCallback(revocationBlob.publicKeyHash, revocationBlob.version, revocationBlob.revocations.size)
+                    }
                 }
             } else {
                 logger.warn { "Received update for version ${payload.version} we did not request, dropping." }
@@ -453,10 +458,6 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         return out
     }
 
-//    fun setOnRevocationPresentationCallback(f: (List<Long>, List<String>) -> Unit) {
-//        this.onRevocationUpdatePreviewCallback = f
-//    }
-
     private fun gossipMyRevocations() {
         val peers = this.fetchPeers()
         this.gossipRevocations(peers)
@@ -480,6 +481,10 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                 this.requestCache.add(AllowedRevocationUpdateRequestCache(this.requestCache, it))
             }
         }
+    }
+
+    fun setRevocationUpdateCallback(f: (publicKeyHash: ByteArray, version: Long, amount: Int) -> Unit) {
+        this.revocationUpdateCallback = f
     }
 
     class Factory(
