@@ -25,7 +25,7 @@ class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
 
     init {
         if (publicKey != null && privateKey == null) {
-            this.publicKey = publicKey.pub()
+            this.publicKey = publicKey
             this.privateKey = null
         } else if (publicKey == null && privateKey != null) {
             this.privateKey = privateKey
@@ -148,7 +148,7 @@ class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
         val chunkSize = DEFAULT_CHUNK_SIZE + signatureLength
         var isCorrect = true
         for (i in serialized.indices step chunkSize) {
-            isCorrect = isCorrect && this.gatherToken(Token.deserialize(serialized, this.publicKey, offset = i)) != null
+            isCorrect = isCorrect and (this.gatherToken(Token.deserialize(serialized, this.publicKey, offset = i)) != null)
         }
         return isCorrect
     }
@@ -169,7 +169,7 @@ class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
         }
         if (retryToken != null) {
             this.unchained.remove(retryToken)
-            if (this.gatherToken(retryToken) != null) {
+            if (this.gatherToken(retryToken) == null) {
                 logger.warn { "Dropped illegal token $retryToken!" }
             }
         }
