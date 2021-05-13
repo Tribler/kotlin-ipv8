@@ -12,7 +12,7 @@ class AllowedRevocationUpdateRequestCache(
     requestCache: RequestCache,
     peer: Peer
 ) :
-    NumberCache(requestCache, ALLOWED_REVOCATION_UPDATE_REQUEST_CACHE_PREFIX, this.generateId(peer).second) {
+    NumberCache(requestCache, ALLOWED_REVOCATION_UPDATE_REQUEST_CACHE_PREFIX, this.generateId(peer).second, timeout = 30) {
 
     companion object {
         fun generateId(peer: Peer): Pair<String, BigInteger> {

@@ -77,8 +77,10 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
     fun start() {
         this.gossipRoutine = GlobalScope.launch {
             while (isActive) {
-                gossipRevocations(getRandomPeers(DEFAULT_GOSSIP_AMOUNT))
-                delay(DELAY)
+                if (::network.isInitialized) {
+                    gossipRevocations(getRandomPeers(DEFAULT_GOSSIP_AMOUNT))
+                    delay(DELAY)
+                }
             }
         }
     }
