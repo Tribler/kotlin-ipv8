@@ -357,6 +357,9 @@ class CommunicationChannel(
 
         for (credential in pseudonym.getCredentials()) {
             val attestations = credential.attestations.toList()
+            if (attestations.isEmpty()) {
+                continue
+            }
 
             val attestors = mutableListOf<Pair<ByteArray, ByteArray>>()
 
@@ -396,6 +399,7 @@ class CommunicationChannel(
 
     fun getAttributesSignedBy(peer: Peer): List<SubjectAttestationPresentation> {
         val db = this.identityOverlay.identityManager.database
+        val myKeyHash = myPeer.publicKey.keyToHash()
         // Exclude own public key
         val subjects = db.getKnownSubjects() - peer.publicKey
         val out = mutableListOf<SubjectAttestationPresentation>()
@@ -409,12 +413,13 @@ class CommunicationChannel(
                         metadata.hash,
                         metadata,
                         md.getString("name"),
-                        md.getDouble("date").toFloat()
+                        md.getDouble("date").toFloat(),
+                        !this.revocationOverlay.authorityManager.verify(metadata.hash, myKeyHash)
                     )
                 )
             }
         }
-        return out.sortedBy { it.publicKey.keyToHash().toHex() }
+        return out.sortedBy { -it.signDate }
     }
 
     @Deprecated("This should not be used.")
@@ -450,6 +455,7 @@ class SubjectAttestationPresentation(
     val metadata: Metadata,
     val attributeName: String,
     val signDate: Float,
+    val isRevoked: Boolean
 ) {
     override fun equals(other: Any?): Boolean {
         return other is SubjectAttestationPresentation && this.publicKey == other.publicKey && this.metadata == other.metadata
