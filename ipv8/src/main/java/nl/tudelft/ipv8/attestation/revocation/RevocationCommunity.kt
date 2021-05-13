@@ -185,9 +185,6 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
             val updateRequestPayload = RevocationUpdateRequestPayload(requestedRefs)
             val packet = serializePacket(REVOCATION_UPDATE_REQUEST_PAYLOAD, updateRequestPayload)
             logger.info("Requesting revocation update: ${requestedRefs}.")
-//            logger.info("Remoterefs: $remoteRefs")
-//            logger.info("Localrefs: $localRefs")
-//                this.requestCache.add(PendingRevocationUpdateCache(this.requestCache, peer.mid))
             this.endpoint.send(peer, packet)
         }
     }
@@ -197,8 +194,6 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         payload: RevocationUpdateRequestPayload,
         bulkSending: Boolean = false,
     ) {
-        // TODO make sure we want to send to this clients.
-
         if (bulkSending) {
             val revocations = hashMapOf<ByteArrayKey, List<RevocationBlob>>()
             payload.revocationRefs.forEach { (hash, version) ->
@@ -236,7 +231,6 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
 
                 // TODO: ths could be performed in coroutines, however, would most likely lead to package lost.
                 for (rev in revocations) {
-//                logger.info("Sending version ${rev.version}")
                     val blob = serializeRevocationBlob(rev)
                     val hash = sha1(blob)
                     var sequenceNumber = 0
