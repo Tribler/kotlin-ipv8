@@ -10,7 +10,6 @@ import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.WalletAttestation
 import nl.tudelft.ipv8.attestation.IdentityAlgorithm
-import nl.tudelft.ipv8.attestation.AuthorityManager
 import nl.tudelft.ipv8.attestation.RequestCache
 import nl.tudelft.ipv8.attestation.schema.*
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity.MessageId.ATTESTATION
@@ -38,7 +37,7 @@ import kotlin.random.nextUBytes
 private val logger = KotlinLogging.logger {}
 private const val CHUNK_SIZE = 800
 
-class AttestationCommunity(val authorityManager: AuthorityManager, val database: AttestationStore) :
+class AttestationCommunity(val database: AttestationStore) :
     Community() {
 
     override lateinit var myPeer: Peer
@@ -49,10 +48,8 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         myPeer: Peer,
         endpoint: EndpointAggregator,
         network: Network,
-        authorityManager: AuthorityManager,
         database: AttestationStore,
     ) : this(
-        authorityManager,
         database
     ) {
         this.myPeer = myPeer
@@ -79,7 +76,6 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     val requestCache = RequestCache()
 
     init {
-        authorityManager.loadTrustedAuthorities()
         schemaManager.registerDefaultSchemas()
         for (att in this.database.getAllAttestations()) {
             val hash = att.attestationHash
@@ -700,11 +696,10 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     }
 
     class Factory(
-        private val authorityManager: AuthorityManager,
         private val database: AttestationStore,
     ) : Overlay.Factory<AttestationCommunity>(AttestationCommunity::class.java) {
         override fun create(): AttestationCommunity {
-            return AttestationCommunity(authorityManager, database)
+            return AttestationCommunity(database)
         }
     }
 }

@@ -67,9 +67,9 @@ class IdentityCommunity(
     private val knownAttestationHashes = hashMapOf<ByteArrayKey, HashInformation>()
     private val pseudonymManager = this.identityManager.getPseudonym(this.myPeer.key)
 
-    private var tokenChain: List<Token> = mutableListOf()
-    private var metadataChain: List<Metadata> = mutableListOf()
-    private var attestationChain: List<IdentityAttestation> = mutableListOf()
+    private var tokenChain: MutableList<Token> = mutableListOf()
+    private var metadataChain: MutableList<Metadata> = mutableListOf()
+    private var attestationChain: MutableList<IdentityAttestation> = mutableListOf()
     private val permissions: HashMap<Peer, Int> = hashMapOf()
 
     init {
@@ -77,16 +77,16 @@ class IdentityCommunity(
         super.network = network
 
         for (token in this.pseudonymManager.tree.elements.values) {
-            val chain = this.pseudonymManager.tree.getRootPath(token)
+            val chain = this.pseudonymManager.tree.getRootPath(token).reversed()
             if (chain.size > this.tokenChain.size) {
-                this.tokenChain = chain
+                this.tokenChain = chain.toMutableList()
             }
         }
         for (credential in this.pseudonymManager.getCredentials()) {
             for (token in this.tokenChain) {
                 if (credential.metadata.tokenPointer.contentEquals(token.hash)) {
-                    this.metadataChain += credential.metadata
-                    this.attestationChain += credential.attestations
+                    this.metadataChain.add(credential.metadata)
+                    this.attestationChain.addAll(credential.attestations)
                     break
                 }
             }
@@ -142,7 +142,7 @@ class IdentityCommunity(
         val hash = if (attributeHash.size == 20) padSHA1Hash(attributeHash) else attributeHash
         for (credential in this.pseudonymManager.getCredentials()) {
             val token =
-                this.pseudonymManager.tree.elements.get(ByteArrayKey(credential.metadata.tokenPointer))
+                this.pseudonymManager.tree.elements[ByteArrayKey(credential.metadata.tokenPointer)]
             if (token?.contentHash.contentEquals(hash)) {
                 return credential.metadata
             }
@@ -150,7 +150,11 @@ class IdentityCommunity(
         return null
     }
 
-    private fun shouldSign(pseudonym: PseudonymManager, metadata: Metadata, isVerification: Boolean = false): Boolean {
+    private fun shouldSign(
+        pseudonym: PseudonymManager,
+        metadata: Metadata,
+        isVerification: Boolean = false
+    ): Boolean {
         val transaction = JSONObject(String(metadata.serializedMetadata))
         val requestedKeys = transaction.keySet()
         if (!pseudonym.tree.elements.containsKey(metadata.tokenPointer.toKey())) {
@@ -186,8 +190,7 @@ class IdentityCommunity(
         }
         if (this.knownAttestationHashes[attributeHash.toKey()]!!.metadata != null
             && transaction.asMap().filterKeys { it !in DEFAULT_METADATA }
-            // TODO: Remove filter here.
-            != this.knownAttestationHashes[attributeHash.toKey()]!!.metadata!!.filterKeys { it !in DEFAULT_METADATA }
+            != this.knownAttestationHashes[attributeHash.toKey()]!!.metadata!!
         ) {
             logger.debug("Not signing $metadata, metadata does not match!")
             return false
@@ -217,7 +220,7 @@ class IdentityCommunity(
             }
             packetSpace = max(0, packetSpace)
             val trimLength = packetSpace / tokenSize
-            tokensOut = tokens.copyOfRange(tokens.size - (trimLength * tokenSize), tokens.size)
+            tokensOut = tokens.copyOfRange(0, (trimLength * tokenSize))
         }
         return Disclosure(metadata, tokensOut, attestations, authorities)
     }
@@ -276,7 +279,8 @@ class IdentityCommunity(
         )
 
         val disclosureJSON = JSONObject(disclosureInformation)
-        val requiredAttributes = listOf(disclosureJSON.getString("attestationHash").hexToBytes().toKey())
+        val requiredAttributes =
+            listOf(disclosureJSON.getString("attestationHash").hexToBytes().toKey())
         val knownAttributes: List<ByteArrayKey> =
             pseudonym.tree.elements.values.map { ByteArrayKey(it.contentHash) }
 
@@ -313,7 +317,14 @@ class IdentityCommunity(
             if (!knownAttributes.contains(attributeHash)) {
                 logger.info("Missing information for attestation ${attributeHash.bytes.toHex()}, requesting more.")
                 // TODO: add second parameter for uniqueness.
-                requestCache.add(TokenRequestCache(requestCache, peer.mid, attributeName, disclosureInformation))
+                requestCache.add(
+                    TokenRequestCache(
+                        requestCache,
+                        peer.mid,
+                        attributeName,
+                        disclosureInformation
+                    )
+                )
                 val payload = RequestMissingPayload(pseudonym.tree.elements.size)
                 this.endpoint.send(peer, serializePacket(REQUEST_MISSING_PAYLOAD, payload))
             }
@@ -325,11 +336,11 @@ class IdentityCommunity(
         credential: Credential,
         presentationMetadata: String,
     ) {
-        // val credential = this.selfAdvertise(attributeHash, attributeName, blockType, metadata)
         this.permissions[peer] = this.tokenChain.size
         val disclosure = this.pseudonymManager.discloseCredentials(listOf(credential), setOf())
         val (metadataObj, tokens, attestations, authorities) = this.fitDisclosure(disclosure)
-        val payload = DisclosePayload(metadataObj, tokens, attestations, authorities, presentationMetadata)
+        val payload =
+            DisclosePayload(metadataObj, tokens, attestations, authorities, presentationMetadata)
         this.endpoint.send(peer, serializePacket(DISCLOSURE_PAYLOAD, payload))
     }
 
@@ -372,15 +383,16 @@ class IdentityCommunity(
             if (this.metadataChain.isNotEmpty()) this.metadataChain.last() else null
         )
 
-        this.attestationChain += credential.attestations
-        this.metadataChain += credential.metadata
-        this.tokenChain += this.pseudonymManager.tree.elements[credential.metadata.tokenPointer.toKey()]!!
+        this.attestationChain.addAll(credential.attestations)
+        this.metadataChain.add(credential.metadata)
+        this.tokenChain.add(pseudonymManager.tree.elements[credential.metadata.tokenPointer.toKey()]!!)
 
         return credential
     }
 
     private fun onDisclosure(peer: Peer, payload: DisclosePayload) {
-        val isAttestationRequest = this.knownAttestationHashes.values.any { it.publicKey == peer.publicKey }
+        val isAttestationRequest =
+            this.knownAttestationHashes.values.any { it.publicKey == peer.publicKey }
         val disclosureMD = JSONObject(payload.advertisementInformation ?: "{}")
         val id = disclosureMD.optString("id")
         val idPair = DisclosureRequestCache.idFromUUID(id)
@@ -392,7 +404,12 @@ class IdentityCommunity(
                 val cache = this.requestCache.pop(idPair)!! as DisclosureRequestCache
                 this.receivedDisclosureForPresentation(
                     peer,
-                    Disclosure(payload.metadata, payload.tokens, payload.attestations, payload.authorities),
+                    Disclosure(
+                        payload.metadata,
+                        payload.tokens,
+                        payload.attestations,
+                        payload.authorities
+                    ),
                     cache.disclosureRequest.attributeName,
                     payload.advertisementInformation!!
                 )
@@ -400,7 +417,12 @@ class IdentityCommunity(
             isAttestationRequest -> {
                 this.receivedDisclosureForAttest(
                     peer,
-                    Disclosure(payload.metadata, payload.tokens, payload.attestations, payload.authorities)
+                    Disclosure(
+                        payload.metadata,
+                        payload.tokens,
+                        payload.attestations,
+                        payload.authorities
+                    )
                 )
             }
             else -> {
@@ -421,23 +443,24 @@ class IdentityCommunity(
     private fun onRequestMissing(peer: Peer, payload: RequestMissingPayload) {
         logger.info("Received missing request from ${peer.mid} for ${payload.known} tokens")
         var out = byteArrayOf()
-        val permitted = this.tokenChain.subList(0, this.permissions.get(peer) ?: 0)
-        permitted.forEachIndexed { index, token ->
+        val permitted = this.tokenChain.subList(0, this.permissions[peer] ?: 0)
+
+        for ((index, token) in permitted.withIndex()) {
             if (index >= payload.known) {
                 val serialized = token.getPlaintextSigned()
                 if (out.size + serialized.size > SAFE_UDP_PACKET_LENGTH) {
-                    return@forEachIndexed
+                    break
                 }
                 out += serialized
             }
         }
-
         val responsePayload = MissingResponsePayload(out)
         this.endpoint.send(peer, serializePacket(MISSING_RESPONSE_PAYLOAD, responsePayload))
     }
 
     private fun onMissingResponse(peer: Peer, payload: MissingResponsePayload) {
-        val solicitedAttestationRequest = this.knownAttestationHashes.values.any { it.publicKey == peer.publicKey }
+        val solicitedAttestationRequest =
+            this.knownAttestationHashes.values.any { it.publicKey == peer.publicKey }
         val idPair = TokenRequestCache.generateId(peer.mid)
         val solicitedAttestationPresentation = this.requestCache.has(idPair)
 

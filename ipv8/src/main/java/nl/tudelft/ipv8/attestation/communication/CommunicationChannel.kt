@@ -15,7 +15,7 @@ import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
 import nl.tudelft.ipv8.attestation.communication.caches.DisclosureRequestCache
 import nl.tudelft.ipv8.attestation.identity.IdentityAttestation
 import nl.tudelft.ipv8.attestation.identity.database.Credential
-import nl.tudelft.ipv8.attestation.schema.ID_METADATA
+import nl.tudelft.ipv8.attestation.revocation.RevocationCommunity
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
@@ -29,7 +29,6 @@ import nl.tudelft.ipv8.util.toByteArray
 import nl.tudelft.ipv8.util.toHex
 import nl.tudelft.ipv8.util.toKey
 import org.json.JSONObject
-import java.util.Locale
 import java.util.UUID
 
 const val DEFAULT_TIME_OUT = 30_000L
@@ -37,7 +36,8 @@ private val logger = KotlinLogging.logger {}
 
 class CommunicationChannel(
     val attestationOverlay: AttestationCommunity,
-    val identityOverlay: IdentityCommunity
+    val identityOverlay: IdentityCommunity,
+    val revocationOverlay: RevocationCommunity
 ) {
     val attestationRequests =
         hashMapOf<AttributePointer, Triple<SettableDeferred<ByteArray?>, String, String?>>()
@@ -65,7 +65,7 @@ class CommunicationChannel(
         get() = this.attestationOverlay.schemaManager.getSchemaNames()
 
     val authorityManager
-        get() = this.attestationOverlay.authorityManager
+        get() = this.revocationOverlay.authorityManager
 
     private fun onRequestAttestationAsync(
         peer: Peer,
@@ -264,17 +264,7 @@ class CommunicationChannel(
     }
 
     fun revoke(signatures: List<ByteArray>) {
-        val keyHash = myPeer.publicKey.keyToHash()
-        val latestVersion = authorityManager.getAuthority(keyHash)?.version?.plus(1) ?: 1L
-        var signableData = latestVersion.toByteArray()
-        signatures.forEach { signableData += it }
-        val versionSignature = (myPeer.key as PrivateKey).sign(sha3_256(signableData))
-        authorityManager.insertRevocations(
-            myPeer.publicKey.keyToHash(),
-            latestVersion,
-            versionSignature,
-            signatures
-        )
+       this.revocationOverlay.revokeAttestations(signatures)
     }
 
     fun verifyLocally(
@@ -312,7 +302,7 @@ class CommunicationChannel(
         // Check if authority is recognized and the corresponding signature is correct.
         if (!attestors.any { attestor ->
                 val authority =
-                    this.attestationOverlay.authorityManager.getTrustedAuthority(attestor.first)
+                    this.authorityManager.getTrustedAuthority(attestor.first)
                 authority?.let {
                     it.publicKey?.verify(attestor.second, metadata.hash)
                 } == true
@@ -322,7 +312,7 @@ class CommunicationChannel(
         }
 
         // Check if any authority has not revoked a signature
-        if (!this.attestationOverlay.authorityManager.verify(metadata.hash)) {
+        if (!this.authorityManager.verify(metadata.hash)) {
             logger.info("Not accepting ${attestationHash.toHex()}, signature was revoked.")
             return false
         }
@@ -367,6 +357,9 @@ class CommunicationChannel(
 
         for (credential in pseudonym.getCredentials()) {
             val attestations = credential.attestations.toList()
+            if (attestations.isEmpty()) {
+                continue
+            }
 
             val attestors = mutableListOf<Pair<ByteArray, ByteArray>>()
 
@@ -406,6 +399,7 @@ class CommunicationChannel(
 
     fun getAttributesSignedBy(peer: Peer): List<SubjectAttestationPresentation> {
         val db = this.identityOverlay.identityManager.database
+        val myKeyHash = myPeer.publicKey.keyToHash()
         // Exclude own public key
         val subjects = db.getKnownSubjects() - peer.publicKey
         val out = mutableListOf<SubjectAttestationPresentation>()
@@ -419,12 +413,13 @@ class CommunicationChannel(
                         metadata.hash,
                         metadata,
                         md.getString("name"),
-                        md.getDouble("date").toFloat()
+                        md.getDouble("date").toFloat(),
+                        !this.revocationOverlay.authorityManager.verify(metadata.hash, myKeyHash)
                     )
                 )
             }
         }
-        return out.sortedBy { it.publicKey.keyToHash().toHex() }
+        return out.sortedBy { -it.signDate }
     }
 
     @Deprecated("This should not be used.")
@@ -460,6 +455,7 @@ class SubjectAttestationPresentation(
     val metadata: Metadata,
     val attributeName: String,
     val signDate: Float,
+    val isRevoked: Boolean
 ) {
     override fun equals(other: Any?): Boolean {
         return other is SubjectAttestationPresentation && this.publicKey == other.publicKey && this.metadata == other.metadata

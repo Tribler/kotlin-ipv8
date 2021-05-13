@@ -67,7 +67,7 @@ class IdentityManager(internal var database: IdentityStore) {
                 )
             )
             authorityOffset += authoritySize
-            correct = correct && pseudonym.addAttestation(
+            correct = correct and pseudonym.addAttestation(
                 authority,
                 IdentityAttestation.deserialize(serializedAttestations, authority, attestationOffset)
             )

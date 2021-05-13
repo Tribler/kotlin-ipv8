@@ -1,7 +1,11 @@
 package nl.tudelft.ipv8.attestation
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import mu.KotlinLogging
 import nl.tudelft.ipv8.attestation.revocation.AuthorityStore
 import nl.tudelft.ipv8.attestation.revocation.RevocationBlob
+import nl.tudelft.ipv8.attestation.revocation.datastructures.BloomFilter
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.util.ByteArrayKey
 import nl.tudelft.ipv8.util.toKey
@@ -13,17 +17,26 @@ class Authority(
     val recognized: Boolean = false,
 )
 
-class Revocations(
-    val publicKeyHash: String,
-    val encryptedVersion: ByteArray,
-    val signature: String,
-    val revocations: List<String>,
-)
+const val DEFAULT_CAPACITY = 100
+private val logger = KotlinLogging.logger {}
 
 class AuthorityManager(val authorityDatabase: AuthorityStore) {
 
     private val trustedAuthorities = hashMapOf<ByteArrayKey, Authority>()
+    private val revocations: BloomFilter
     private val lock = Object()
+
+    init {
+        loadTrustedAuthorities()
+        val revocationsAmount = authorityDatabase.getNumberOfRevocations()
+        if (revocationsAmount + 100 >= Integer.MAX_VALUE) {
+            logger.error("Number of revocations overflows bloom filter capacity.")
+        }
+        revocations = BloomFilter(revocationsAmount.toInt() + DEFAULT_CAPACITY)
+        GlobalScope.launch {
+            authorityDatabase.getAllRevocations().forEach { revocations.add(it) }
+        }
+    }
 
     fun loadTrustedAuthorities() {
         val authorities = authorityDatabase.getRecognizedAuthorities()
@@ -35,7 +48,16 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
     }
 
     fun verify(signature: ByteArray): Boolean {
-        return !getAllRevocations().any { it.contentEquals(signature) }
+        return !(this.revocations.probablyContains(signature) && authorityDatabase.isRevoked(
+            signature
+        ))
+    }
+
+    fun verify(signature: ByteArray, authorityKeyHash: ByteArray): Boolean {
+        return !(this.revocations.probablyContains(signature) && authorityDatabase.isRevokedBy(
+            signature,
+            authorityKeyHash
+        ))
     }
 
     fun insertRevocations(
@@ -48,13 +70,33 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
         if (this.trustedAuthorities.containsKey(publicKeyHash.toKey())) {
             this.trustedAuthorities[publicKeyHash.toKey()]!!.version = versionNumber
         }
+        revokedHashes.forEach { revocations.add(it) }
     }
 
+    /**
+     * Method for fetching all latest known versions.
+     */
     fun getLatestRevocationPreviews(): Map<ByteArrayKey, Long> {
         val authorities = authorityDatabase.getKnownAuthorities()
         val localRefs = hashMapOf<ByteArrayKey, Long>()
         authorities.forEach {
-            localRefs[it.hash.toKey()] = it.version
+            if (it.version > 0)
+                localRefs[it.hash.toKey()] = it.version
+        }
+        return localRefs
+    }
+
+    /**
+     * Method for fetching the lowest missing versions.
+     */
+    fun getMissingRevocationPreviews(): Map<ByteArrayKey, Long> {
+        val authorities = authorityDatabase.getKnownAuthorities()
+        val localRefs = hashMapOf<ByteArrayKey, Long>()
+        authorities.forEach {
+            localRefs[it.hash.toKey()] =
+                it.version.coerceAtMost(
+                    authorityDatabase.getMissingVersion(it.hash) ?: Long.MAX_VALUE
+                )
         }
         return localRefs
     }
@@ -82,7 +124,7 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
 
     fun addTrustedAuthority(publicKey: PublicKey) {
         val hash = publicKey.keyToHash()
-        if (!this.contains(hash)) {
+        if (!this.containsAuthority(hash)) {
             val localAuthority = authorityDatabase.getAuthorityByHash(hash)
             if (localAuthority == null) {
                 authorityDatabase.insertTrustedAuthority(publicKey)
@@ -99,18 +141,18 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
     }
 
     fun deleteTrustedAuthority(hash: ByteArray) {
-        if (this.contains(hash)) {
+        if (this.containsAuthority(hash)) {
             this.trustedAuthorities.remove(hash.toKey())
             this.authorityDatabase.disregardAuthority(hash)
         }
     }
 
     fun getTrustedAuthority(hash: ByteArray): Authority? {
-        return this.trustedAuthorities.get(hash.toKey())
+        return this.trustedAuthorities[hash.toKey()]
     }
 
     fun getAuthority(hash: ByteArray): Authority? {
-        return this.trustedAuthorities.get(hash.toKey()) ?: authorityDatabase.getAuthorityByHash(
+        return this.trustedAuthorities[hash.toKey()] ?: authorityDatabase.getAuthorityByHash(
             hash
         )
     }
@@ -119,7 +161,7 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
         return this.deleteTrustedAuthority(publicKey.keyToHash())
     }
 
-    fun contains(hash: ByteArray): Boolean {
+    fun containsAuthority(hash: ByteArray): Boolean {
         return this.trustedAuthorities.containsKey(hash.toKey())
     }
 }

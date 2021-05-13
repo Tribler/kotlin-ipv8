@@ -48,6 +48,6 @@ abstract class SignedObject(val privateKey: PrivateKey? = null, private val know
 
     override fun hashCode(): Int {
         // TODO: verify that this is correct.
-        return deserializeULong(this.hash).toInt()
+        return deserializeULong(this.hash.copyOfRange(0, 8)).toInt()
     }
 }

@@ -5,7 +5,6 @@ import nl.tudelft.ipv8.attestation.Authority
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.sqldelight.Database
-import nl.tudelft.ipv8.sqldelight.GetAllRevocations
 
 private val authorityMapper: (
     ByteArray?,
@@ -70,16 +69,6 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
             authorityId = dao.getAuthorityIdByHash(publicKeyHash).executeAsOne()
         }
 
-        if (version >= 2L) {
-            val previousId =
-                dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L)
-                    .executeAsOneOrNull()?.version_id
-            if (previousId == null) {
-                logger.warn("Received revocations out of order, skipping!")
-                return
-            }
-        }
-
         var versionId =
             dao.getVersionByAuthorityIDandVersionNumber(authorityId, version)
                 .executeAsOneOrNull()?.version_id
@@ -121,5 +110,27 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
 
     override fun getAllRevocations(): List<ByteArray> {
         return dao.getRevocations().executeAsList()
+    }
+
+    override fun getNumberOfRevocations(): Long {
+        return dao.getNumberOfRevocations().executeAsOne()
+    }
+
+    override fun getMissingVersion(authorityKeyHash: ByteArray): Long? {
+        val authorityId = dao.getAuthorityIdByHash(authorityKeyHash).executeAsOneOrNull()
+        return authorityId?.let { dao.getMissingVersionByAuthorityID(it).executeAsOneOrNull()?.MIN }
+    }
+
+    override fun isRevoked(signature: ByteArray): Boolean {
+        return dao.isRevoked(signature).executeAsList().isNotEmpty()
+    }
+
+    override fun isRevokedBy(signature: ByteArray, authorityKeyHash: ByteArray): Boolean {
+        val authorityId = dao.getAuthorityIdByHash(authorityKeyHash).executeAsOneOrNull()
+        return if (authorityId == null) {
+            false
+        } else {
+            dao.isRevokedBy(signature, authorityId).executeAsList().isNotEmpty()
+        }
     }
 }
