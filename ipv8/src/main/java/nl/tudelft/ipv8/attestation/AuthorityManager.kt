@@ -17,13 +17,6 @@ class Authority(
     val recognized: Boolean = false,
 )
 
-class Revocations(
-    val publicKeyHash: String,
-    val encryptedVersion: ByteArray,
-    val signature: String,
-    val revocations: List<String>,
-)
-
 const val DEFAULT_CAPACITY = 100
 private val logger = KotlinLogging.logger {}
 
@@ -55,7 +48,16 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
     }
 
     fun verify(signature: ByteArray): Boolean {
-        return !(this.revocations.probablyContains(signature) && authorityDatabase.isRevoked(signature))
+        return !(this.revocations.probablyContains(signature) && authorityDatabase.isRevoked(
+            signature
+        ))
+    }
+
+    fun verify(signature: ByteArray, authorityKeyHash: ByteArray): Boolean {
+        return !(this.revocations.probablyContains(signature) && authorityDatabase.isRevokedBy(
+            signature,
+            authorityKeyHash
+        ))
     }
 
     fun insertRevocations(
@@ -92,7 +94,9 @@ class AuthorityManager(val authorityDatabase: AuthorityStore) {
         val localRefs = hashMapOf<ByteArrayKey, Long>()
         authorities.forEach {
             localRefs[it.hash.toKey()] =
-                it.version.coerceAtMost(authorityDatabase.getMissingVersion(it.hash) ?: Long.MAX_VALUE)
+                it.version.coerceAtMost(
+                    authorityDatabase.getMissingVersion(it.hash) ?: Long.MAX_VALUE
+                )
         }
         return localRefs
     }
