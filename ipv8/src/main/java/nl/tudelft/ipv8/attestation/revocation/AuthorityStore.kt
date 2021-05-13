@@ -28,6 +28,7 @@ interface AuthorityStore {
     )
 
     fun isRevoked(signature: ByteArray): Boolean
+    fun isRevokedBy(signature: ByteArray, authorityKeyHash: ByteArray): Boolean
     fun getRevocations(publicKeyHash: ByteArray, versions: List<Long>): List<RevocationBlob>
     fun getVersionsSince(publicKeyHash: ByteArray, sinceVersion: Long): List<Long>
     fun getAllRevocations(): List<ByteArray>

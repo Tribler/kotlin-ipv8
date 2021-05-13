@@ -132,6 +132,15 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
     }
 
     override fun isRevoked(signature: ByteArray): Boolean {
-        return dao.isRevoked(signature).executeAsOneOrNull()?.toInt() == 1
+        return dao.isRevoked(signature).executeAsList().isNotEmpty()
+    }
+
+    override fun isRevokedBy(signature: ByteArray, authorityKeyHash: ByteArray): Boolean {
+        val authorityId = dao.getAuthorityIdByHash(authorityKeyHash).executeAsOneOrNull()
+        return if (authorityId == null) {
+            false
+        } else {
+            dao.isRevokedBy(signature, authorityId).executeAsList().isNotEmpty()
+        }
     }
 }

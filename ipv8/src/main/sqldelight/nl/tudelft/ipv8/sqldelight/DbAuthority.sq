@@ -97,3 +97,6 @@ GROUP BY A.version_number;
 
 isRevoked:
 SELECT 1 FROM revocations WHERE revoked_hash = ?;
+
+isRevokedBy:
+SELECT 1 FROM revocations WHERE revoked_hash = ? AND authority_id = ?;
