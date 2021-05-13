@@ -69,16 +69,6 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
             authorityId = dao.getAuthorityIdByHash(publicKeyHash).executeAsOne()
         }
 
-        // if (version >= 2L) {
-        //     val previousId =
-        //         dao.getVersionByAuthorityIDandVersionNumber(authorityId, version - 1L)
-        //             .executeAsOneOrNull()?.version_id
-        //     if (previousId == null) {
-        //         logger.error("Received revocations out of order, skipping!")
-        //         throw IllegalStateException("Encountered out-of-order revocation version.")
-        //     }
-        // }
-
         var versionId =
             dao.getVersionByAuthorityIDandVersionNumber(authorityId, version)
                 .executeAsOneOrNull()?.version_id
