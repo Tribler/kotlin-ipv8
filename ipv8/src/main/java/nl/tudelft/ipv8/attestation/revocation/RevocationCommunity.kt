@@ -360,7 +360,11 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                         revocationBlob.revocations
                     )
                     if (this::revocationUpdateCallback.isInitialized) {
-                        this.revocationUpdateCallback(revocationBlob.publicKeyHash, revocationBlob.version, revocationBlob.revocations.size)
+                        this.revocationUpdateCallback(
+                            revocationBlob.publicKeyHash,
+                            revocationBlob.version,
+                            revocationBlob.revocations.size
+                        )
                     }
                 }
             } else {

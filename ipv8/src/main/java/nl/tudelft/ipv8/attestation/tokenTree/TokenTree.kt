@@ -103,7 +103,7 @@ class TokenTree(publicKey: PublicKey? = null, privateKey: PrivateKey? = null) {
     fun getRootPath(token: Token, maxDepth: Int = 1000): List<Token> {
         var current = token
         var steps = 0
-        val path = arrayListOf(token)
+        val path = mutableListOf(token)
         while (maxDepth == -1 || maxDepth > steps) {
             if (!current.verify(this.publicKey)) {
                 return arrayListOf()
