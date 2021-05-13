@@ -4,13 +4,13 @@ import nl.tudelft.ipv8.messaging.*
 
 class RevocationUpdateChunkPayload(
     val sequenceNumber: Int,
-    val hash: ByteArray,
-    val publicKeyHash: ByteArray,
+    val payloadHash: ByteArray,
+    val authorityKeyHash: ByteArray,
     val version: Long,
     val data: ByteArray,
 ) : Serializable {
     override fun serialize(): ByteArray {
-        return serializeUInt(sequenceNumber.toUInt()) + hash + publicKeyHash + serializeULong(version.toULong()) + serializeVarLen(
+        return serializeUInt(sequenceNumber.toUInt()) + payloadHash + authorityKeyHash + serializeULong(version.toULong()) + serializeVarLen(
             data)
     }
 

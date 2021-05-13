@@ -48,19 +48,19 @@ class PseudonymManager(
 
             if (metadata.verify(this.publicKey) && metadata.tokenPointer.contentEquals(token.hash)) {
                 this.database.insertMetadata(this.publicKey, metadata)
-            }
 
-            val validAttestations = mutableSetOf<IdentityAttestation>()
+                val validAttestations = mutableSetOf<IdentityAttestation>()
 
-            for ((authorityPublicKey, identityAttestation) in attestations) {
-                if (this.addAttestation(authorityPublicKey, identityAttestation)) {
-                    validAttestations += identityAttestation
+                for ((authorityPublicKey, identityAttestation) in attestations) {
+                    if (this.addAttestation(authorityPublicKey, identityAttestation)) {
+                        validAttestations.add(identityAttestation)
+                    }
                 }
-            }
 
-            val out = Credential(metadata, validAttestations)
-            this.credentials.plusAssign(out)
-            return out
+                val out = Credential(metadata, validAttestations)
+                this.credentials.add(out)
+                return out
+            }
         }
         return null
     }
@@ -90,9 +90,13 @@ class PseudonymManager(
         metadata: HashMap<String, Any>,
         after: Metadata? = null,
     ): Credential {
-        val preceding = if (after == null) null else this.tree.elements.get(after.tokenPointer.toKey())
+        val preceding = if (after == null) null else this.tree.elements[after.tokenPointer.toKey()]
         val token = this.tree.addByHash(attestationHash, preceding)
-        val metadataObj = Metadata(token.hash, JSONObject(metadata).toString().toByteArray(), this.tree.privateKey)
+        val metadataObj = Metadata(
+            token.hash,
+            JSONObject(metadata).toString().toByteArray(),
+            this.tree.privateKey
+        )
         return this.addCredential(token, metadataObj, setOf())!!
     }
 
@@ -104,11 +108,14 @@ class PseudonymManager(
         return this.database.getCredentialsFor(this.publicKey)
     }
 
-    fun discloseCredentials(credentials: List<Credential>, attestationSelector: Set<ByteArray>): Disclosure {
+    fun discloseCredentials(
+        credentials: List<Credential>,
+        attestationSelector: Set<ByteArray>
+    ): Disclosure {
         return createDisclosure(credentials.map { it.metadata }.toSet(), attestationSelector)
     }
 
-    fun createDisclosure(metadata: Set<Metadata>, attestationSelector: Set<ByteArray>): Disclosure {
+    private fun createDisclosure(metadata: Set<Metadata>, attestationSelector: Set<ByteArray>): Disclosure {
         val attSelector = attestationSelector.map { ByteArrayKey(it) }
         var serializedMetadata = byteArrayOf()
         for (md in metadata) {
@@ -130,7 +137,7 @@ class PseudonymManager(
             }
         }
         val requiredTokenHashes = metadata.map { it.tokenPointer }
-        val tokens = mutableSetOf<Token>()
+        val tokens = mutableListOf<Token>()
 
         for (requiredTokenHash in requiredTokenHashes) {
             val rootToken = this.tree.elements[requiredTokenHash.toKey()]!!
@@ -139,14 +146,17 @@ class PseudonymManager(
                 throw RuntimeException("Attempted to create disclosure for undisclosable Token!")
             }
 
-            tokens += rootToken
+            tokens.add(rootToken)
             var currentToken = rootToken
 
             while (!currentToken.previousTokenHash.contentEquals(this.tree.genesisHash)) {
                 currentToken = this.tree.elements[currentToken.previousTokenHash.toKey()]!!
-                tokens += currentToken
+                tokens.add(currentToken)
             }
         }
+
+        // This is the order that they are present in the tree, as we stepped backwards.
+        tokens.reverse()
         var serializedTokens = byteArrayOf()
         tokens.forEach { serializedTokens += it.getPlaintextSigned() }
         return Disclosure(serializedMetadata, serializedTokens, attestations, authorities)

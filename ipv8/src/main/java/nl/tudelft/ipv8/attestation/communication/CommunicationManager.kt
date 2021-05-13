@@ -8,6 +8,7 @@ import nl.tudelft.ipv8.attestation.identity.IdentityCommunity
 import nl.tudelft.ipv8.attestation.identity.createCommunity
 import nl.tudelft.ipv8.attestation.identity.store.IdentityStore
 import nl.tudelft.ipv8.attestation.identity.manager.IdentityManager
+import nl.tudelft.ipv8.attestation.revocation.RevocationCommunity
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
 import nl.tudelft.ipv8.attestation.wallet.store.AttestationStore
 import nl.tudelft.ipv8.keyvault.PrivateKey
@@ -76,13 +77,21 @@ class CommunicationManager(
                 identityOverlay.myPeer,
                 identityOverlay.endpoint,
                 identityOverlay.network,
-                authorityManager,
                 attestationStore
             )
             attestationOverlay.load()
 
+            val revocationOverlay = RevocationCommunity(
+                identityOverlay.myPeer,
+                identityOverlay.endpoint,
+                identityOverlay.network,
+                authorityManager,
+                identityOverlay::getPeers
+            )
+            revocationOverlay.load()
+
             this.channels[publicKeyBytes.toKey()] =
-                CommunicationChannel(attestationOverlay, identityOverlay)
+                CommunicationChannel(attestationOverlay, identityOverlay, revocationOverlay)
             this.nameToChannel[name] = this.channels[publicKeyBytes.toKey()]!!
         }
         return this.nameToChannel[name]!!
@@ -94,6 +103,7 @@ class CommunicationManager(
             this.channels.remove(communicationChannel.publicKeyBin.toKey())
             this.iPv8Instance.unloadSecondaryOverlayStrategy(communicationChannel.identityOverlay.serviceId)
             communicationChannel.attestationOverlay.unload()
+            communicationChannel.revocationOverlay.unload()
             // TODO: Endpoint close?
         }
     }

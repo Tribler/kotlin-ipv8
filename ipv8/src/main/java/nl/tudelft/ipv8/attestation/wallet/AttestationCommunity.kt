@@ -9,7 +9,6 @@ import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.wallet.cryptography.IdentityAlgorithm
-import nl.tudelft.ipv8.attestation.common.AuthorityManager
 import nl.tudelft.ipv8.attestation.common.RequestCache
 import nl.tudelft.ipv8.attestation.common.SchemaManager
 import nl.tudelft.ipv8.attestation.common.consts.SchemaConstants.ID_METADATA
@@ -47,7 +46,7 @@ private const val CHUNK_SIZE = 800
 /**
  * Community for signing and verifying attestations.
  */
-class AttestationCommunity(val authorityManager: AuthorityManager, val database: AttestationStore) :
+class AttestationCommunity(val database: AttestationStore) :
     Community() {
 
     override val serviceId = "e5d116f803a916a84850b9057cc0f662163f71f5"
@@ -65,10 +64,8 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
         myPeer: Peer,
         endpoint: EndpointAggregator,
         network: Network,
-        authorityManager: AuthorityManager,
         database: AttestationStore,
     ) : this(
-        authorityManager,
         database
     ) {
         this.myPeer = myPeer
@@ -93,7 +90,6 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     val requestCache = RequestCache()
 
     init {
-        authorityManager.loadTrustedAuthorities()
         schemaManager.registerDefaultSchemas()
         for (att in this.database.getAllAttestations()) {
             val hash = att.attestationHash
@@ -708,11 +704,10 @@ class AttestationCommunity(val authorityManager: AuthorityManager, val database:
     }
 
     class Factory(
-        private val authorityManager: AuthorityManager,
         private val database: AttestationStore,
     ) : Overlay.Factory<AttestationCommunity>(AttestationCommunity::class.java) {
         override fun create(): AttestationCommunity {
-            return AttestationCommunity(authorityManager, database)
+            return AttestationCommunity(database)
         }
     }
 }
