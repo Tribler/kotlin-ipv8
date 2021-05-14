@@ -102,4 +102,13 @@ class IdentitySQLiteStore(database: Database) : IdentityStore {
         return dao.getKnownSubjects().executeAsList()
             .map { defaultCryptoProvider.keyFromPublicBin(it) }
     }
+
+    override fun dropIdentityTable(publicKey: PublicKey): List<ByteArray> {
+        val attestationHashes = this.getTokensFor(publicKey).map { it.contentHash }
+        val keyBin = publicKey.keyToBin()
+        dao.deleteTokensFor(keyBin)
+        dao.deleteMetadataFor(keyBin)
+        dao.deleteIdentityAttestationsFor(keyBin)
+        return attestationHashes
+    }
 }

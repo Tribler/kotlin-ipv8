@@ -159,16 +159,21 @@ class CommunicationChannel(
         this.verify(peer, stripSHA1Padding(attributeHash), listOf(value), idFormat)
     }
 
-    private fun dropIdentityTableData() {
-        TODO("")
+    private fun dropIdentityTableData(): List<ByteArray> {
+        val database = this.identityOverlay.identityManager.database
+        return database.dropIdentityTable(this.myPeer.publicKey)
     }
 
-    private fun dropAttestationTableData() {
-        TODO("")
+    private fun dropAttestationTableData(attestationHashes: List<ByteArray>) {
+        val database = this.attestationOverlay.database
+        return database.deleteAttestations(attestationHashes)
     }
 
-    fun remove() {
-        TODO("")
+    fun deleteIdentity() {
+        val hashes = this.dropIdentityTableData().map { stripSHA1Padding(it) }
+        this.dropAttestationTableData(hashes)
+        this.attestationRequests.clear()
+        this.verifyRequests.clear()
     }
 
     fun requestAttestation(
