@@ -55,3 +55,12 @@ SELECT public_key FROM tokens;
 
 getKnownSubjects:
 SELECT DISTINCT public_key FROM metadata;
+
+deleteTokensFor:
+DELETE FROM tokens WHERE public_key = ?;
+
+deleteMetadataFor:
+DELETE FROM metadata WHERE public_key = ?;
+
+deleteIdentityAttestationsFor:
+DELETE FROM identity_attestations WHERE public_key = ?;

@@ -21,3 +21,6 @@ SELECT value FROM attestations WHERE hash = ?;
 
 deleteAttestationByHash:
 DELETE FROM attestations WHERE hash = ?;
+
+deleteAttestations:
+DELETE FROM attestations WHERE hash IN ?;

@@ -27,4 +27,5 @@ interface IdentityStore {
     fun getCredentialsFor(publicKey: PublicKey): List<Credential>
     fun getKnownIdentities(): List<PublicKey>
     fun getKnownSubjects(): List<PublicKey>
+    fun dropIdentityTable(publicKey: PublicKey): List<ByteArray>
 }
