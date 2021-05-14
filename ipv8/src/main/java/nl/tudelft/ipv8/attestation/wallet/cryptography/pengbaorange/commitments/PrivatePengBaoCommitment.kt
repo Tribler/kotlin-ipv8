@@ -12,6 +12,7 @@ import nl.tudelft.ipv8.messaging.serializeVarLen
 import nl.tudelft.ipv8.util.hexToBytes
 import nl.tudelft.ipv8.util.toHex
 import java.math.BigInteger
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.decode as bonehExactDecode
 
 class PengBaoPrivateData(
     val m1: BigInteger,
@@ -32,9 +33,9 @@ class PengBaoPrivateData(
     }
 
     fun serialize(): ByteArray {
-        return serializeVarLen(this.m1.toByteArray()) + serializeVarLen(this.m2.toByteArray()) + serializeVarLen(this.m3.toByteArray()) + serializeVarLen(
-            this.r1.toByteArray()
-        ) + serializeVarLen(this.r2.toByteArray()) + serializeVarLen(this.r3.toByteArray())
+        return serializeVarLen(this.m1.toByteArray()) + serializeVarLen(this.m2.toByteArray()) +
+            serializeVarLen(this.m3.toByteArray()) + serializeVarLen(this.r1.toByteArray()) +
+            serializeVarLen(this.r2.toByteArray()) + serializeVarLen(this.r3.toByteArray())
     }
 
     fun encode(publicKey: BonehPublicKey): ByteArray {
@@ -57,7 +58,10 @@ class PengBaoPrivateData(
         val MSG_SPACE = (0 until 256).toList().toTypedArray()
 
         fun deserialize(serialized: ByteArray): Pair<PengBaoPrivateData, ByteArray> {
-            val (values, rem) = deserializeAmount(serialized, PENG_BAO_PRIVATE_COMMITMENT_NUM_PARAMS)
+            val (values, rem) = deserializeAmount(
+                serialized,
+                PENG_BAO_PRIVATE_COMMITMENT_NUM_PARAMS
+            )
             val m1 = BigInteger(values[0])
             val m2 = BigInteger(values[1])
             val m3 = BigInteger(values[2])
@@ -75,7 +79,7 @@ class PengBaoPrivateData(
             for (i in 0 until length) {
                 val (deserialized, localRem) = deserializeFP2Value(privateKey.g.mod, rem)
                 rem = localRem
-                var hexedRaw = nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.decode(
+                val hexedRaw = bonehExactDecode(
                     privateKey,
                     MSG_SPACE,
                     deserialized
