@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.revocation
 
-import nl.tudelft.ipv8.attestation.Authority
+import nl.tudelft.ipv8.attestation.common.Authority
 import nl.tudelft.ipv8.keyvault.PublicKey
 
 class RevocationBlob(

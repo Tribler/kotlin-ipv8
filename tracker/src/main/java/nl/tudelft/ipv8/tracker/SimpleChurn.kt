@@ -8,7 +8,7 @@ import java.util.*
 private val logger = KotlinLogging.logger {}
 
 class SimpleChurn(
-    private val overlay: Overlay
+    override val overlay: Overlay
 ) : DiscoveryStrategy {
     override fun takeStep() {
         synchronized(overlay.network.graphLock) {

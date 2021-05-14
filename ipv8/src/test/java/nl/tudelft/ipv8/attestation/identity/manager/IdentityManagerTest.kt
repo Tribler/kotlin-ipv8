@@ -2,8 +2,8 @@ package nl.tudelft.ipv8.attestation.identity.manager
 
 import com.squareup.sqldelight.db.SqlDriver
 import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver
-import nl.tudelft.ipv8.attestation.identity.database.Credential
-import nl.tudelft.ipv8.attestation.identity.database.IdentitySQLiteStore
+import nl.tudelft.ipv8.attestation.identity.store.Credential
+import nl.tudelft.ipv8.attestation.identity.store.IdentitySQLiteStore
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.sqldelight.Database
 import org.json.JSONObject

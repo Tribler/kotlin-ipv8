@@ -1,12 +1,12 @@
 package nl.tudelft.ipv8.attestation.identity.manager
 
 import mu.KotlinLogging
-import nl.tudelft.ipv8.attestation.identity.IdentityAttestation
-import nl.tudelft.ipv8.attestation.identity.Metadata
-import nl.tudelft.ipv8.attestation.identity.database.Credential
-import nl.tudelft.ipv8.attestation.identity.database.IdentityStore
-import nl.tudelft.ipv8.attestation.tokenTree.Token
-import nl.tudelft.ipv8.attestation.tokenTree.TokenTree
+import nl.tudelft.ipv8.attestation.identity.datastructures.IdentityAttestation
+import nl.tudelft.ipv8.attestation.identity.datastructures.Metadata
+import nl.tudelft.ipv8.attestation.identity.store.Credential
+import nl.tudelft.ipv8.attestation.identity.store.IdentityStore
+import nl.tudelft.ipv8.attestation.identity.datastructures.tokenTree.Token
+import nl.tudelft.ipv8.attestation.identity.datastructures.tokenTree.TokenTree
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.messaging.serializeUInt

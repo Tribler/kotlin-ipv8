@@ -13,7 +13,6 @@ class AttestationHelperFunctionsTest {
     private val privateKey =
         BonehPrivateKey.deserialize("0000000907a016081ab53e90850000000900edf0f06d18de2c400000000906b15c56c9a13f1d250000000902fa4b47c93f63a2a3000000090412c4d01c5d61ce3b000000082426557bc0fc6af9000000044405f5d7".hexToBytes())!!
 
-
     @Test
     fun generateInverseGroupTest() {
         /*
@@ -27,7 +26,6 @@ class AttestationHelperFunctionsTest {
 
         assertEquals(20, group.size)
         assertEquals(BigInteger.ZERO, sum.mod(p + BigInteger.ONE))
-
     }
 
     @Test
@@ -45,12 +43,12 @@ class AttestationHelperFunctionsTest {
 
         val decoded = arrayOf(0, 1, 1, 2)
         for (i in attestations.indices) {
-            assertEquals(decoded[i],
-                decode(privateKey, arrayOf(0, 1, 2, 3), attestations[i].bitPairs.get(0).compress()))
+            assertEquals(
+                decoded[i],
+                decode(privateKey, arrayOf(0, 1, 2, 3), attestations[i].bitPairs.get(0).compress())
+            )
         }
-
     }
-
 
     @Test
     fun emptyRelativityMapTest() {

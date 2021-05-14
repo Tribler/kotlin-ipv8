@@ -1,7 +1,7 @@
 package nl.tudelft.ipv8.attestation.revocation.caches
 
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.attestation.RequestCache
+import nl.tudelft.ipv8.attestation.common.RequestCache
 import nl.tudelft.ipv8.attestation.wallet.caches.HashCache
 import nl.tudelft.ipv8.attestation.wallet.caches.NumberCache
 import java.math.BigInteger

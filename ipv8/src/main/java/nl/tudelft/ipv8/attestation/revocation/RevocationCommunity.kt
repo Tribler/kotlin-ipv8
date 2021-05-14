@@ -5,13 +5,13 @@ import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.attestation.AuthorityManager
+import nl.tudelft.ipv8.attestation.common.AuthorityManager
 import nl.tudelft.ipv8.attestation.revocation.caches.PENDING_REVOCATION_UPDATE_CACHE_PREFIX
 import nl.tudelft.ipv8.attestation.revocation.caches.PendingRevocationUpdateCache
 import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdateChunkPayload
 import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdatePreviewPayload
 import nl.tudelft.ipv8.attestation.revocation.payloads.RevocationUpdateRequestPayload
-import nl.tudelft.ipv8.attestation.RequestCache
+import nl.tudelft.ipv8.attestation.common.RequestCache
 import nl.tudelft.ipv8.attestation.revocation.caches.AllowedRevocationUpdateRequestCache
 import nl.tudelft.ipv8.attestation.wallet.caches.PeerCache
 import nl.tudelft.ipv8.keyvault.PrivateKey

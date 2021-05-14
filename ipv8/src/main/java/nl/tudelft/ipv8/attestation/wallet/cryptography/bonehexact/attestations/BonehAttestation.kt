@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations
 
-import nl.tudelft.ipv8.attestation.WalletAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.WalletAttestation
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKey
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
 import nl.tudelft.ipv8.messaging.SERIALIZED_USHORT_SIZE

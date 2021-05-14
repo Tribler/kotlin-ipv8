@@ -3,14 +3,14 @@ package nl.tudelft.ipv8.attestation.communication
 import mu.KotlinLogging
 import nl.tudelft.ipv8.IPv8
 import nl.tudelft.ipv8.Peer
-import nl.tudelft.ipv8.attestation.AuthorityManager
+import nl.tudelft.ipv8.attestation.common.AuthorityManager
 import nl.tudelft.ipv8.attestation.identity.IdentityCommunity
 import nl.tudelft.ipv8.attestation.identity.createCommunity
-import nl.tudelft.ipv8.attestation.identity.database.IdentityStore
+import nl.tudelft.ipv8.attestation.identity.store.IdentityStore
 import nl.tudelft.ipv8.attestation.identity.manager.IdentityManager
 import nl.tudelft.ipv8.attestation.revocation.RevocationCommunity
 import nl.tudelft.ipv8.attestation.wallet.AttestationCommunity
-import nl.tudelft.ipv8.attestation.wallet.AttestationStore
+import nl.tudelft.ipv8.attestation.wallet.store.AttestationStore
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.util.*
