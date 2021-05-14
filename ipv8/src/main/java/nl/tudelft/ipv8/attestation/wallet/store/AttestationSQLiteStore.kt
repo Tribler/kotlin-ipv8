@@ -55,4 +55,8 @@ class AttestationSQLiteStore(database: Database) : AttestationStore {
     override fun deleteAttestationByHash(attestationHash: ByteArray) {
         return dao.deleteAttestationByHash(attestationHash)
     }
+
+    override fun deleteAttestations(attestationHashes: List<ByteArray>) {
+        return dao.deleteAttestations(attestationHashes)
+    }
 }

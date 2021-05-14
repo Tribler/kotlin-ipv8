@@ -27,4 +27,6 @@ interface AttestationStore {
     fun getValueByHash(attestationHash: ByteArray): ByteArray?
 
     fun deleteAttestationByHash(attestationHash: ByteArray)
+
+    fun deleteAttestations(attestationHashes: List<ByteArray>)
 }
