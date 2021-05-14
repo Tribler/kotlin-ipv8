@@ -22,15 +22,15 @@ class BitPairAttestation(private val a: FP2Value, private val b: FP2Value, priva
     companion object {
         fun deserialize(serialized: ByteArray, prime: BigInteger): BitPairAttestation {
             var localOffset = 0
-            val nums = arrayListOf<BigInteger>()
-            while (serialized.isNotEmpty() && nums.size < 6) {
+            val numbers = arrayListOf<BigInteger>()
+            while (serialized.isNotEmpty() && numbers.size < 6) {
                 val unpacked = deserializeVarLen(serialized, localOffset)
-                nums.add(BigInteger(unpacked.first))
+                numbers.add(BigInteger(unpacked.first))
                 localOffset += unpacked.second
             }
-            return BitPairAttestation(FP2Value(prime, nums[0], nums[1]),
-                FP2Value(prime, nums[2], nums[3]),
-                FP2Value(prime, nums[4], nums[5]))
+            return BitPairAttestation(FP2Value(prime, numbers[0], numbers[1]),
+                FP2Value(prime, numbers[2], numbers[3]),
+                FP2Value(prime, numbers[4], numbers[5]))
         }
     }
 }

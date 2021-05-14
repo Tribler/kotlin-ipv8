@@ -1,17 +1,29 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact
 
+import nl.tudelft.ipv8.attestation.common.consts.AlgorithmNames.BONEH_EXACT
+import nl.tudelft.ipv8.attestation.wallet.consts.Cryptography.ALGORITHM
+import nl.tudelft.ipv8.attestation.wallet.consts.Cryptography.HASH
+import nl.tudelft.ipv8.attestation.wallet.consts.Cryptography.KEY_SIZE
+import nl.tudelft.ipv8.attestation.wallet.consts.Cryptography.SHA256
+import nl.tudelft.ipv8.attestation.wallet.consts.Cryptography.SHA256_4
+import nl.tudelft.ipv8.attestation.wallet.consts.Cryptography.SHA512
 import nl.tudelft.ipv8.attestation.wallet.cryptography.IdentityAlgorithm
 import nl.tudelft.ipv8.attestation.wallet.cryptography.*
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.attestations.BonehAttestation
 import nl.tudelft.ipv8.messaging.*
 import java.math.BigInteger
 
-const val ALGORITHM_NAME = "bonehexact"
+const val ALGORITHM_NAME = BONEH_EXACT
+const val MIN_KEY_SIZE = 32
+const val MAX_KEY_SIZE = 512
 
-class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, HashMap<String, Any>>) :
+class BonehExact(
+    val idFormat: String,
+    val formats: HashMap<String, HashMap<String, Any>>
+) :
     IdentityAlgorithm(idFormat, formats) {
 
-    private val keySize = formats[idFormat]?.get("key_size") as Int
+    private val keySize = formats[idFormat]?.get(KEY_SIZE) as Int
     private var attestationFunction: (BonehPublicKey, ByteArray) -> BonehAttestation
     private var aggregateReference: (ByteArray) -> HashMap<Int, Int>
 
@@ -24,24 +36,24 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
 
         val format = formats[idFormat]!!
 
-        if (format.get("algorithm") !== ALGORITHM_NAME) {
+        if (format[ALGORITHM] !== ALGORITHM_NAME) {
             throw RuntimeException("Identity format linked to wrong algorithm!")
         }
 
-        if (this.keySize < 32 || this.keySize > 512) {
+        if (this.keySize < MIN_KEY_SIZE || this.keySize > MAX_KEY_SIZE) {
             throw RuntimeException("Illegal key size specified!")
         }
 
-        when (val hashMode = format["hash"]) {
-            "sha256" -> {
+        when (val hashMode = format[HASH]) {
+            SHA256 -> {
                 this.attestationFunction = ::attestSHA256
                 this.aggregateReference = ::binaryRelativitySHA256
             }
-            "sha256_4" -> {
+            SHA256_4 -> {
                 this.attestationFunction = ::attestSHA256_4
                 this.aggregateReference = ::binaryRelativitySHA256_4
             }
-            "sha512" -> {
+            SHA512 -> {
                 this.attestationFunction = ::attestSHA512
                 this.aggregateReference = ::binaryRelativitySHA512
             }
@@ -71,15 +83,22 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
 
     override fun certainty(value: ByteArray, aggregate: HashMap<Any, Any>): Double {
         @Suppress("UNCHECKED_CAST")
-        return binaryRelativityCertainty(this.aggregateReference(value), aggregate as HashMap<Int, Int>)
+        return binaryRelativityCertainty(
+            this.aggregateReference(value),
+            aggregate as HashMap<Int, Int>
+        )
     }
 
-    override fun createChallenges(publicKey: BonehPublicKey, attestation: WalletAttestation): ArrayList<ByteArray> {
+    override fun createChallenges(
+        publicKey: BonehPublicKey,
+        attestation: WalletAttestation
+    ): ArrayList<ByteArray> {
         attestation as BonehAttestation
         val challenges = arrayListOf<ByteArray>()
         for (bitPair in attestation.bitPairs) {
             val challenge = createChallenge(attestation.publicKey, bitPair)
-            val serialized = serializeVarLen(challenge.a.toByteArray()) + serializeVarLen(challenge.b.toByteArray())
+            val serialized =
+                serializeVarLen(challenge.a.toByteArray()) + serializeVarLen(challenge.b.toByteArray())
             challenges.add(serialized)
         }
 
@@ -104,7 +123,10 @@ class BonehExactAlgorithm(val idFormat: String, val formats: HashMap<String, Has
     ) {
         val deserialized = deserializeUInt(response)
         @Suppress("UNCHECKED_CAST")
-        return internalProcessChallengeResponse(aggregate as HashMap<Int, Int>, deserialized.toInt())
+        return internalProcessChallengeResponse(
+            aggregate as HashMap<Int, Int>,
+            deserialized.toInt()
+        )
     }
 
     override fun createCertaintyAggregate(attestation: WalletAttestation?): HashMap<Any, Any> {
