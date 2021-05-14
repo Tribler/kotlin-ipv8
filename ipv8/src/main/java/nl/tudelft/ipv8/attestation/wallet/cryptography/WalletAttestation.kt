@@ -30,7 +30,7 @@ abstract class WalletAttestation {
     }
 
     override fun toString(): String {
-        return "nl.tudelft.ipv8.attestation.wallet.cryptography.WalletAttestation(publicKey=$publicKey, idFormat=$idFormat)"
+        return "WalletAttestation(publicKey=$publicKey, idFormat=$idFormat)"
     }
 
 }
