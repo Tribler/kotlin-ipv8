@@ -72,6 +72,7 @@ class IdentityCommunity(
     val requestCache = RequestCache()
 
     private lateinit var attestationPresentationCallback: (peer: Peer, attributeHash: ByteArray, value: ByteArray, metadata: Metadata, attestations: List<IdentityAttestation>, disclosureInformation: String) -> Unit
+    private lateinit var attestationCallback: (peer: Peer, attestation: IdentityAttestation) -> Unit
 
     private val knownAttestationHashes = hashMapOf<ByteArrayKey, HashInformation>()
     private val pseudonymManager = this.identityManager.getPseudonym(this.myPeer.key)
@@ -416,6 +417,9 @@ class IdentityCommunity(
         val attestation = IdentityAttestation.deserialize(payload.attestation, peer.publicKey)
         if (this.pseudonymManager.addAttestation(peer.publicKey, attestation)) {
             logger.info("Received attestation from ${peer.mid}.")
+            if (this::attestationCallback.isInitialized) {
+                this.attestationCallback(peer, attestation)
+            }
         } else {
             logger.warn("Received invalid attestation from ${peer.mid}.")
         }
@@ -470,6 +474,10 @@ class IdentityCommunity(
 
     fun setAttestationPresentationCallback(f: (peer: Peer, attributeHash: ByteArray, value: ByteArray, metadata: Metadata, attestations: List<IdentityAttestation>, disclosureInformation: String) -> Unit) {
         this.attestationPresentationCallback = f
+    }
+
+    fun setAttestationCallback(f: (peer: Peer, attestation: IdentityAttestation) -> Unit) {
+        this.attestationCallback = f
     }
 
     private fun onDisclosureWrapper(packet: Packet) {
