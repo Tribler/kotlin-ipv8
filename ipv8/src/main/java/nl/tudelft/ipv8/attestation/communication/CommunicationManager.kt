@@ -6,6 +6,7 @@ import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.common.AuthorityManager
 import nl.tudelft.ipv8.attestation.identity.IdentityCommunity
 import nl.tudelft.ipv8.attestation.identity.createCommunity
+import nl.tudelft.ipv8.attestation.identity.datastructures.IdentityAttestation
 import nl.tudelft.ipv8.attestation.identity.store.IdentityStore
 import nl.tudelft.ipv8.attestation.identity.manager.IdentityManager
 import nl.tudelft.ipv8.attestation.revocation.RevocationCommunity
@@ -37,6 +38,13 @@ class CommunicationManager(
 
     private val loadPseudonym = loadPseudonym ?: Companion::loadPseudonym
     private val storePseudonym = storePseudonym ?: Companion::storePseudonym
+
+    private lateinit var attestationCallback: (peer: Peer, attestation: IdentityAttestation) -> Unit
+
+    fun setAttestationCallback(f: (peer: Peer, attestation: IdentityAttestation) -> Unit) {
+        this.attestationCallback = f
+        channels.values.forEach { it.identityOverlay.setAttestationCallback(f) }
+    }
 
     private fun lazyIdentityManager(): IdentityManager {
         if (this.identityManager == null) {
@@ -72,6 +80,9 @@ class CommunicationManager(
                 identityStore,
                 decodedRendezvousToken
             )
+            if (this::attestationCallback.isInitialized) {
+                identityOverlay.setAttestationCallback(this.attestationCallback)
+            }
 
             val attestationOverlay = AttestationCommunity(
                 identityOverlay.myPeer,

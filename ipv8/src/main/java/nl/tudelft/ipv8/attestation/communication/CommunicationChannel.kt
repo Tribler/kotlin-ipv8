@@ -269,7 +269,7 @@ class CommunicationChannel(
     }
 
     fun revoke(signatures: List<ByteArray>) {
-       this.revocationOverlay.revokeAttestations(signatures)
+        this.revocationOverlay.revokeAttestations(signatures)
     }
 
     fun verifyLocally(
@@ -463,7 +463,7 @@ class SubjectAttestationPresentation(
     val isRevoked: Boolean
 ) {
     override fun equals(other: Any?): Boolean {
-        return other is SubjectAttestationPresentation && this.publicKey == other.publicKey && this.metadata == other.metadata
+        return other is SubjectAttestationPresentation && this.publicKey == other.publicKey && this.metadata == other.metadata && this.isRevoked == other.isRevoked
     }
 
     override fun hashCode(): Int {
