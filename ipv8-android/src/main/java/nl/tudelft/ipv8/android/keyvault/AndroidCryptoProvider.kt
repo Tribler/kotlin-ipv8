@@ -1,7 +1,7 @@
 package nl.tudelft.ipv8.android.keyvault
 
-import com.goterl.lazycode.lazysodium.LazySodiumAndroid
-import com.goterl.lazycode.lazysodium.SodiumAndroid
+import com.goterl.lazysodium.LazySodiumAndroid
+import com.goterl.lazysodium.SodiumAndroid
 import nl.tudelft.ipv8.keyvault.*
 
 private val lazySodium = LazySodiumAndroid(SodiumAndroid())
