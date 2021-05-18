@@ -1,7 +1,7 @@
 package nl.tudelft.ipv8
 
-import com.goterl.lazycode.lazysodium.LazySodiumJava
-import com.goterl.lazycode.lazysodium.SodiumJava
+import com.goterl.lazysodium.LazySodiumJava
+import com.goterl.lazysodium.SodiumJava
 import nl.tudelft.ipv8.keyvault.LibNaClPK
 import nl.tudelft.ipv8.util.hexToBytes
 

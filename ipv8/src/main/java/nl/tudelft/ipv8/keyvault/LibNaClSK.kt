@@ -1,7 +1,7 @@
 package nl.tudelft.ipv8.keyvault
 
-import com.goterl.lazycode.lazysodium.LazySodium
-import com.goterl.lazycode.lazysodium.interfaces.Box
+import com.goterl.lazysodium.LazySodium
+import com.goterl.lazysodium.interfaces.Box
 import nl.tudelft.ipv8.util.toHex
 import kotlin.random.Random
 

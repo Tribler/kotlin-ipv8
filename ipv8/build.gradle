@@ -64,7 +64,7 @@ dependencies {
     implementation 'commons-net:commons-net:3.6'
 
     // Crypto
-    implementation "com.goterl.lazycode:lazysodium-java:4.2.4"
+    implementation "com.goterl:lazysodium-java:5.0.1"
 
     // Logging
     implementation 'io.github.microutils:kotlin-logging:1.7.7'

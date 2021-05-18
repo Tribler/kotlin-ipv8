@@ -1,7 +1,7 @@
 package nl.tudelft.ipv8.attestation.trustchain.payload
 
-import com.goterl.lazycode.lazysodium.LazySodiumJava
-import com.goterl.lazycode.lazysodium.SodiumJava
+import com.goterl.lazysodium.LazySodiumJava
+import com.goterl.lazysodium.SodiumJava
 import nl.tudelft.ipv8.attestation.trustchain.ANY_COUNTERPARTY_PK
 import nl.tudelft.ipv8.attestation.trustchain.EMPTY_SIG
 import nl.tudelft.ipv8.attestation.trustchain.GENESIS_HASH

@@ -49,7 +49,7 @@ android {
 
 dependencies {
     api (project(':ipv8')) {
-        exclude group: 'com.goterl.lazycode'
+        exclude module: 'lazysodium-java'
     }
 
     // Kotlin
@@ -64,7 +64,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-common-java8:2.2.0"
 
     // Crypto
-    implementation "com.goterl.lazycode:lazysodium-android:4.1.0@aar"
+    implementation "com.goterl:lazysodium-android:5.0.1@aar"
     implementation 'net.java.dev.jna:jna:5.5.0@aar'
 
     // BLE
