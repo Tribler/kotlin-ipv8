@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import mu.KotlinLogging
+import nl.tudelft.ipv8.exception.PacketDecodingException
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.EndpointAggregator
@@ -152,7 +153,10 @@ abstract class Community : Overlay {
             try {
                 handler(packet)
             } catch (e: Exception) {
-                e.printStackTrace()
+                when(e) {
+                    is PacketDecodingException -> logger.warn("Unable to decode authenticated payload: $e")
+                    else -> e.printStackTrace()
+                }
             }
         } else {
             logger.debug("Received unknown message $msgId from $sourceAddress")
