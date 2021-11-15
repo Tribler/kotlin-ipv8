@@ -35,15 +35,16 @@ The project is a composed of several modules:
 - `demo-jvm` (JVM app) – The CLI app demonstrating the usage of `ipv8-jvm` library.
 - `tracker` (JVM app) – The bootstrap server implementation.
 
-## Building with Gradle
+## Building Kotlin-ipv8 as a library using Gradle
 
-The following list contains reminders and recommendations to help you import this project locally using Gradle.
+The following list contains reminders and recommendations to help you import this project locally using Gradle,
+when using it as a library.
 
 - The project's root folder contains a `build.gradle` file that defines variables and dependencies that are used by
 the other `build.gradle` files in different modules. In order to use this project as a library, your own `build.gradle`
 file needs to define these variables and dependencies, too. A working template would be to simply copy parts of the root
 folder's `build.gradle` file.
-- Don't forget to `include ':ipv8'` into your `settings.gradle`,
+- Don't forget to `include ':ipv8'` into your own `settings.gradle`,
 as well as the module that you're going to use, presumably `ipv8-android` or `ipv8-jvm`.
 - This repository currently uses Gradle version `6.1.1`. Ensure that your `gradle-wrapper.properties` uses the same version.
 - This repository currently uses Java version `1.8`. Ensure that your Gradle builds with this, too.
