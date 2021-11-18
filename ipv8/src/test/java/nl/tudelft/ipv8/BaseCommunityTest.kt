@@ -20,7 +20,7 @@ private val lazySodium = LazySodiumJava(SodiumJava())
 
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class BaseCommunityTest {
-    private val testDispatcher = TestCoroutineDispatcher()
+    protected val testDispatcher = TestCoroutineDispatcher()
 
     @Before
     fun setUp() {

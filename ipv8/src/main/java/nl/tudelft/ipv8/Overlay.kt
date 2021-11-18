@@ -1,5 +1,6 @@
 package nl.tudelft.ipv8
 
+import kotlinx.coroutines.CoroutineDispatcher
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.peerdiscovery.Network
@@ -24,7 +25,7 @@ interface Overlay : EndpointListener {
     /**
      * Called to inintialize this overlay.
      */
-    fun load() {
+    fun load(dispatcher: CoroutineDispatcher) {
         endpoint.addListener(this)
     }
 

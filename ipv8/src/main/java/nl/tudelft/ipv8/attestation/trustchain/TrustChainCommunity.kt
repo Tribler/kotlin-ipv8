@@ -46,8 +46,8 @@ open class TrustChainCommunity(
         messageHandlers[MessageId.EMPTY_CRAWL_RESPONSE] = ::onEmptyCrawlResponsePacket
     }
 
-    override fun load() {
-        super.load()
+    override fun load(dispatcher: CoroutineDispatcher) {
+        super.load(dispatcher)
         crawler.trustChainCommunity = this
     }
 

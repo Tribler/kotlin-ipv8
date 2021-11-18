@@ -1,9 +1,6 @@
 package nl.tudelft.ipv8
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import mu.KotlinLogging
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.Address
@@ -50,8 +47,8 @@ abstract class Community : Overlay {
         messageHandlers[MessageId.INTRODUCTION_RESPONSE] = ::onIntroductionResponsePacket
     }
 
-    override fun load() {
-        super.load()
+    override fun load(dispatcher: CoroutineDispatcher) {
+        super.load(dispatcher)
 
         logger.info { "Loading " + javaClass.simpleName + " for peer " + myPeer.mid }
 
@@ -64,7 +61,7 @@ abstract class Community : Overlay {
         network.blacklist.addAll(DEFAULT_ADDRESSES)
 
         job = SupervisorJob()
-        scope = CoroutineScope(Dispatchers.Main + job)
+        scope = CoroutineScope(dispatcher + job)
     }
 
     override fun unload() {

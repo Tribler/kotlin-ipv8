@@ -27,7 +27,8 @@ import java.util.*
 import kotlin.math.roundToInt
 
 class Application {
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val dispatcher = Dispatchers.Default
+    private val scope = CoroutineScope(dispatcher)
     private val logger = KotlinLogging.logger {}
 
     fun run() {
@@ -78,7 +79,7 @@ class Application {
         ), walkerInterval = 1.0)
 
         val ipv8 = IPv8(endpoint, config, myPeer)
-        ipv8.start()
+        ipv8.start(dispatcher)
 
         scope.launch {
             while (true) {

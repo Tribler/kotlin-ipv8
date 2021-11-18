@@ -4,6 +4,7 @@ import io.mockk.Called
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.BaseCommunityTest
 import nl.tudelft.ipv8.attestation.trustchain.payload.HalfBlockPayload
@@ -21,6 +22,7 @@ import java.math.BigInteger
 import java.util.*
 
 class TrustChainCommunityTest : BaseCommunityTest() {
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun getCommunity(): TrustChainCommunity {
         val settings = TrustChainSettings()
         val store = mockk<TrustChainStore>(relaxed = true)
@@ -29,7 +31,7 @@ class TrustChainCommunityTest : BaseCommunityTest() {
         community.endpoint = getEndpoint()
         community.network = Network()
         community.maxPeers = 20
-        community.load()
+        community.load(testDispatcher)
         return community
     }
 

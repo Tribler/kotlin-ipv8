@@ -31,7 +31,7 @@ class IPv8(
         return overlays[T::class.java] as? T
     }
 
-    fun start() {
+    fun start(dispatcher: CoroutineDispatcher = Dispatchers.Main) {
         if (isStarted()) throw IllegalStateException("IPv8 has already started")
 
         isStarted = true
@@ -51,7 +51,7 @@ class IPv8(
             overlay.endpoint = endpoint
             overlay.network = network
             overlay.maxPeers = overlayConfiguration.maxPeers
-            overlay.load()
+            overlay.load(dispatcher)
 
             overlays[overlayClass] = overlay
 

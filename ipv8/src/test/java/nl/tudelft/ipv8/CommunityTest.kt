@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import nl.tudelft.ipv8.keyvault.*
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.Packet
@@ -119,6 +120,7 @@ class CommunityTest : BaseCommunityTest() {
         verify { community.onIntroductionResponse(any(), any()) }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun loadAndUnload() {
         val myPrivateKey = getPrivateKey()
@@ -127,7 +129,7 @@ class CommunityTest : BaseCommunityTest() {
 
         val community = getCommunity()
 
-        community.load()
+        community.load(testDispatcher)
         Assert.assertEquals(1, community.network.blacklistMids.size)
         Assert.assertEquals(myPeer.mid, community.network.blacklistMids.first())
         community.unload()
