@@ -1,15 +1,13 @@
 package nl.tudelft.ipv8
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import mu.KotlinLogging
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.Serializable
+import nl.tudelft.ipv8.messaging.eva.*
 import nl.tudelft.ipv8.messaging.payload.*
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.WanEstimationLog
@@ -43,11 +41,18 @@ abstract class Community : Overlay {
     private lateinit var job: Job
     protected lateinit var scope: CoroutineScope
 
+    var evaProtocolEnabled = false
+    lateinit var evaProtocol: EVAProtocol
+
     init {
         messageHandlers[MessageId.PUNCTURE_REQUEST] = ::onPunctureRequestPacket
         messageHandlers[MessageId.PUNCTURE] = ::onPuncturePacket
         messageHandlers[MessageId.INTRODUCTION_REQUEST] = ::onIntroductionRequestPacket
         messageHandlers[MessageId.INTRODUCTION_RESPONSE] = ::onIntroductionResponsePacket
+        messageHandlers[MessageId.EVA_WRITE_REQUEST] = ::onEVAWriteRequestPacket
+        messageHandlers[MessageId.EVA_ACKNOWLEDGEMENT] = ::onEVAAcknowledgementPacket
+        messageHandlers[MessageId.EVA_DATA] = ::onEVADataPacket
+        messageHandlers[MessageId.EVA_ERROR] = ::onEVAErrorPacket
     }
 
     override fun load() {
@@ -65,6 +70,9 @@ abstract class Community : Overlay {
 
         job = SupervisorJob()
         scope = CoroutineScope(Dispatchers.Main + job)
+
+        if (evaProtocolEnabled)
+            evaProtocol = EVAProtocol(this, scope)
     }
 
     override fun unload() {
@@ -146,6 +154,7 @@ abstract class Community : Overlay {
         }
 
         val msgId = data[prefix.size].toUByte().toInt()
+
         val handler = messageHandlers[msgId]
 
         if (handler != null) {
@@ -166,10 +175,9 @@ abstract class Community : Overlay {
         }
     }
 
-    /*
+    /**
      * Introduction and puncturing requests creation
      */
-
     internal fun createIntroductionRequest(
         socketAddress: IPv4Address,
         extraBytes: ByteArray = byteArrayOf()
@@ -215,8 +223,10 @@ abstract class Community : Overlay {
 
         if (intro != null) {
             // TODO: Seems like a bad practice to send a packet in the create method...
-            val packet = createPunctureRequest(requester.lanAddress, requester.wanAddress,
-                identifier)
+            val packet = createPunctureRequest(
+                requester.lanAddress, requester.wanAddress,
+                identifier
+            )
             send(intro, packet)
         }
 
@@ -241,6 +251,34 @@ abstract class Community : Overlay {
         logger.debug("-> punctureRequest")
         val payload = PunctureRequestPayload(lanWalker, wanWalker, identifier)
         return serializePacket(MessageId.PUNCTURE_REQUEST, payload, sign = false)
+    }
+
+    /**
+     * EVA serialized packets for different EVA payloads
+     */
+    fun createEVAWriteRequest(dataSize: Int, blockCount: Int, nonce: ULong, id: String, infoBinary: ByteArray): ByteArray {
+        logger.debug { "EVAPROTOCOL: -> EVAWriteRequest" }
+        val payload = EVAWriteRequestPayload(dataSize, blockCount, nonce, id, infoBinary)
+        return serializePacket(MessageId.EVA_WRITE_REQUEST, payload)
+        // , sign = true, encrypt = true, recipient = peer
+    }
+
+    fun createEVAAcknowledgement(number: Int, windowSize: Int, nonce: ULong): ByteArray {
+        logger.debug { "EVAPROTOCOL: -> EVAAcknowledgement" }
+        val payload = EVAAcknowledgementPayload(number, windowSize, nonce)
+        return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload)
+    }
+
+    fun createEVAData(peer: Peer, blockNumber: Int, nonce: ULong, dataBinary: ByteArray): ByteArray {
+        logger.debug { "EVAPROTOCOL: -> EVAData" }
+        val payload = EVADataPayload(blockNumber, nonce, dataBinary)
+        return serializePacket(MessageId.EVA_DATA, payload, encrypt = true, recipient = peer)
+    }
+
+    fun createEVAError(message: String, info: String): ByteArray {
+        logger.debug { "EVAPROTOCOL: -> EVAError" }
+        val payload = EVAErrorPayload(message, info)
+        return serializePacket(MessageId.EVA_ERROR, payload)
     }
 
     /**
@@ -321,10 +359,9 @@ abstract class Community : Overlay {
         return packet
     }
 
-    /*
+    /**
      * Request deserialization
      */
-
     internal fun onIntroductionRequestPacket(packet: Packet) {
         val (peer, payload) =
             packet.getAuthPayload(IntroductionRequestPayload.Deserializer)
@@ -349,10 +386,41 @@ abstract class Community : Overlay {
         }
     }
 
-    /*
+    /**
+     * EVA protocol on receive packet handlers
+     *
+     * @param packet specific packets for the EVA protocol (write request, ack, data, error)
+     */
+    private fun onEVAWriteRequestPacket(packet: Packet) {
+        logger.debug { "EVAPROTOCOL: On EVA write request packet from ${packet.source}"}
+        val (peer, payload) = packet.getAuthPayload(EVAWriteRequestPayload.Deserializer)
+        onEVAWriteRequest(peer, payload)
+    }
+
+    private fun onEVAAcknowledgementPacket(packet: Packet) {
+        logger.debug { "EVAPROTOCOL: On EVA acknowledgement packet from ${packet.source}"}
+        val (peer, payload) = packet.getAuthPayload(EVAAcknowledgementPayload.Deserializer)
+        onEVAAcknowldgement(peer, payload)
+    }
+
+    private fun onEVADataPacket(packet: Packet) {
+        logger.debug { "EVAPROTOCOL: On EVA data packet from ${packet.source}"}
+//        val (peer, payload) = packet.getAuthPayload(EVADataPayload.Deserializer)
+        val (peer, payload) = packet.getDecryptedAuthPayload(
+            EVADataPayload.Deserializer, myPeer.key as PrivateKey
+        )
+        onEVAData(peer, payload)
+    }
+
+    private fun onEVAErrorPacket(packet: Packet) {
+        logger.debug { "EVAPROTOCOL: On EVA error packet from ${packet.source}"}
+        val (peer, payload) = packet.getAuthPayload(EVAErrorPayload.Deserializer)
+        onEVAError(peer, payload)
+    }
+
+    /**
      * Request handling
      */
-
     internal open fun onIntroductionRequest(
         peer: Peer,
         payload: IntroductionRequestPayload
@@ -488,6 +556,67 @@ abstract class Community : Overlay {
         endpoint.send(address, data)
     }
 
+    /**
+     * EVA protocol on receive handlers
+     */
+    fun onEVAWriteRequest(peer: Peer, payload: EVAWriteRequestPayload) {
+        logger.debug { "EVAPROTOCOL: ON EVA WRITE REQUEST $payload" }
+        evaProtocol.onWriteRequest(peer, payload)
+    }
+
+    fun onEVAAcknowldgement(peer: Peer, payload: EVAAcknowledgementPayload) {
+        logger.debug { "EVAPROTOCOL: ON EVA ACKNOWLEDGEMENT $payload" }
+        evaProtocol.onAcknowledgement(peer, payload)
+    }
+
+    fun onEVAData(peer: Peer, payload: EVADataPayload) {
+        logger.debug { "EVAPROTOCOL: ON EVA DATA. BlockNumber (${payload.blockNumber}). Nonce (${payload.nonce})." }
+        evaProtocol.onData(peer, payload)
+    }
+
+    fun onEVAError(peer: Peer, payload: EVAErrorPayload) {
+        logger.debug { "EVAPROTOCOL: ON EVA ERROR $payload" }
+        evaProtocol.onError(peer, payload)
+    }
+
+    /**
+     * EVA protocol entrypoint to send binary data
+     *
+     * @param peer the address to deliver the data
+     * @param infoBinary string that identifies to which communitu or class it should be delivered
+     * @param id file/data identifier that identifies the sent data
+     * @param dataBinary serialized packet in bytes
+     * @param nonce an optional unique number that identifies this transfer
+     */
+    fun evaSendBinary(
+        peer: Peer,
+        info: String,
+        id: String,
+        data: ByteArray,
+        nonce: Long? = null
+    ) {
+        evaProtocol.sendBinary(peer, info, id, data, nonce)
+    }
+
+    /**
+     * EVA protocol callbacks for other communities and classes
+     */
+    fun setOnEVASendCompleteCallback(callback: (peer: Peer, info: String, dataBinary: ByteArray?, nonce: ULong) -> Unit) {
+        if (evaProtocolEnabled) evaProtocol.onSendCompleteCallback = callback
+    }
+
+    fun setOnEVAReceiveProgressCallback(callback: (peer: Peer, info: String, progress: TransferProgress) -> Unit) {
+        if (evaProtocolEnabled) evaProtocol.onReceiveProgressCallback = callback
+    }
+
+    fun setOnEVAReceiveCompleteCallback(callback: (peer: Peer, info: String, id: String, dataBinary: ByteArray?) -> Unit) {
+        if (evaProtocolEnabled) evaProtocol.onReceiveCompleteCallback = callback
+    }
+
+    fun setOnEVAErrorCallback(callback: (peer: Peer, exception: TransferException) -> Unit) {
+        if (evaProtocolEnabled) evaProtocol.onErrorCallback = callback
+    }
+
     companion object {
         val DEFAULT_ADDRESSES: List<IPv4Address> = listOf(
             // Dispersy
@@ -525,5 +654,14 @@ abstract class Community : Overlay {
         const val PUNCTURE = 249
         const val INTRODUCTION_REQUEST = 246
         const val INTRODUCTION_RESPONSE = 245
+        const val EVA_WRITE_REQUEST = 130
+        const val EVA_ACKNOWLEDGEMENT = 131
+        const val EVA_DATA = 132
+        const val EVA_ERROR = 133
+    }
+
+    object EVAId {
+        const val EVA_UNSPECIFIED = ""
+        const val EVA_PEERCHAT_ATTACHMENT = "eva_peerchat_attachment"
     }
 }
