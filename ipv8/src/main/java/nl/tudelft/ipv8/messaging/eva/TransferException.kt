@@ -1,12 +1,15 @@
 package nl.tudelft.ipv8.messaging.eva
 
-class TransferException(
-    val m: String,
-    val exception: Exception
-)
+open class TransferException(
+    var m: String,
+    var info: String,
+    var transfer: Transfer? = null
+) : Exception()
 
-class ValueException(m: String, exception: Exception) : TransferException(m, exception)
+class SizeException(m: String, info: String, transfer: Transfer? = null) : TransferException(m, info, transfer)
 
-class TimeoutException(m: Sstring, exception: Exception) : TransferException(m, exception)
+class TimeoutException(m: String, info: String, transfer: Transfer? = null) : TransferException(m, info, transfer)
 
-class
+class ValueException(m: String, info: String, transfer: Transfer? = null) : TransferException(m, info, transfer)
+
+class PeerBusyException(m: String, info: String, transfer: Transfer? = null) : TransferException(m, info, transfer)
