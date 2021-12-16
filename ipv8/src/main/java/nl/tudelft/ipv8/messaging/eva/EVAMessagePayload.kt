@@ -16,38 +16,14 @@ data class EVAWriteRequestPayload(
     var blockCount: Int,
     var nonce: ULong,
     var id: String,
-    var infoBinary: ByteArray
+    var info: String
 ) : EVAMessagePayload(Community.MessageId.EVA_WRITE_REQUEST), Serializable {
     override fun serialize(): ByteArray {
         return serializeUShort(dataSize) +
             serializeUShort(blockCount) +
             serializeULong(nonce) +
             serializeVarLen(id.toByteArray(Charsets.UTF_8)) +
-            infoBinary
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as EVAWriteRequestPayload
-
-        if (dataSize != other.dataSize) return false
-        if (blockCount != other.blockCount) return false
-        if (nonce != other.nonce) return false
-        if (id != other.id) return false
-        if (!infoBinary.contentEquals(other.infoBinary)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = dataSize
-        result = 31 * result + blockCount
-        result = 31 * result + nonce.hashCode()
-        result = 31 * result + id.hashCode()
-        result = 31 * result + infoBinary.contentHashCode()
-        return result
+            serializeVarLen(info.toByteArray(Charsets.UTF_8))
     }
 
     companion object Deserializer : Deserializable<EVAWriteRequestPayload> {
@@ -61,15 +37,17 @@ data class EVAWriteRequestPayload(
             localOffset += SERIALIZED_ULONG_SIZE
             val (id, idLen) = deserializeVarLen(buffer, offset + localOffset)
             localOffset += idLen
-            val (infoBinary, infoBinaryLen) = deserializeRaw(buffer, offset + localOffset)
-            localOffset += infoBinaryLen
+            val (info, infoLen) = deserializeVarLen(buffer, offset + localOffset)
+            localOffset += infoLen
+//            val (infoBinary, infoBinaryLen) = deserializeRaw(buffer, offset + localOffset)
+//            localOffset += infoBinaryLen
 
             val payload = EVAWriteRequestPayload(
                 dataSize,
                 blockCount,
                 nonce,
                 String(id, Charsets.UTF_8),
-                infoBinary
+                String(info, Charsets.UTF_8)
             )
 
             return Pair(payload, localOffset)
@@ -186,3 +164,7 @@ data class EVAErrorPayload(
         }
     }
 }
+
+//data class EVACancelPayload(
+//    var
+//)

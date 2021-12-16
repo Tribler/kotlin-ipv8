@@ -256,27 +256,22 @@ abstract class Community : Overlay {
     /**
      * EVA serialized packets for different EVA payloads
      */
-    fun createEVAWriteRequest(dataSize: Int, blockCount: Int, nonce: ULong, id: String, infoBinary: ByteArray): ByteArray {
-        logger.debug { "EVAPROTOCOL: -> EVAWriteRequest" }
-        val payload = EVAWriteRequestPayload(dataSize, blockCount, nonce, id, infoBinary)
+    fun createEVAWriteRequest(dataSize: Int, blockCount: Int, nonce: ULong, id: String, info: String): ByteArray {
+        val payload = EVAWriteRequestPayload(dataSize, blockCount, nonce, id, info)
         return serializePacket(MessageId.EVA_WRITE_REQUEST, payload)
-        // , sign = true, encrypt = true, recipient = peer
     }
 
     fun createEVAAcknowledgement(number: Int, windowSize: Int, nonce: ULong): ByteArray {
-        logger.debug { "EVAPROTOCOL: -> EVAAcknowledgement" }
         val payload = EVAAcknowledgementPayload(number, windowSize, nonce)
         return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload)
     }
 
     fun createEVAData(peer: Peer, blockNumber: Int, nonce: ULong, dataBinary: ByteArray): ByteArray {
-        logger.debug { "EVAPROTOCOL: -> EVAData" }
         val payload = EVADataPayload(blockNumber, nonce, dataBinary)
         return serializePacket(MessageId.EVA_DATA, payload, encrypt = true, recipient = peer)
     }
 
     fun createEVAError(message: String, info: String): ByteArray {
-        logger.debug { "EVAPROTOCOL: -> EVAError" }
         val payload = EVAErrorPayload(message, info)
         return serializePacket(MessageId.EVA_ERROR, payload)
     }

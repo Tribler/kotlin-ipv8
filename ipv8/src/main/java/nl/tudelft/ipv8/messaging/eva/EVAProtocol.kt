@@ -189,7 +189,6 @@ open class EVAProtocol(
         // Stop if a transfer of the requested file is already scheduled, outgoing or transferred
         if (isScheduled(peer.key, id) || isOutgoing(peer.key, id) || isTransferred(peer.key, id, finishedOutgoing)) return
 
-        val infoBinary = info.toByteArray(Charsets.UTF_8)
         val nonceValue = (nonce ?: (0..MAX_NONCE).random()).toULong()
 
         logger.debug { "EVAPROTOCOL: Sending binary with id '$id', nonce '$nonceValue' for info '$info'." }
@@ -198,7 +197,7 @@ open class EVAProtocol(
             if (!isScheduled(peer.key, id)) {
                 scheduled.addValue(
                     peer.key,
-                    ScheduledTransfer(infoBinary, data, nonceValue, id, 0)
+                    ScheduledTransfer(info, data, nonceValue, id, 0)
                 )
 
                 onReceiveProgressCallback(
@@ -215,22 +214,20 @@ open class EVAProtocol(
             return
         }
 
-        startOutgoingTransfer(peer, infoBinary, id, data, nonceValue)
+        startOutgoingTransfer(peer, info, id, data, nonceValue)
     }
 
     /**
      * Start an outgoing transfer of data
      *
      * @param peer the receiver of the data
-     * @param infoBinary a string converted to bytes that defines the requested class/community
+     * @param info a string that defines the requested class/community
      * @param id unique file/data identifier that enables identification on sender and receiver side
      * @param data the data in bytes
      * @param nonce an unique number that defines this transfer
      */
-    private fun startOutgoingTransfer(peer: Peer, infoBinary: ByteArray, id: String, data: ByteArray, nonce: ULong) {
+    private fun startOutgoingTransfer(peer: Peer, info: String, id: String, data: ByteArray, nonce: ULong) {
         logger.debug { "EVAPROTOCOL: Start outgoing transfer." }
-
-        val info = String(infoBinary, Charsets.UTF_8)
 
         if (getConnectedPeer(peer.key) == null ||
             isOutgoing(peer.key, id) ||
@@ -241,7 +238,7 @@ open class EVAProtocol(
             if (!isScheduled(peer.key, id)) {
                 scheduled.addValue(
                     peer.key,
-                    ScheduledTransfer(infoBinary, data, nonce, id, 0)
+                    ScheduledTransfer(info, data, nonce, id, 0)
                 )
 
                 onReceiveProgressCallback(
@@ -262,7 +259,7 @@ open class EVAProtocol(
         val blockCount = BigDecimal(dataSize).divide(BigDecimal(blockSize), RoundingMode.UP).toInt()
 
         val scheduledTransfer = scheduled[peer.key]?.firstOrNull { it.id == id } ?: ScheduledTransfer(
-            infoBinary,
+            info,
             byteArrayOf(),
             nonce,
             id,
@@ -285,13 +282,12 @@ open class EVAProtocol(
             return
         }
 
-//        transfer.blockCount = BigDecimal(dataSize).divide(BigDecimal(blockSize), RoundingMode.UP).toInt()
         transfer.dataBinary = data
 
         outgoing[peer.key] = transfer
         scheduleTerminate(outgoing, peer, transfer)
 
-        val writeRequestPacket = community.createEVAWriteRequest(dataSize, transfer.blockCount, nonce, id, infoBinary)
+        val writeRequestPacket = community.createEVAWriteRequest(dataSize, transfer.blockCount, nonce, id, info)
         send(peer, writeRequestPacket)
 
         val packet = Packet(peer.address, writeRequestPacket)
@@ -308,11 +304,11 @@ open class EVAProtocol(
      * @param payload information about the coming transfer (size, blocks, nonce, id, class)
      */
     fun onWriteRequest(peer: Peer, payload: EVAWriteRequestPayload) {
-        logger.debug { "EVAPROTOCOL: On write request. Nonce: ${payload.nonce}. Peer: ${peer.publicKey.keyToBin().toHex()}. Info: ${String(payload.infoBinary, Charsets.UTF_8)}. BlockCount: ${payload.blockCount}. Payload datasize: ${payload.dataSize}, allowed datasize: $binarySizeLimit" }
+        logger.debug { "EVAPROTOCOL: On write request. Nonce: ${payload.nonce}. Peer: ${peer.publicKey.keyToBin().toHex()}. Info: ${payload.info}. BlockCount: ${payload.blockCount}. Payload datasize: ${payload.dataSize}, allowed datasize: $binarySizeLimit" }
 
         if (isIncoming(peer.key, payload.id) || isTransferred(peer.key, payload.id, finishedIncoming)) return
 
-        val scheduledTransfer = ScheduledTransfer(payload.infoBinary, byteArrayOf(), payload.nonce, payload.id, payload.blockCount)
+        val scheduledTransfer = ScheduledTransfer(payload.info, byteArrayOf(), payload.nonce, payload.id, payload.blockCount)
         val transfer = Transfer(TransferType.INCOMING, scheduledTransfer)
 
         when {
@@ -322,7 +318,7 @@ open class EVAProtocol(
                     transfer,
                     ValueException(
                         "Data size can not be less or equal to 0",
-                        String(payload.infoBinary, Charsets.UTF_8),
+                        payload.info,
                         transfer
                     )
                 )
@@ -334,26 +330,15 @@ open class EVAProtocol(
                     transfer,
                     SizeException(
                         "Current data size limit($binarySizeLimit) has been exceeded",
-                        String(payload.infoBinary, Charsets.UTF_8),
+                        payload.info,
                         transfer
                     )
                 )
                 return
             }
         }
-//        if (payload.dataSize <= 0) {
-//            incomingError(peer, transfer, ValueException("Data size can not be less or equal to 0"))
-//            return
-//        }
-//
-//        if (payload.dataSize > binarySizeLimit) {
-//            val exception = SizeException("Current data size limit($binarySizeLimit) has been exceeded", transfer)
-//            incomingError(peer, transfer, exception)
-//            return
-//        }
 
         transfer.dataSize = payload.dataSize
-//        transfer.blockCount = payload.blockCount
         transfer.windowSize = windowSizeInBlocks
         transfer.attempt = 0
 
@@ -365,7 +350,7 @@ open class EVAProtocol(
                 transfer,
                 PeerBusyException(
                     "There is already a transfer ongoing with peer",
-                    String(payload.infoBinary, Charsets.UTF_8),
+                    payload.info,
                     transfer
                 )
             )
@@ -432,11 +417,11 @@ open class EVAProtocol(
 
         val transfer = incoming[peer.key] ?: return
 
-        if (transfer.blockNumber != payload.blockNumber - 1 || transfer.nonce != payload.nonce) return
+        if (transfer.nonce != payload.nonce || transfer.blockNumber != payload.blockNumber - 1) return
 
         transfer.blockNumber = payload.blockNumber
 
-        val info = String(transfer.infoBinary ?: byteArrayOf(), Charsets.UTF_8)
+        val info = transfer.info
 
         when {
             transfer.blockNumber == 0 -> {
@@ -458,7 +443,7 @@ open class EVAProtocol(
             if (it != null) {
                 onReceiveProgressCallback(
                     peer,
-                    info,
+                    info ?: "",
                     it
                 )
             }
@@ -471,7 +456,7 @@ open class EVAProtocol(
                     transfer,
                     SizeException(
                         "Current data size limit(${binarySizeLimit}) has been exceeded",
-                        info,
+                        info ?: "",
                         transfer
                     )
                 )
@@ -543,7 +528,7 @@ open class EVAProtocol(
      */
     private fun finishIncomingTransfer(peer: Peer, transfer: Transfer) {
         val data = transfer.dataBinary
-        val info = if (transfer.infoBinary != null) String(transfer.infoBinary!!, Charsets.UTF_8) else ""
+        val info = transfer.info ?: ""
 
         logger.debug { "EVAPROTOCOL: Incoming transfer finished: id ${transfer.id} and info $info" }
 
@@ -576,7 +561,7 @@ open class EVAProtocol(
      */
     private fun finishOutgoingTransfer(peer: Peer, transfer: Transfer) {
         val data = transfer.dataBinary
-        val info = if (transfer.infoBinary != null) String(transfer.infoBinary!!, Charsets.UTF_8) else ""
+        val info = transfer.info ?: ""
         val nonce = transfer.nonce
 
         logger.debug { "EVAPROTOCOL: Outgoing transfer finished: id: ${transfer.id}, nonce: ${transfer.nonce} and info $info" }
@@ -605,7 +590,7 @@ open class EVAProtocol(
             scheduled.popValue(key)?.let { transfer ->
                 startOutgoingTransfer(
                     peer,
-                    transfer.infoBinary,
+                    transfer.info,
                     transfer.id,
                     transfer.dataBinary,
                     transfer.nonce,
@@ -651,6 +636,7 @@ open class EVAProtocol(
      * @param exception transfer exception
      */
     private fun notifyError(peer: Peer, exception: TransferException) {
+        logger.debug { "EVAPROTOCOL ${exception.m} ${exception.info} ${exception.transfer}" }
         onErrorCallback(peer, exception)
     }
 
@@ -699,7 +685,7 @@ open class EVAProtocol(
             peer,
             TimeoutException(
                 "Terminated by timeout. Timeout is $timeout sec",
-                String(transfer.infoBinary ?: byteArrayOf(), Charsets.UTF_8),
+                transfer.info ?: "",
                 transfer
             )
         )
