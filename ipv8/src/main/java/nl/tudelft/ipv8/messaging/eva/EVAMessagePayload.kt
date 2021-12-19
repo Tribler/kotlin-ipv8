@@ -12,14 +12,14 @@ open class EVAMessagePayload(
 }
 
 data class EVAWriteRequestPayload(
-    var dataSize: Int,
+    var dataSize: ULong,
     var blockCount: Int,
     var nonce: ULong,
     var id: String,
     var info: String
 ) : EVAMessagePayload(Community.MessageId.EVA_WRITE_REQUEST), Serializable {
     override fun serialize(): ByteArray {
-        return serializeUShort(dataSize) +
+        return serializeULong(dataSize) +
             serializeUShort(blockCount) +
             serializeULong(nonce) +
             serializeVarLen(id.toByteArray(Charsets.UTF_8)) +
@@ -29,8 +29,8 @@ data class EVAWriteRequestPayload(
     companion object Deserializer : Deserializable<EVAWriteRequestPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<EVAWriteRequestPayload, Int> {
             var localOffset = 0
-            val dataSize = deserializeUShort(buffer, offset + localOffset)
-            localOffset += SERIALIZED_USHORT_SIZE
+            val dataSize = deserializeULong(buffer, offset + localOffset)
+            localOffset += SERIALIZED_ULONG_SIZE
             val blockCount = deserializeUShort(buffer, offset + localOffset)
             localOffset += SERIALIZED_USHORT_SIZE
             val nonce = deserializeULong(buffer, offset + localOffset)
@@ -58,12 +58,40 @@ data class EVAWriteRequestPayload(
 data class EVAAcknowledgementPayload(
     var number: Int,
     var windowSize: Int,
-    var nonce: ULong
+    var nonce: ULong,
+    var ackWindow: Int,
+    var unAckedBlocks: ByteArray
 ) : EVAMessagePayload(Community.MessageId.EVA_ACKNOWLEDGEMENT), Serializable {
     override fun serialize(): ByteArray {
         return serializeUShort(number) +
             serializeUShort(windowSize) +
-            serializeULong(nonce)
+            serializeULong(nonce) +
+            serializeUShort(ackWindow) +
+            unAckedBlocks
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as EVAAcknowledgementPayload
+
+        if (number != other.number) return false
+        if (windowSize != other.windowSize) return false
+        if (nonce != other.nonce) return false
+        if (ackWindow != other.ackWindow) return false
+        if (!unAckedBlocks.contentEquals(other.unAckedBlocks)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = number
+        result = 31 * result + windowSize
+        result = 31 * result + nonce.hashCode()
+        result = 31 * result + ackWindow
+        result = 31 * result + unAckedBlocks.contentHashCode()
+        return result
     }
 
     companion object Deserializer : Deserializable<EVAAcknowledgementPayload> {
@@ -75,11 +103,17 @@ data class EVAAcknowledgementPayload(
             localOffset += SERIALIZED_USHORT_SIZE
             val nonce = deserializeULong(buffer, offset + localOffset)
             localOffset += SERIALIZED_ULONG_SIZE
+            val ackWindow = deserializeUShort(buffer, offset + localOffset)
+            localOffset += SERIALIZED_USHORT_SIZE
+            val (unAckedBlocks, unAckedBlocksLen) = deserializeRaw(buffer, offset + localOffset)
+            localOffset += unAckedBlocksLen
 
             val payload = EVAAcknowledgementPayload(
                 number,
                 windowSize,
-                nonce
+                nonce,
+                ackWindow,
+                unAckedBlocks
             )
             return Pair(payload, localOffset)
         }

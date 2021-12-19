@@ -256,13 +256,13 @@ abstract class Community : Overlay {
     /**
      * EVA serialized packets for different EVA payloads
      */
-    fun createEVAWriteRequest(dataSize: Int, blockCount: Int, nonce: ULong, id: String, info: String): ByteArray {
+    fun createEVAWriteRequest(dataSize: ULong, blockCount: Int, nonce: ULong, id: String, info: String): ByteArray {
         val payload = EVAWriteRequestPayload(dataSize, blockCount, nonce, id, info)
         return serializePacket(MessageId.EVA_WRITE_REQUEST, payload)
     }
 
-    fun createEVAAcknowledgement(number: Int, windowSize: Int, nonce: ULong): ByteArray {
-        val payload = EVAAcknowledgementPayload(number, windowSize, nonce)
+    fun createEVAAcknowledgement(number: Int, windowSize: Int, nonce: ULong, unReceivedBlocks: ByteArray, ackWindow: Int): ByteArray {
+        val payload = EVAAcknowledgementPayload(number, windowSize, nonce, ackWindow, unReceivedBlocks)
         return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload)
     }
 
