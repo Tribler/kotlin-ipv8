@@ -5,49 +5,48 @@ import nl.tudelft.ipv8.messaging.*
 
 open class EVAMessagePayload(
     val type: Int
-) : Serializable {
-    override fun serialize(): ByteArray {
-        return "".toByteArray()
-    }
-}
+)
+//    : Serializable {
+//    override fun serialize(): ByteArray {
+//        return "".toByteArray()
+//    }
+//}
 
 data class EVAWriteRequestPayload(
+    var info: String,
+    var id: String,
+    var nonce: ULong,
     var dataSize: ULong,
     var blockCount: Int,
-    var nonce: ULong,
-    var id: String,
-    var info: String
 ) : EVAMessagePayload(Community.MessageId.EVA_WRITE_REQUEST), Serializable {
     override fun serialize(): ByteArray {
-        return serializeULong(dataSize) +
-            serializeUShort(blockCount) +
-            serializeULong(nonce) +
+        return serializeVarLen(info.toByteArray(Charsets.UTF_8)) +
             serializeVarLen(id.toByteArray(Charsets.UTF_8)) +
-            serializeVarLen(info.toByteArray(Charsets.UTF_8))
+            serializeULong(nonce) +
+            serializeULong(dataSize) +
+            serializeUShort(blockCount)
     }
 
     companion object Deserializer : Deserializable<EVAWriteRequestPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<EVAWriteRequestPayload, Int> {
             var localOffset = 0
+            val (info, infoLen) = deserializeVarLen(buffer, offset + localOffset)
+            localOffset += infoLen
+            val (id, idLen) = deserializeVarLen(buffer, offset + localOffset)
+            localOffset += idLen
+            val nonce = deserializeULong(buffer, offset + localOffset)
+            localOffset += SERIALIZED_ULONG_SIZE
             val dataSize = deserializeULong(buffer, offset + localOffset)
             localOffset += SERIALIZED_ULONG_SIZE
             val blockCount = deserializeUShort(buffer, offset + localOffset)
             localOffset += SERIALIZED_USHORT_SIZE
-            val nonce = deserializeULong(buffer, offset + localOffset)
-            localOffset += SERIALIZED_ULONG_SIZE
-            val (id, idLen) = deserializeVarLen(buffer, offset + localOffset)
-            localOffset += idLen
-            val (info, infoLen) = deserializeVarLen(buffer, offset + localOffset)
-            localOffset += infoLen
-//            val (infoBinary, infoBinaryLen) = deserializeRaw(buffer, offset + localOffset)
-//            localOffset += infoBinaryLen
 
             val payload = EVAWriteRequestPayload(
-                dataSize,
-                blockCount,
-                nonce,
+                String(info, Charsets.UTF_8),
                 String(id, Charsets.UTF_8),
-                String(info, Charsets.UTF_8)
+                nonce,
+                dataSize,
+                blockCount
             )
 
             return Pair(payload, localOffset)
@@ -56,15 +55,13 @@ data class EVAWriteRequestPayload(
 }
 
 data class EVAAcknowledgementPayload(
-    var number: Int,
     var windowSize: Int,
     var nonce: ULong,
     var ackWindow: Int,
     var unAckedBlocks: ByteArray
 ) : EVAMessagePayload(Community.MessageId.EVA_ACKNOWLEDGEMENT), Serializable {
     override fun serialize(): ByteArray {
-        return serializeUShort(number) +
-            serializeUShort(windowSize) +
+        return serializeUShort(windowSize) +
             serializeULong(nonce) +
             serializeUShort(ackWindow) +
             unAckedBlocks
@@ -76,7 +73,6 @@ data class EVAAcknowledgementPayload(
 
         other as EVAAcknowledgementPayload
 
-        if (number != other.number) return false
         if (windowSize != other.windowSize) return false
         if (nonce != other.nonce) return false
         if (ackWindow != other.ackWindow) return false
@@ -86,8 +82,7 @@ data class EVAAcknowledgementPayload(
     }
 
     override fun hashCode(): Int {
-        var result = number
-        result = 31 * result + windowSize
+        var result = windowSize
         result = 31 * result + nonce.hashCode()
         result = 31 * result + ackWindow
         result = 31 * result + unAckedBlocks.contentHashCode()
@@ -97,8 +92,6 @@ data class EVAAcknowledgementPayload(
     companion object Deserializer : Deserializable<EVAAcknowledgementPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<EVAAcknowledgementPayload, Int> {
             var localOffset = 0
-            val number = deserializeUShort(buffer, offset + localOffset)
-            localOffset += SERIALIZED_USHORT_SIZE
             val windowSize = deserializeUShort(buffer, offset + localOffset)
             localOffset += SERIALIZED_USHORT_SIZE
             val nonce = deserializeULong(buffer, offset + localOffset)
@@ -109,7 +102,6 @@ data class EVAAcknowledgementPayload(
             localOffset += unAckedBlocksLen
 
             val payload = EVAAcknowledgementPayload(
-                number,
                 windowSize,
                 nonce,
                 ackWindow,
@@ -123,12 +115,12 @@ data class EVAAcknowledgementPayload(
 data class EVADataPayload(
     var blockNumber: Int,
     var nonce: ULong,
-    var dataBinary: ByteArray
+    var data: ByteArray
 ) : EVAMessagePayload(Community.MessageId.EVA_DATA), Serializable {
     override fun serialize(): ByteArray {
         return serializeUShort(blockNumber) +
             serializeULong(nonce) +
-            dataBinary
+            data
     }
 
     override fun equals(other: Any?): Boolean {
@@ -139,7 +131,7 @@ data class EVADataPayload(
 
         if (blockNumber != other.blockNumber) return false
         if (nonce != other.nonce) return false
-        if (!dataBinary.contentEquals(other.dataBinary)) return false
+        if (!data.contentEquals(other.data)) return false
 
         return true
     }
@@ -147,7 +139,7 @@ data class EVADataPayload(
     override fun hashCode(): Int {
         var result = blockNumber
         result = 31 * result + nonce.hashCode()
-        result = 31 * result + dataBinary.contentHashCode()
+        result = 31 * result + data.contentHashCode()
         return result
     }
 
@@ -158,13 +150,13 @@ data class EVADataPayload(
             localOffset += SERIALIZED_USHORT_SIZE
             val nonce = deserializeULong(buffer, offset + localOffset)
             localOffset += SERIALIZED_ULONG_SIZE
-            val (dataBinary, dataBinaryLen) = deserializeRaw(buffer, offset + localOffset)
-            localOffset += dataBinaryLen
+            val (data, dataLen) = deserializeRaw(buffer, offset + localOffset)
+            localOffset += dataLen
 
             val payload = EVADataPayload(
                 blockNumber,
                 nonce,
-                dataBinary
+                data
             )
 
             return Pair(payload, localOffset)
@@ -173,32 +165,28 @@ data class EVADataPayload(
 }
 
 data class EVAErrorPayload(
-    var message: String,
-    var info: String
+    var info: String,
+    var message: String
 ) : EVAMessagePayload(Community.MessageId.EVA_ERROR), Serializable {
     override fun serialize(): ByteArray {
-        return message.toByteArray(Charsets.UTF_8) +
-            info.toByteArray(Charsets.UTF_8)
+        return serializeVarLen(info.toByteArray(Charsets.UTF_8)) +
+            serializeVarLen(message.toByteArray(Charsets.UTF_8))
     }
 
     companion object Deserializer : Deserializable<EVAErrorPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<EVAErrorPayload, Int> {
             var localOffset = 0
-            val (message, messageLen) = deserializeVarLen(buffer, offset + localOffset)
-            localOffset += messageLen
             val (info, infoLen) = deserializeVarLen(buffer, offset + localOffset)
             localOffset += infoLen
+            val (message, messageLen) = deserializeVarLen(buffer, offset + localOffset)
+            localOffset += messageLen
 
             val payload = EVAErrorPayload(
-                String(message, Charsets.UTF_8),
-                String(info, Charsets.UTF_8)
+                info.toString(Charsets.UTF_8),
+                message.toString(Charsets.UTF_8)
             )
 
             return Pair(payload, localOffset)
         }
     }
 }
-
-//data class EVACancelPayload(
-//    var
-//)

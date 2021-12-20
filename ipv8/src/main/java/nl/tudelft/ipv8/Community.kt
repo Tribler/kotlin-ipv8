@@ -256,23 +256,23 @@ abstract class Community : Overlay {
     /**
      * EVA serialized packets for different EVA payloads
      */
-    fun createEVAWriteRequest(dataSize: ULong, blockCount: Int, nonce: ULong, id: String, info: String): ByteArray {
-        val payload = EVAWriteRequestPayload(dataSize, blockCount, nonce, id, info)
+    fun createEVAWriteRequest(info: String, id: String, nonce: ULong, dataSize: ULong, blockCount: Int): ByteArray {
+        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount)
         return serializePacket(MessageId.EVA_WRITE_REQUEST, payload)
     }
 
-    fun createEVAAcknowledgement(number: Int, windowSize: Int, nonce: ULong, unReceivedBlocks: ByteArray, ackWindow: Int): ByteArray {
-        val payload = EVAAcknowledgementPayload(number, windowSize, nonce, ackWindow, unReceivedBlocks)
+    fun createEVAAcknowledgement(windowSize: Int, nonce: ULong, ackWindow: Int, unReceivedBlocks: ByteArray): ByteArray {
+        val payload = EVAAcknowledgementPayload(windowSize, nonce, ackWindow, unReceivedBlocks)
         return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload)
     }
 
-    fun createEVAData(peer: Peer, blockNumber: Int, nonce: ULong, dataBinary: ByteArray): ByteArray {
-        val payload = EVADataPayload(blockNumber, nonce, dataBinary)
+    fun createEVAData(peer: Peer, blockNumber: Int, nonce: ULong, data: ByteArray): ByteArray {
+        val payload = EVADataPayload(blockNumber, nonce, data)
         return serializePacket(MessageId.EVA_DATA, payload, encrypt = true, recipient = peer)
     }
 
-    fun createEVAError(message: String, info: String): ByteArray {
-        val payload = EVAErrorPayload(message, info)
+    fun createEVAError(info: String, message: String): ByteArray {
+        val payload = EVAErrorPayload(info, message)
         return serializePacket(MessageId.EVA_ERROR, payload)
     }
 
@@ -400,7 +400,6 @@ abstract class Community : Overlay {
 
     private fun onEVADataPacket(packet: Packet) {
         logger.debug { "EVAPROTOCOL: On EVA data packet from ${packet.source}"}
-//        val (peer, payload) = packet.getAuthPayload(EVADataPayload.Deserializer)
         val (peer, payload) = packet.getDecryptedAuthPayload(
             EVADataPayload.Deserializer, myPeer.key as PrivateKey
         )
@@ -578,9 +577,9 @@ abstract class Community : Overlay {
      * EVA protocol entrypoint to send binary data
      *
      * @param peer the address to deliver the data
-     * @param infoBinary string that identifies to which communitu or class it should be delivered
+     * @param info string that identifies to which communitu or class it should be delivered
      * @param id file/data identifier that identifies the sent data
-     * @param dataBinary serialized packet in bytes
+     * @param data serialized packet in bytes
      * @param nonce an optional unique number that identifies this transfer
      */
     fun evaSendBinary(
@@ -596,7 +595,7 @@ abstract class Community : Overlay {
     /**
      * EVA protocol callbacks for other communities and classes
      */
-    fun setOnEVASendCompleteCallback(callback: (peer: Peer, info: String, dataBinary: ByteArray?, nonce: ULong) -> Unit) {
+    fun setOnEVASendCompleteCallback(callback: (peer: Peer, info: String, data: ByteArray?, nonce: ULong) -> Unit) {
         if (evaProtocolEnabled) evaProtocol.onSendCompleteCallback = callback
     }
 
@@ -604,7 +603,7 @@ abstract class Community : Overlay {
         if (evaProtocolEnabled) evaProtocol.onReceiveProgressCallback = callback
     }
 
-    fun setOnEVAReceiveCompleteCallback(callback: (peer: Peer, info: String, id: String, dataBinary: ByteArray?) -> Unit) {
+    fun setOnEVAReceiveCompleteCallback(callback: (peer: Peer, info: String, id: String, data: ByteArray?) -> Unit) {
         if (evaProtocolEnabled) evaProtocol.onReceiveCompleteCallback = callback
     }
 

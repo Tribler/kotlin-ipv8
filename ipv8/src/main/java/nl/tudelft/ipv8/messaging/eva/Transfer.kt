@@ -1,31 +1,25 @@
 package nl.tudelft.ipv8.messaging.eva
 
-import mu.KotlinLogging
 import java.util.*
-
-private val logger = KotlinLogging.logger {}
 
 data class Transfer(
     private val type: TransferType,
     private val scheduledTransfer: ScheduledTransfer
 ) {
     var info = scheduledTransfer.info
-
-    //    var dataBinary: ByteArray? = scheduledTransfer.dataBinary
-    var dataBinary = ByteArray(scheduledTransfer.dataSize.toInt())
-    var nonce = scheduledTransfer.nonce
     var id = scheduledTransfer.id
+    var data = ByteArray(scheduledTransfer.dataSize.toInt())
+    var nonce = scheduledTransfer.nonce
+
     var dataSize = scheduledTransfer.dataSize
     var blockCount = scheduledTransfer.blockCount
+    var blockSize = scheduledTransfer.blockSize
 
-    var blockNumber = NONE
     var attempt = 0
     var windowSize = 0
-    var acknowledgementNumber = 0
     var ackedWindow = 0
     var updated = Date().time
     var released = false
-    val blockSize = 1000
 
     // Set of all blocks that have not been received by the receiver or have been sent by the sender
     var unReceivedBlocks: MutableSet<Int> = when (type) {
@@ -33,22 +27,25 @@ data class Transfer(
         else -> mutableSetOf()
     }
 
-    var lastSendBlocks: List<Int> = listOf()
-
-//    private val progressMarkers = (0..100).associateBy { kotlin.math.ceil(scheduledTransfer.blockCount.toDouble() / 100 * it).toInt() }
+    var lastSentBlocks: List<Int> = listOf()
 
     fun release() {
         info = ""
-        dataBinary = byteArrayOf()
+        data = byteArrayOf()
         released = true
     }
 
-    fun setSendSet() {
+    /**
+     * Used by the sender.
+     * Determines which block numbers must be send in the next send-wave.
+     */
+    fun setSendSet(): List<Int> {
         val list = ((ackedWindow * windowSize)..(kotlin.math.min(
             (ackedWindow + 1) * windowSize - 1,
             blockCount - 1
         ))).toSet()
-        lastSendBlocks = (unReceivedBlocks + list).toList()
+        lastSentBlocks = (unReceivedBlocks + list).toList()
+        return lastSentBlocks
     }
 
     /**
@@ -58,51 +55,41 @@ data class Transfer(
      */
     fun addData(number: Int, data: ByteArray) {
         val startIndex = number * blockSize
-        data.copyInto(dataBinary, startIndex)
+        data.copyInto(this.data, startIndex)
         removeUnreceivedBlock(number)
     }
 
     /**
      * Used by the sender.
-     * Fetches the data
+     * Fetches the data for a particular block.
      */
     fun getData(blockNumber: Int): ByteArray {
         val start = blockNumber * blockSize
         val stop = start + blockSize
-        return dataBinary.takeInRange(start, stop)
+        return data.takeInRange(start, stop)
     }
 
     /**
      * Used by the sender.
-     * Upon receipt of an ack from the receiver, the unreceived blocks within the acked windows
-     * are re-added to the set of unreceived blocks.
+     * Upon receipt of an ack from the receiver it includes a list of block numbers that hasn't been
+     * received yet. These block numbers are added to the set of unreceived block numbers to be
+     * included in the next send-wave.
      */
     fun addUnreceivedBlocks(set: ByteArray) {
-        val collection: MutableCollection<Int> = mutableSetOf()
-        set
-            .decodeToString()
+        set.decodeToString()
             .removeSurrounding("[", "]")
             .replace(" ", "")
             .splitIgnoreEmpty(",")
-            .map { it.toInt() }
-            .toCollection(collection)
-        unReceivedBlocks.addAll(collection)
-
-//        logger.debug { "EVAPROTOCOL: BLOCK NUMBERS: $blockNumbers" }
-//
-//        if (blockNumbers.isNotEmpty()) {
-//            logger.debug { "EVAPROTOCOL: BLOCKNUMBERS NOT EMPTY!" }
-//            try {
-//                blockNumbers.map { it.toInt() }
-//                    .toCollection(collection)
-//                unReceivedBlocks.addAll(collection)
-//            } catch (e: Exception) {
-//                e.printStackTrace()
-//            }
-//        }
+            .forEach {
+                unReceivedBlocks.add(it.toInt())
+            }
     }
 
-    fun removeUnreceivedBlock(number: Int) {
+    /**
+     * Used by the receiver.
+     * Removes a block (number) from the set of unreceived blocks
+     */
+    private fun removeUnreceivedBlock(number: Int) {
         unReceivedBlocks.remove(number)
     }
 
@@ -119,23 +106,18 @@ data class Transfer(
             .encodeToByteArray()
     }
 
+    fun isBlockReceived(number: Int): Boolean = !unReceivedBlocks.contains(number)
+
     /**
+     * Used by the receiver.
      * Function that determines the progress of the receiving process by counting the number of
      * received blocks compared to the total blockcount
      */
     fun getProgress(): Double =
         100.0 - (unReceivedBlocks.size.toDouble() / blockCount.toDouble()) * 100.0
 
-//    fun isProgressMarker(): Boolean {
-//        return getProgressMarker() != null
-//    }
-//
-//    fun getProgressMarker(): Double? {
-//        return progressMarkers[blockNumber]?.toDouble()
-//    }
-
     override fun toString(): String {
-        return "Type: $type. Info: '$info'. Data size: $dataSize, Block: $blockNumber($blockCount). Window size: $windowSize. Updated: $updated. Nonce: $nonce"
+        return "Type: '$type'. Info: '$info'. ID: '$id'. Data size: '$dataSize', Window size: '$windowSize'. Updated: '$updated'. Nonce: '$nonce'. AckWindow: '$ackedWindow'."
     }
 
     companion object {
@@ -150,11 +132,12 @@ enum class TransferType {
 
 data class ScheduledTransfer(
     val info: String,
-    val dataBinary: ByteArray,
+    val data: ByteArray,
     val nonce: ULong,
     val id: String,
     val blockCount: Int,
-    val dataSize: ULong
+    val dataSize: ULong,
+    val blockSize: Int
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -163,22 +146,24 @@ data class ScheduledTransfer(
         other as ScheduledTransfer
 
         if (info != other.info) return false
-        if (!dataBinary.contentEquals(other.dataBinary)) return false
+        if (!data.contentEquals(other.data)) return false
         if (nonce != other.nonce) return false
         if (id != other.id) return false
         if (blockCount != other.blockCount) return false
         if (dataSize != other.dataSize) return false
+        if (blockSize != other.blockSize) return false
 
         return true
     }
 
     override fun hashCode(): Int {
         var result = info.hashCode()
-        result = 31 * result + dataBinary.contentHashCode()
+        result = 31 * result + data.contentHashCode()
         result = 31 * result + nonce.hashCode()
         result = 31 * result + id.hashCode()
         result = 31 * result + blockCount
         result = 31 * result + dataSize.hashCode()
+        result = 31 * result + blockSize
         return result
     }
 

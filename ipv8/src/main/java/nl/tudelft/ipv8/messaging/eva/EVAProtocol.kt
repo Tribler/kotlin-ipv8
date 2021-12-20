@@ -17,9 +17,7 @@ private val logger = KotlinLogging.logger {}
 open class EVAProtocol(
     private var community: Community,
     scope: CoroutineScope,
-    private var blockSize: Int = BLOCK_SIZE,
     private var windowSizeInBlocks: Int = WINDOW_SIZE_IN_BLOCKS,
-    private var startMessageID: Int = START_MESSAGE_ID,
     private var retransmitIntervalInSec: Int = RETRANSMIT_INTERVAL_IN_SEC,
     private var retransmitAttemptCount: Int = RETRANSMIT_ATTEMPT_COUNT,
     private var scheduledSendIntervalInSec: Int = SCHEDULED_SEND_INTERVAL_IN_SEC,
@@ -27,7 +25,8 @@ open class EVAProtocol(
     private var binarySizeLimit: Int = BINARY_SIZE_LIMIT,
     private var terminateByTimeoutEnabled: Boolean = true
 ) {
-    private var retransmitEnabled = false
+    private var blockSize = BLOCK_SIZE
+    private var retransmitEnabled = true
 
     private var scheduled: MutableMap<Key, Queue<ScheduledTransfer>> = mutableMapOf()
     private var incoming: MutableMap<Key, Transfer> = mutableMapOf()
@@ -37,15 +36,17 @@ open class EVAProtocol(
     private var scheduledTasks = PriorityQueue<ScheduledTask>()
 
     lateinit var onReceiveProgressCallback: (peer: Peer, info: String, progress: TransferProgress) -> Unit
-    lateinit var onReceiveCompleteCallback: (peer: Peer, info: String, id: String, dataBinary: ByteArray?) -> Unit
-    lateinit var onSendCompleteCallback: (peer: Peer, info: String, dataBinary: ByteArray?, nonce: ULong) -> Unit
+    lateinit var onReceiveCompleteCallback: (peer: Peer, info: String, id: String, data: ByteArray?) -> Unit
+    lateinit var onSendCompleteCallback: (peer: Peer, info: String, data: ByteArray?, nonce: ULong) -> Unit
     lateinit var onErrorCallback: (peer: Peer, exception: TransferException) -> Unit
 
     init {
         logger.debug {
-            "EVAPROTOCOL: Initialized. Block size: ${blockSize}. Window size: ${windowSizeInBlocks}." +
-                "EVAPROTOCOL: Start message id: ${startMessageID}. Retransmit interval: ${retransmitIntervalInSec}sec." +
-                "EVAPROTOCOL: Max retransmit attempts: ${retransmitAttemptCount}. Timeout: ${timeoutIntervalInSec}sec." +
+            "EVAPROTOCOL: Initialized. Block size: ${blockSize}." +
+                "EVAPROTOCOL: Window size: ${windowSizeInBlocks}." +
+                "EVAPROTOCOL: Retransmit interval: ${retransmitIntervalInSec}sec." +
+                "EVAPROTOCOL: Max retransmit attempts: ${retransmitAttemptCount}." +
+                "EVAPROTOCOL: Timeout: ${timeoutIntervalInSec}sec." +
                 "EVAPROTOCOL: Scheduled send interval: ${scheduledSendIntervalInSec}sec." +
                 "EVAPROTOCOL: Binary size limit: ${binarySizeLimit}."
         }
@@ -64,7 +65,7 @@ open class EVAProtocol(
 
         /**
          * Coroutine that periodically checks whether there are scheduled tasks planned in the queue
-         * and if so, if its time to be executed. Every second this is checked.
+         * and if so, if its time to be executed. The interval is set to 1 second.
          */
         scope.launch {
             while (isActive) {
@@ -197,7 +198,7 @@ open class EVAProtocol(
             if (!isScheduled(peer.key, id)) {
                 scheduled.addValue(
                     peer.key,
-                    ScheduledTransfer(info, data, nonceValue, id, 0, data.size.toULong())
+                    ScheduledTransfer(info, data, nonceValue, id, 0, data.size.toULong(), blockSize)
                 )
 
                 onReceiveProgressCallback(
@@ -238,7 +239,7 @@ open class EVAProtocol(
             if (!isScheduled(peer.key, id)) {
                 scheduled.addValue(
                     peer.key,
-                    ScheduledTransfer(info, data, nonce, id, 0, data.size.toULong())
+                    ScheduledTransfer(info, data, nonce, id, 0, data.size.toULong(), blockSize)
                 )
 
                 onReceiveProgressCallback(
@@ -258,19 +259,14 @@ open class EVAProtocol(
         val dataSize = data.size
         val blockCount = BigDecimal(dataSize).divide(BigDecimal(blockSize), RoundingMode.UP).toInt()
 
-//        logger.debug { "EVAPROTOCOL: DATA SIZE: $dataSize $blockCount" }
-//
-//        for (number in 0..blockCount) {
-//            logger.debug { "EVAPROTOCOL: BLOCK $number from ${number * blockSize} to ${(number + 1) * blockSize}" }
-//        }
-
         val scheduledTransfer = scheduled[peer.key]?.firstOrNull { it.id == id } ?: ScheduledTransfer(
             info,
             byteArrayOf(),
             nonce,
             id,
             blockCount,
-            dataSize.toULong()
+            dataSize.toULong(),
+            blockSize
         )
 
         val transfer = Transfer(TransferType.OUTGOING, scheduledTransfer)
@@ -289,12 +285,12 @@ open class EVAProtocol(
             return
         }
 
-        transfer.dataBinary = data
+        transfer.data = data
 
         outgoing[peer.key] = transfer
         scheduleTerminate(outgoing, peer, transfer)
 
-        val writeRequestPacket = community.createEVAWriteRequest(dataSize.toULong(), transfer.blockCount, nonce, id, info)
+        val writeRequestPacket = community.createEVAWriteRequest(info, id, nonce, dataSize.toULong(), transfer.blockCount)
         send(peer, writeRequestPacket)
     }
 
@@ -309,7 +305,15 @@ open class EVAProtocol(
 
         if (isIncoming(peer.key, payload.id) || isTransferred(peer.key, payload.id, finishedIncoming)) return
 
-        val scheduledTransfer = ScheduledTransfer(payload.info, byteArrayOf(), payload.nonce, payload.id, payload.blockCount, payload.dataSize)
+        val scheduledTransfer = ScheduledTransfer(
+            payload.info,
+            byteArrayOf(),
+            payload.nonce,
+            payload.id,
+            payload.blockCount,
+            payload.dataSize,
+            blockSize
+        )
         val transfer = Transfer(TransferType.INCOMING, scheduledTransfer)
 
         logger.debug { "EVAPROTOCOL: $transfer"}
@@ -375,22 +379,14 @@ open class EVAProtocol(
      * @param payload acknowledgement of sent blocks with info about number, windowsize and nonce
      */
     fun onAcknowledgement(peer: Peer, payload: EVAAcknowledgementPayload) {
-        logger.debug { "EVAPROTOCOL: On acknowledgement(${payload.number}). Window size: ${payload.windowSize}." }
+        logger.debug { "EVAPROTOCOL: On acknowledgement for window '${payload.ackWindow}'. Window size: '${payload.windowSize}'." }
 
         val transfer = outgoing[peer.key] ?: return
         logger.debug { "EVAPROTOCOL: Transfer: $transfer"}
 
         if (transfer.nonce != payload.nonce) return
-//        if (transfer.blockNumber > payload.number || transfer.nonce != payload.nonce) return
-
-//        transfer.blockNumber = payload.number
-//        if (transfer.blockNumber > transfer.blockCount - 1) {
-//            finishOutgoingTransfer(peer, transfer)
-//            return
-//        }
 
         transfer.windowSize = payload.windowSize
-//        transfer.windowSize = max(MIN_WINDOWS_SIZE, kotlin.math.min(payload.windowSize, binarySizeLimit))
         transfer.updated = Date().time
 
         if (payload.ackWindow > 0) {
@@ -400,13 +396,21 @@ open class EVAProtocol(
 
         transfer.ackedWindow = payload.ackWindow
 
-        transfer.setSendSet()
-        transfer.lastSendBlocks.forEach { blockNumber ->
+        transfer.setSendSet().let {
+            if (it.isEmpty()) {
+                finishOutgoingTransfer(peer, transfer)
+                return
+            } else {
+                transmitData(peer, transfer)
+                transfer.unReceivedBlocks = mutableSetOf()
+            }
+        }
+    }
+
+    private fun transmitData(peer: Peer, transfer: Transfer) {
+        transfer.lastSentBlocks.forEach { blockNumber ->
             if (blockNumber > transfer.blockCount - 1) return
-//            val start = blockNumber * blockSize
-//            val stop = start + blockSize
-//
-//            val data = transfer.dataBinary.takeInRange(start, stop)
+
             val data = transfer.getData(blockNumber)
 
             if (data.isEmpty()) return
@@ -417,24 +421,30 @@ open class EVAProtocol(
             send(peer, dataPacket)
         }
 
-
-//        for (blockNumber in (transfer.blockNumber until transfer.blockCount)) {
-////        for (blockNumber in (transfer.blockNumber until transfer.blockNumber + transfer.windowSize)) {
-//            if (blockNumber > transfer.blockCount - 1) return
-//
-//            val start = blockNumber * blockSize
-//            val stop = start + blockSize
-//
-//            val data = transfer.dataBinary.takeInRange(start, stop)
-//
-//            if (data.isEmpty()) return
-//
-//            logger.debug { "EVAPROTOCOL: Transmit($blockNumber/${transfer.blockCount-1})" }
-//
-//            val dataPacket = community.createEVAData(peer, blockNumber, transfer.nonce, data)
-//            send(peer, dataPacket)
+//        scheduleTask(Date().time + retransmitIntervalInSec * 1000) {
+//            logger.debug { "EVAPROTOCOL: Schedule resend data for transfer with id ${transfer.id} and nonce ${transfer.nonce}" }
+//            retransmitData(peer, transfer, transfer.ackedWindow + 1)
 //        }
     }
+
+//    private fun retransmitData(
+//        peer: Peer,
+//        transfer: Transfer,
+//        ackWindow: Int
+//    ) {
+//        logger.debug { "EVAPROTOCOL: Resend data for transfer with id ${transfer.id} and nonce ${transfer.nonce}, ${transfer.released}, ${transfer.attempt}" }
+//
+//        if (transfer.released || !retransmitEnabled || transfer.attempt >= retransmitAttemptCount - 1) return
+//
+//        logger.debug { "EVAPROTOCOL: Resend FIRST PART ${transfer.ackedWindow} $ackWindow" }
+//        if (transfer.ackedWindow != ackWindow) return
+//
+//        logger.debug { "EVAPROTOCOL: Executing resend data for transfer with id ${transfer.id} and nonce ${transfer.nonce}" }
+//
+//        transfer.attempt += 1
+//
+//        transmitData(peer, transfer)
+//    }
 
     /**
      * Upon receipt of an EVA data block, the binary data is added to the already received data.
@@ -448,68 +458,22 @@ open class EVAProtocol(
 
         val transfer = incoming[peer.key] ?: return
 
-//        if (transfer.nonce != payload.nonce || transfer.blockNumber != payload.blockNumber - 1) return
-
         if (transfer.nonce != payload.nonce) return
 
-//        transfer.blockNumber = payload.blockNumber
-
-        val info = transfer.info
-
-        when {
-            transfer.ackedWindow == 0 -> {
-                TransferProgress(
-                    transfer.id,
-                    TransferState.INITIALIZING,
-                    0.0
-                )
+        when (transfer.ackedWindow) {
+            0 -> {
+                TransferProgress(transfer.id, TransferState.INITIALIZING, 0.0)
             }
-//            transfer.isProgressMarker() -> {
-//                TransferProgress(
-//                    transfer.id,
-//                    TransferState.DOWNLOADING,
-//                    transfer.getProgressMarker()!!
-//                )
-//            }
             else -> {
-                TransferProgress(
-                    transfer.id,
-                    TransferState.DOWNLOADING,
-                    transfer.getProgress()
-                )
+                TransferProgress(transfer.id, TransferState.DOWNLOADING, transfer.getProgress())
             }
         }.also {
-//            if (it != null) {
-                onReceiveProgressCallback(
-                    peer,
-                    info,
-                    it
-                )
-//            }
+            onReceiveProgressCallback(peer, transfer.info, it)
         }
 
-//        transfer.dataBinary?.size?.plus(payload.dataBinary.size)?.let { dataSize ->
-//            if (dataSize > binarySizeLimit) {
-//                incomingError(
-//                    peer,
-//                    transfer,
-//                    SizeException(
-//                        "Current data size limit(${binarySizeLimit}) has been exceeded",
-//                        info ?: "",
-//                        transfer
-//                    )
-//                )
-//                return
-//            }
-//        }
-
-//        val startIndex = payload.blockNumber * blockSize
-//        val endIndex = startIndex + payload.dataBinary.size
-
-//        logger.debug { "EVAPROTOCOL: ${transfer.dataBinary.size} $startIndex ${startIndex + payload.dataBinary.size}"}
-//        payload.dataBinary.copyInto(transfer.dataBinary, startIndex)
-        transfer.addData(payload.blockNumber, payload.dataBinary)
-//        transfer.dataBinary = transfer.dataBinary?.plus(payload.dataBinary)
+        if (!transfer.isBlockReceived(payload.blockNumber)) {
+            transfer.addData(payload.blockNumber, payload.data)
+        }
         transfer.attempt = 0
         transfer.updated = Date().time
 
@@ -521,13 +485,6 @@ open class EVAProtocol(
             return
         }
 
-//        if (transfer.blockNumber == transfer.blockCount - 1) {
-//            logger.debug { "EVAPROTOCOL: Final data packet received"}
-//            sendAcknowledgement(peer, transfer)
-//            finishIncomingTransfer(peer, transfer)
-//            return
-//        }
-
         val timeToAcknowledge = payload.blockNumber == kotlin.math.min((transfer.ackedWindow + 1) * transfer.windowSize - 1, transfer.blockCount - 1)
         if (timeToAcknowledge) {
             if (payload.blockNumber < (transfer.ackedWindow + 1) * transfer.windowSize) {
@@ -535,17 +492,6 @@ open class EVAProtocol(
             }
             sendAcknowledgement(peer, transfer)
         }
-
-
-//        val timeToAcknowledge = transfer.acknowledgementNumber <= transfer.blockNumber + 1
-//        if (timeToAcknowledge) {
-//            sendAcknowledgement(peer, transfer)
-//        }
-
-//        val timeToAcknowledge = transfer.acknowledgementNumber + transfer.windowSize <= transfer.blockNumber + 1
-//        if (timeToAcknowledge) {
-//            sendAcknowledgement(peer, transfer)
-//        }
     }
 
     /**
@@ -579,20 +525,17 @@ open class EVAProtocol(
      * @param transfer the corresponding transfer object for the acknowledgement
      */
     private fun sendAcknowledgement(peer: Peer, transfer: Transfer) {
-//        transfer.acknowledgementNumber = transfer.blockNumber + 1
-
         val unReceivedBlocks = if (transfer.ackedWindow > 0) {
             transfer.getUnreceivedBlocksUntil()
         } else byteArrayOf()
 
-        logger.debug { "EVAPROTOCOL: Acknowledgement (${transfer.acknowledgementNumber}) sent to ${peer.mid} with windowSize (${transfer.windowSize}) and nonce ${transfer.nonce}"}
+        logger.debug { "EVAPROTOCOL: Acknowledgement for window '${transfer.ackedWindow}' sent to ${peer.mid} with windowSize (${transfer.windowSize}) and nonce ${transfer.nonce}"}
 
         val ackPacket = community.createEVAAcknowledgement(
-            transfer.acknowledgementNumber,
             transfer.windowSize,
             transfer.nonce,
-            unReceivedBlocks,
-            transfer.ackedWindow
+            transfer.ackedWindow,
+            unReceivedBlocks
         )
         send(peer, ackPacket)
     }
@@ -604,7 +547,7 @@ open class EVAProtocol(
      * @param transfer corresponding transfer
      */
     private fun finishIncomingTransfer(peer: Peer, transfer: Transfer) {
-        val data = transfer.dataBinary
+        val data = transfer.data
         val info = transfer.info
 
         logger.debug { "EVAPROTOCOL: Incoming transfer finished: id ${transfer.id} and info $info" }
@@ -637,7 +580,7 @@ open class EVAProtocol(
      * @param transfer corresponding transfer
      */
     private fun finishOutgoingTransfer(peer: Peer, transfer: Transfer) {
-        val data = transfer.dataBinary
+        val data = transfer.data
         val info = transfer.info
         val nonce = transfer.nonce
 
@@ -669,7 +612,7 @@ open class EVAProtocol(
                     peer,
                     transfer.info,
                     transfer.id,
-                    transfer.dataBinary,
+                    transfer.data,
                     transfer.nonce,
                 )
             }
@@ -700,7 +643,7 @@ open class EVAProtocol(
     private fun incomingError(peer: Peer, transfer: Transfer, exception: TransferException) {
         terminate(incoming, peer, transfer)
 
-        val errorPacket = community.createEVAError(exception.localizedMessage ?: "", exception.info)
+        val errorPacket = community.createEVAError(exception.info, exception.localizedMessage ?: "Unknown error")
         send(peer, errorPacket)
 
         notifyError(peer, exception)
@@ -795,10 +738,9 @@ open class EVAProtocol(
         if (transfer.released || !retransmitEnabled || transfer.attempt >= retransmitAttemptCount - 1) return
 
         if (Date().time - transfer.updated >= retransmitIntervalInSec * 1000) {
-            transfer.acknowledgementNumber = transfer.blockNumber + 1
             transfer.attempt += 1
 
-            logger.debug { "EVAPROTOCOL: Re-acknowledgement attempt ${transfer.attempt + 1}/$retransmitAttemptCount: (${transfer.acknowledgementNumber})." }
+            logger.debug { "EVAPROTOCOL: Re-acknowledgement attempt ${transfer.attempt + 1}/$retransmitAttemptCount for window ${transfer.ackedWindow}." }
 
             sendAcknowledgement(peer, transfer)
         }
@@ -813,7 +755,6 @@ open class EVAProtocol(
 
         const val BLOCK_SIZE = 1000
         const val WINDOW_SIZE_IN_BLOCKS = 64
-        const val START_MESSAGE_ID = 186
         const val RETRANSMIT_INTERVAL_IN_SEC = 3
         const val RETRANSMIT_ATTEMPT_COUNT = 3
         const val SCHEDULED_SEND_INTERVAL_IN_SEC = 5
