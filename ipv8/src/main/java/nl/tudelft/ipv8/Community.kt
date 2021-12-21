@@ -386,19 +386,19 @@ abstract class Community : Overlay {
      *
      * @param packet specific packets for the EVA protocol (write request, ack, data, error)
      */
-    private fun onEVAWriteRequestPacket(packet: Packet) {
+    internal fun onEVAWriteRequestPacket(packet: Packet) {
         logger.debug { "EVAPROTOCOL: On EVA write request packet from ${packet.source}"}
         val (peer, payload) = packet.getAuthPayload(EVAWriteRequestPayload.Deserializer)
         onEVAWriteRequest(peer, payload)
     }
 
-    private fun onEVAAcknowledgementPacket(packet: Packet) {
+    internal fun onEVAAcknowledgementPacket(packet: Packet) {
         logger.debug { "EVAPROTOCOL: On EVA acknowledgement packet from ${packet.source}"}
         val (peer, payload) = packet.getAuthPayload(EVAAcknowledgementPayload.Deserializer)
-        onEVAAcknowldgement(peer, payload)
+        onEVAAcknowledgement(peer, payload)
     }
 
-    private fun onEVADataPacket(packet: Packet) {
+    internal fun onEVADataPacket(packet: Packet) {
         logger.debug { "EVAPROTOCOL: On EVA data packet from ${packet.source}"}
         val (peer, payload) = packet.getDecryptedAuthPayload(
             EVADataPayload.Deserializer, myPeer.key as PrivateKey
@@ -406,7 +406,7 @@ abstract class Community : Overlay {
         onEVAData(peer, payload)
     }
 
-    private fun onEVAErrorPacket(packet: Packet) {
+    internal fun onEVAErrorPacket(packet: Packet) {
         logger.debug { "EVAPROTOCOL: On EVA error packet from ${packet.source}"}
         val (peer, payload) = packet.getAuthPayload(EVAErrorPayload.Deserializer)
         onEVAError(peer, payload)
