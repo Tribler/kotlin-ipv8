@@ -3,7 +3,7 @@ package nl.tudelft.ipv8.messaging.eva
 import java.util.*
 
 data class Transfer(
-    private val type: TransferType,
+    val type: TransferType,
     private val scheduledTransfer: ScheduledTransfer
 ) {
     var info = scheduledTransfer.info
@@ -76,12 +76,9 @@ data class Transfer(
      * included in the next send-wave.
      */
     fun addUnreceivedBlocks(set: ByteArray) {
-        set.decodeToString()
-            .removeSurrounding("[", "]")
-            .replace(" ", "")
-            .splitIgnoreEmpty(",")
+        set.decodeToIntegerList()
             .forEach {
-                unReceivedBlocks.add(it.toInt())
+                unReceivedBlocks.add(it)
             }
     }
 
@@ -100,12 +97,13 @@ data class Transfer(
     fun getUnreceivedBlocksUntil(): ByteArray {
         return unReceivedBlocks
             .filter { it < ackedWindow * windowSize }
-            .map { it.toString() }
-            .toTypedArray()
-            .contentToString()
             .encodeToByteArray()
     }
 
+    /**
+     * Used by the receiver.
+     * Returns whether a block has been received.
+     */
     fun isBlockReceived(number: Int): Boolean = !unReceivedBlocks.contains(number)
 
     /**
@@ -186,4 +184,19 @@ fun CharSequence.splitIgnoreEmpty(vararg delimiters: String): List<String> {
     return this.split(*delimiters).filter {
         it.isNotEmpty()
     }
+}
+
+fun ByteArray.decodeToIntegerList(): List<Int> {
+    return this.decodeToString()
+        .removeSurrounding("[", "]")
+        .replace(" ", "")
+        .splitIgnoreEmpty(",")
+        .map { it.toInt() }
+}
+
+fun List<Int>.encodeToByteArray(): ByteArray {
+    return this.map { it.toString() }
+        .toTypedArray()
+        .contentToString()
+        .encodeToByteArray()
 }
