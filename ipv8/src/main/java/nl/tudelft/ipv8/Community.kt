@@ -42,7 +42,7 @@ abstract class Community : Overlay {
     protected lateinit var scope: CoroutineScope
 
     var evaProtocolEnabled = false
-    lateinit var evaProtocol: EVAProtocol
+    var evaProtocol: EVAProtocol? = null
 
     init {
         messageHandlers[MessageId.PUNCTURE_REQUEST] = ::onPunctureRequestPacket
@@ -555,22 +555,23 @@ abstract class Community : Overlay {
      */
     fun onEVAWriteRequest(peer: Peer, payload: EVAWriteRequestPayload) {
         logger.debug { "EVAPROTOCOL: ON EVA WRITE REQUEST $payload" }
-        evaProtocol.onWriteRequest(peer, payload)
+
+        evaProtocol?.onWriteRequest(peer, payload)
     }
 
-    fun onEVAAcknowldgement(peer: Peer, payload: EVAAcknowledgementPayload) {
+    fun onEVAAcknowledgement(peer: Peer, payload: EVAAcknowledgementPayload) {
         logger.debug { "EVAPROTOCOL: ON EVA ACKNOWLEDGEMENT $payload" }
-        evaProtocol.onAcknowledgement(peer, payload)
+        evaProtocol?.onAcknowledgement(peer, payload)
     }
 
     fun onEVAData(peer: Peer, payload: EVADataPayload) {
         logger.debug { "EVAPROTOCOL: ON EVA DATA. BlockNumber (${payload.blockNumber}). Nonce (${payload.nonce})." }
-        evaProtocol.onData(peer, payload)
+        evaProtocol?.onData(peer, payload)
     }
 
     fun onEVAError(peer: Peer, payload: EVAErrorPayload) {
         logger.debug { "EVAPROTOCOL: ON EVA ERROR $payload" }
-        evaProtocol.onError(peer, payload)
+        evaProtocol?.onError(peer, payload)
     }
 
     /**
@@ -589,26 +590,26 @@ abstract class Community : Overlay {
         data: ByteArray,
         nonce: Long? = null
     ) {
-        evaProtocol.sendBinary(peer, info, id, data, nonce)
+        evaProtocol?.sendBinary(peer, info, id, data, nonce)
     }
 
     /**
      * EVA protocol callbacks for other communities and classes
      */
     fun setOnEVASendCompleteCallback(callback: (peer: Peer, info: String, data: ByteArray?, nonce: ULong) -> Unit) {
-        if (evaProtocolEnabled) evaProtocol.onSendCompleteCallback = callback
+        evaProtocol?.onSendCompleteCallback = callback
     }
 
     fun setOnEVAReceiveProgressCallback(callback: (peer: Peer, info: String, progress: TransferProgress) -> Unit) {
-        if (evaProtocolEnabled) evaProtocol.onReceiveProgressCallback = callback
+        evaProtocol?.onReceiveProgressCallback = callback
     }
 
     fun setOnEVAReceiveCompleteCallback(callback: (peer: Peer, info: String, id: String, data: ByteArray?) -> Unit) {
-        if (evaProtocolEnabled) evaProtocol.onReceiveCompleteCallback = callback
+        evaProtocol?.onReceiveCompleteCallback = callback
     }
 
     fun setOnEVAErrorCallback(callback: (peer: Peer, exception: TransferException) -> Unit) {
-        if (evaProtocolEnabled) evaProtocol.onErrorCallback = callback
+        evaProtocol?.onErrorCallback = callback
     }
 
     companion object {

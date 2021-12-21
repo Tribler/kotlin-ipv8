@@ -35,10 +35,10 @@ open class EVAProtocol(
     private var finishedOutgoing: MutableMap<Key, MutableSet<String>> = mutableMapOf()
     private var scheduledTasks = PriorityQueue<ScheduledTask>()
 
-    lateinit var onReceiveProgressCallback: (peer: Peer, info: String, progress: TransferProgress) -> Unit
-    lateinit var onReceiveCompleteCallback: (peer: Peer, info: String, id: String, data: ByteArray?) -> Unit
-    lateinit var onSendCompleteCallback: (peer: Peer, info: String, data: ByteArray?, nonce: ULong) -> Unit
-    lateinit var onErrorCallback: (peer: Peer, exception: TransferException) -> Unit
+    var onReceiveProgressCallback: ((Peer, String, TransferProgress) -> Unit)? = null
+    var onReceiveCompleteCallback: ((Peer, String, String, ByteArray?) -> Unit)? = null
+    var onSendCompleteCallback: ((Peer, String, ByteArray?, ULong) -> Unit)? = null
+    var onErrorCallback: ((Peer, TransferException) -> Unit)? = null
 
     init {
         logger.debug {
@@ -201,10 +201,8 @@ open class EVAProtocol(
                     ScheduledTransfer(info, data, nonceValue, id, 0, data.size.toULong(), blockSize)
                 )
 
-                onReceiveProgressCallback(
-                    peer,
-                    info,
-                    TransferProgress(
+                onReceiveProgressCallback?.invoke(
+                    peer, info, TransferProgress(
                         id,
                         TransferState.SCHEDULED,
                         0.0
@@ -242,10 +240,8 @@ open class EVAProtocol(
                     ScheduledTransfer(info, data, nonce, id, 0, data.size.toULong(), blockSize)
                 )
 
-                onReceiveProgressCallback(
-                    peer,
-                    info,
-                    TransferProgress(
+                onReceiveProgressCallback?.invoke(
+                    peer, info, TransferProgress(
                         id,
                         TransferState.SCHEDULED,
                         0.0
@@ -468,7 +464,7 @@ open class EVAProtocol(
                 TransferProgress(transfer.id, TransferState.DOWNLOADING, transfer.getProgress())
             }
         }.also {
-            onReceiveProgressCallback(peer, transfer.info, it)
+            onReceiveProgressCallback?.invoke(peer, transfer.info, it)
         }
 
         if (!transfer.isBlockReceived(payload.blockNumber)) {
@@ -555,22 +551,15 @@ open class EVAProtocol(
         finishedIncoming.add(peer.key, transfer.id)
         terminate(incoming, peer, transfer)
 
-        onReceiveProgressCallback(
-            peer,
-            info,
-            TransferProgress(
+        onReceiveProgressCallback?.invoke(
+            peer, info, TransferProgress(
                 transfer.id,
                 TransferState.FINISHED,
                 100.0
             )
         )
 
-        onReceiveCompleteCallback(
-            peer,
-            info,
-            transfer.id,
-            data
-        )
+        onReceiveCompleteCallback?.invoke(peer, info, transfer.id, data)
     }
 
     /**
@@ -589,7 +578,7 @@ open class EVAProtocol(
         finishedOutgoing.add(peer.key, transfer.id)
         terminate(outgoing, peer, transfer)
 
-        onSendCompleteCallback(peer, info, data, nonce)
+        onSendCompleteCallback?.invoke(peer, info, data, nonce)
 
         sendScheduled()
     }
@@ -657,7 +646,7 @@ open class EVAProtocol(
      */
     private fun notifyError(peer: Peer, exception: TransferException) {
         logger.debug { "EVAPROTOCOL ${exception.m} ${exception.info} ${exception.transfer}" }
-        onErrorCallback(peer, exception)
+        onErrorCallback?.invoke(peer, exception)
     }
 
     /**
@@ -759,7 +748,7 @@ open class EVAProtocol(
         const val RETRANSMIT_ATTEMPT_COUNT = 3
         const val SCHEDULED_SEND_INTERVAL_IN_SEC = 5
         const val TIMEOUT_INTERVAL_IN_SEC = 20
-        const val BINARY_SIZE_LIMIT = 1024 * 1024 * 1024
+        const val BINARY_SIZE_LIMIT = 1024 * 1024 * 250
     }
 }
 
