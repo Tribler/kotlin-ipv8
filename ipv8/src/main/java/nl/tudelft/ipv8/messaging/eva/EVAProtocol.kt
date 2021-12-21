@@ -190,7 +190,7 @@ open class EVAProtocol(
         // Stop if a transfer of the requested file is already scheduled, outgoing or transferred
         if (isScheduled(peer.key, id) || isOutgoing(peer.key, id) || isTransferred(peer.key, id, finishedOutgoing)) return
 
-        val nonceValue = (nonce ?: (0..MAX_NONCE).random()).toULong()
+        val nonceValue = (nonce ?: (0..MAX_NONCE).random())
 
         logger.debug { "EVAPROTOCOL: Sending binary with id '$id', nonce '$nonceValue' for info '$info'." }
 
@@ -198,7 +198,7 @@ open class EVAProtocol(
             if (!isScheduled(peer.key, id)) {
                 scheduled.addValue(
                     peer.key,
-                    ScheduledTransfer(info, data, nonceValue, id, 0, data.size.toULong(), blockSize)
+                    ScheduledTransfer(info, data, nonceValue.toULong(), id, 0, data.size.toULong(), blockSize)
                 )
 
                 onReceiveProgressCallback?.invoke(
@@ -225,7 +225,7 @@ open class EVAProtocol(
      * @param data the data in bytes
      * @param nonce an unique number that defines this transfer
      */
-    private fun startOutgoingTransfer(peer: Peer, info: String, id: String, data: ByteArray, nonce: ULong) {
+    private fun startOutgoingTransfer(peer: Peer, info: String, id: String, data: ByteArray, nonce: Long) {
         logger.debug { "EVAPROTOCOL: Start outgoing transfer." }
 
         if (getConnectedPeer(peer.key) == null ||
@@ -237,7 +237,7 @@ open class EVAProtocol(
             if (!isScheduled(peer.key, id)) {
                 scheduled.addValue(
                     peer.key,
-                    ScheduledTransfer(info, data, nonce, id, 0, data.size.toULong(), blockSize)
+                    ScheduledTransfer(info, data, nonce.toULong(), id, 0, data.size.toULong(), blockSize)
                 )
 
                 onReceiveProgressCallback?.invoke(
@@ -258,7 +258,7 @@ open class EVAProtocol(
         val scheduledTransfer = scheduled[peer.key]?.firstOrNull { it.id == id } ?: ScheduledTransfer(
             info,
             byteArrayOf(),
-            nonce,
+            nonce.toULong(),
             id,
             blockCount,
             dataSize.toULong(),
@@ -286,7 +286,7 @@ open class EVAProtocol(
         outgoing[peer.key] = transfer
         scheduleTerminate(outgoing, peer, transfer)
 
-        val writeRequestPacket = community.createEVAWriteRequest(info, id, nonce, dataSize.toULong(), transfer.blockCount)
+        val writeRequestPacket = community.createEVAWriteRequest(info, id, nonce.toULong(), dataSize.toULong(), transfer.blockCount)
         send(peer, writeRequestPacket)
     }
 
@@ -602,7 +602,7 @@ open class EVAProtocol(
                     transfer.info,
                     transfer.id,
                     transfer.data,
-                    transfer.nonce,
+                    transfer.nonce.toLong(),
                 )
             }
         }
