@@ -7,6 +7,18 @@ import org.junit.Test
 
 class EVAMessagePayloadTest {
     @Test
+    fun messagePayload_type() {
+        val info = Community.EVAId.EVA_PEERCHAT_ATTACHMENT
+        val id = "8ac5bc15a71f1e4189f6199fc573e7c7199ba81024f1c819311efeadd236870f"
+        val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
+        val dataSize = 293123456.toULong()
+        val blockCount = 50
+        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount)
+
+        assertEquals(Community.MessageId.EVA_WRITE_REQUEST, payload.type)
+    }
+
+    @Test
     fun serialize_deserialize_write_request() {
         val info = Community.EVAId.EVA_PEERCHAT_ATTACHMENT
         val id = "8ac5bc15a71f1e4189f6199fc573e7c7199ba81024f1c819311efeadd236870f"

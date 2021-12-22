@@ -185,4 +185,17 @@ class TransferTest {
 
         assertEquals(50.toFloat(), transfer.getProgress().toFloat())
     }
+
+    @Test
+    fun transferProgress_create() {
+        val transferProgress = TransferProgress(
+            "0123456789",
+            TransferState.DOWNLOADING,
+            50.0
+        )
+
+        assertEquals("0123456789", transferProgress.id)
+        assertEquals(TransferState.DOWNLOADING, transferProgress.state)
+        assertEquals(50.0.toFloat(), transferProgress.progress.toFloat())
+    }
 }

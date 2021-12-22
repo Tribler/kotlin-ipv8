@@ -9,7 +9,6 @@ import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.TestCommunity
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.peerdiscovery.Network
-import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
@@ -64,6 +63,25 @@ class CommunityEVATest : BaseCommunityTest() {
     }
 
     @Test
+    fun handleEVAWriteRequest() {
+        val myPrivateKey = getPrivateKey()
+        val myPeer = Peer(myPrivateKey)
+        val community = spyk(getCommunity())
+
+        community.createEVAWriteRequest(
+            Community.EVAId.EVA_PEERCHAT_ATTACHMENT,
+            "0123456789",
+            1234.toULong(),
+            10000.toULong(),
+            10
+        ).let { packet ->
+            community.onEVAWriteRequestPacket(Packet(myPeer.address, packet))
+        }
+
+        verify { community.onEVAWriteRequest(any(), any()) }
+    }
+
+    @Test
     fun onEVAAcknowledgementPacket() {
         val myPrivateKey = getPrivateKey()
         val myPeer = Peer(myPrivateKey)
@@ -72,21 +90,34 @@ class CommunityEVATest : BaseCommunityTest() {
         val handler = mockk<(Packet) -> Unit>(relaxed = true)
         community.messageHandlers[Community.MessageId.EVA_ACKNOWLEDGEMENT] = handler
 
-        val windowSize = 4
-        val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
-        val ackWindow = 2
-        val unAckedBlocks = listOf(1,2,3).encodeToByteArray()
-
         community.createEVAAcknowledgement(
-            windowSize,
-            nonce,
-            ackWindow,
-            unAckedBlocks
+            windowSize = 4,
+            nonce = (0..EVAProtocol.MAX_NONCE).random().toULong(),
+            ackWindow = 2,
+            unReceivedBlocks = listOf(1,2,3).encodeToByteArray()
         ).let { packet ->
             community.onPacket(Packet(myPeer.address, packet))
         }
 
         verify { handler(any()) }
+    }
+
+    @Test
+    fun handleEVAAcknowledgement() {
+        val myPrivateKey = getPrivateKey()
+        val myPeer = Peer(myPrivateKey)
+        val community = spyk(getCommunity())
+
+        community.createEVAAcknowledgement(
+            windowSize = 4,
+            nonce = (0..EVAProtocol.MAX_NONCE).random().toULong(),
+            ackWindow = 2,
+            unReceivedBlocks = listOf(1,2,3).encodeToByteArray()
+        ).let { packet ->
+            community.onEVAAcknowledgementPacket(Packet(myPeer.address, packet))
+        }
+
+        verify { community.onEVAAcknowledgement(any(), any()) }
     }
 
     @Test
@@ -117,6 +148,30 @@ class CommunityEVATest : BaseCommunityTest() {
     }
 
     @Test
+    fun handleEVAData() {
+        val myPrivateKey = getPrivateKey()
+        val myPeer = Peer(myPrivateKey)
+        val community = spyk(getCommunity())
+
+        val blockNumber = 2
+        val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
+        val dataString = "Lorem ipsum dolor sit amet"
+        val blockSize = 5
+        val data = dataString.toByteArray(Charsets.UTF_8).takeInRange(blockNumber*blockSize, (blockNumber+1)*blockSize - 1)
+
+        community.createEVAData(
+            myPeer,
+            blockNumber,
+            nonce,
+            data
+        ).let { packet ->
+            community.onEVADataPacket(Packet(myPeer.address, packet))
+        }
+
+        verify { community.onEVAData(any(), any()) }
+    }
+
+    @Test
     fun onEVAErrorPacket() {
         val myPrivateKey = getPrivateKey()
         val myPeer = Peer(myPrivateKey)
@@ -139,6 +194,22 @@ class CommunityEVATest : BaseCommunityTest() {
     }
 
     @Test
+    fun handleEVAError() {
+        val myPrivateKey = getPrivateKey()
+        val myPeer = Peer(myPrivateKey)
+        val community = spyk(getCommunity())
+
+        community.createEVAError(
+            info = Community.EVAId.EVA_PEERCHAT_ATTACHMENT,
+            message = "Lorem ipsum dolor sit amet"
+        ).let { packet ->
+            community.onEVAErrorPacket(Packet(myPeer.address, packet))
+        }
+
+        verify { community.onEVAError(any(), any()) }
+    }
+
+    @Test
     fun sendEVAWriteRequest() {
         val community = getCommunity()
         community.load()
@@ -157,8 +228,8 @@ class CommunityEVATest : BaseCommunityTest() {
 
         val lastRequest = community.myPeer.lastRequest
 
-        Assert.assertEquals(previousRequest, null)
-        Assert.assertNotEquals(previousRequest, lastRequest)
+        assertEquals(previousRequest, null)
+        assertNotEquals(previousRequest, lastRequest)
 
         community.unload()
     }
@@ -181,8 +252,8 @@ class CommunityEVATest : BaseCommunityTest() {
 
         val lastRequest = community.myPeer.lastRequest
 
-        Assert.assertEquals(previousRequest, null)
-        Assert.assertNotEquals(previousRequest, lastRequest)
+        assertEquals(previousRequest, null)
+        assertNotEquals(previousRequest, lastRequest)
 
         community.unload()
     }
@@ -205,8 +276,8 @@ class CommunityEVATest : BaseCommunityTest() {
 
         val lastRequest = community.myPeer.lastRequest
 
-        Assert.assertEquals(previousRequest, null)
-        Assert.assertNotEquals(previousRequest, lastRequest)
+        assertEquals(previousRequest, null)
+        assertNotEquals(previousRequest, lastRequest)
 
         community.unload()
     }
@@ -227,8 +298,8 @@ class CommunityEVATest : BaseCommunityTest() {
 
         val lastRequest = community.myPeer.lastRequest
 
-        Assert.assertEquals(previousRequest, null)
-        Assert.assertNotEquals(previousRequest, lastRequest)
+        assertEquals(null, previousRequest)
+        assertNotEquals(previousRequest, lastRequest)
 
         community.unload()
     }
