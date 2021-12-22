@@ -319,7 +319,7 @@ open class EVAProtocol(
                 incomingError(
                     peer,
                     transfer,
-                    ValueException(
+                    SizeException(
                         "Data size can not be less or equal to 0",
                         payload.info,
                         transfer
@@ -693,7 +693,7 @@ open class EVAProtocol(
         notifyError(
             peer,
             TimeoutException(
-                "Terminated by timeout. Timeout is $timeout sec",
+                "Terminated by timeout. Timeout is ${timeout / 1000} sec",
                 transfer.info,
                 transfer
             )
@@ -763,7 +763,7 @@ fun <K, V> MutableMap<K, Queue<V>>.addValue(key: K, value: V) {
     if (this.containsKey(key)) {
         this[key]?.add(value)
     } else {
-        this[key] = LinkedList(listOf(value))
+        this[key] = LinkedList(mutableListOf(value))
     }
 }
 
