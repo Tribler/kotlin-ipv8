@@ -32,7 +32,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         "0123456789",
         1234.toULong(),
         10000.toULong(),
-        10
+        10.toUInt()
     )
 
     private fun createScheduledTransfer(id: String = "0123456789abcdefghijklmnopqrst"): ScheduledTransfer {
@@ -158,7 +158,7 @@ class EVAProtocolTest : BaseCommunityTest() {
                     "0123456789",
                     1234.toULong(),
                     100.toULong(),
-                    10
+                    10.toUInt()
                 )
 
                 method.invoke(evaProtocol, community.myPeer, packet)
@@ -519,7 +519,7 @@ class EVAProtocolTest : BaseCommunityTest() {
 
         val blockNumber = 0
         val payload = EVADataPayload(
-            blockNumber,
+            blockNumber.toUInt(),
             transfer.nonce,
             transfer.getData(blockNumber)
         )
@@ -558,7 +558,7 @@ class EVAProtocolTest : BaseCommunityTest() {
 
         val blockNumber = 2
         val payload = EVADataPayload(
-            blockNumber,
+            blockNumber.toUInt(),
             transfer.nonce,
             transfer.getData(blockNumber)
         )
@@ -594,7 +594,7 @@ class EVAProtocolTest : BaseCommunityTest() {
 
         val blockNumber = 5
         val payload = EVADataPayload(
-            blockNumber,
+            blockNumber.toUInt(),
             transfer.nonce,
             transfer.getData(blockNumber)
         )

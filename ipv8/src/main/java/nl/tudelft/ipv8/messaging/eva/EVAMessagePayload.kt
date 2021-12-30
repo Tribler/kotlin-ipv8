@@ -6,25 +6,20 @@ import nl.tudelft.ipv8.messaging.*
 open class EVAMessagePayload(
     val type: Int
 )
-//    : Serializable {
-//    override fun serialize(): ByteArray {
-//        return "".toByteArray()
-//    }
-//}
 
 data class EVAWriteRequestPayload(
     var info: String,
     var id: String,
     var nonce: ULong,
     var dataSize: ULong,
-    var blockCount: Int,
+    var blockCount: UInt,
 ) : EVAMessagePayload(Community.MessageId.EVA_WRITE_REQUEST), Serializable {
     override fun serialize(): ByteArray {
         return serializeVarLen(info.toByteArray(Charsets.UTF_8)) +
             serializeVarLen(id.toByteArray(Charsets.UTF_8)) +
             serializeULong(nonce) +
             serializeULong(dataSize) +
-            serializeUShort(blockCount)
+            serializeUInt(blockCount)
     }
 
     companion object Deserializer : Deserializable<EVAWriteRequestPayload> {
@@ -38,8 +33,8 @@ data class EVAWriteRequestPayload(
             localOffset += SERIALIZED_ULONG_SIZE
             val dataSize = deserializeULong(buffer, offset + localOffset)
             localOffset += SERIALIZED_ULONG_SIZE
-            val blockCount = deserializeUShort(buffer, offset + localOffset)
-            localOffset += SERIALIZED_USHORT_SIZE
+            val blockCount = deserializeUInt(buffer, offset + localOffset)
+            localOffset += SERIALIZED_UINT_SIZE
 
             val payload = EVAWriteRequestPayload(
                 String(info, Charsets.UTF_8),
@@ -113,12 +108,12 @@ data class EVAAcknowledgementPayload(
 }
 
 data class EVADataPayload(
-    var blockNumber: Int,
+    var blockNumber: UInt,
     var nonce: ULong,
     var data: ByteArray
 ) : EVAMessagePayload(Community.MessageId.EVA_DATA), Serializable {
     override fun serialize(): ByteArray {
-        return serializeUShort(blockNumber) +
+        return serializeUInt(blockNumber) +
             serializeULong(nonce) +
             data
     }
@@ -137,7 +132,7 @@ data class EVADataPayload(
     }
 
     override fun hashCode(): Int {
-        var result = blockNumber
+        var result = blockNumber.hashCode()
         result = 31 * result + nonce.hashCode()
         result = 31 * result + data.contentHashCode()
         return result
@@ -146,8 +141,8 @@ data class EVADataPayload(
     companion object Deserializer : Deserializable<EVADataPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<EVADataPayload, Int> {
             var localOffset = 0
-            val blockNumber = deserializeUShort(buffer, offset + localOffset)
-            localOffset += SERIALIZED_USHORT_SIZE
+            val blockNumber = deserializeUInt(buffer, offset + localOffset)
+            localOffset += SERIALIZED_UINT_SIZE
             val nonce = deserializeULong(buffer, offset + localOffset)
             localOffset += SERIALIZED_ULONG_SIZE
             val (data, dataLen) = deserializeRaw(buffer, offset + localOffset)

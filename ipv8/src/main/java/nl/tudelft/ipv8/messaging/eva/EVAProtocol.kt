@@ -255,6 +255,8 @@ open class EVAProtocol(
         val dataSize = data.size
         val blockCount = BigDecimal(dataSize).divide(BigDecimal(blockSize), RoundingMode.UP).toInt()
 
+        logger.debug { "EVAPROTOCOL: SIZE AND COUNT: $dataSize $blockSize $blockCount" }
+
         val scheduledTransfer = scheduled[peer.key]?.firstOrNull { it.id == id } ?: ScheduledTransfer(
             info,
             byteArrayOf(),
@@ -286,7 +288,7 @@ open class EVAProtocol(
         outgoing[peer.key] = transfer
         scheduleTerminate(outgoing, peer, transfer)
 
-        val writeRequestPacket = community.createEVAWriteRequest(info, id, nonce.toULong(), dataSize.toULong(), transfer.blockCount)
+        val writeRequestPacket = community.createEVAWriteRequest(info, id, nonce.toULong(), dataSize.toULong(), transfer.blockCount.toUInt())
         send(peer, writeRequestPacket)
     }
 
@@ -306,7 +308,7 @@ open class EVAProtocol(
             byteArrayOf(),
             payload.nonce,
             payload.id,
-            payload.blockCount,
+            payload.blockCount.toInt(),
             payload.dataSize,
             blockSize
         )
@@ -413,7 +415,7 @@ open class EVAProtocol(
 
             logger.debug { "EVAPROTOCOL: Transmit($blockNumber/${transfer.blockCount-1})" }
 
-            val dataPacket = community.createEVAData(peer, blockNumber, transfer.nonce, data)
+            val dataPacket = community.createEVAData(peer, blockNumber.toUInt(), transfer.nonce, data)
             send(peer, dataPacket)
         }
 
@@ -456,6 +458,8 @@ open class EVAProtocol(
 
         if (transfer.nonce != payload.nonce) return
 
+        val blockNumber = payload.blockNumber.toInt()
+
         when (transfer.ackedWindow) {
             0 -> {
                 TransferProgress(transfer.id, TransferState.INITIALIZING, 0.0)
@@ -467,8 +471,8 @@ open class EVAProtocol(
             onReceiveProgressCallback?.invoke(peer, transfer.info, it)
         }
 
-        if (!transfer.isBlockReceived(payload.blockNumber)) {
-            transfer.addData(payload.blockNumber, payload.data)
+        if (!transfer.isBlockReceived(blockNumber)) {
+            transfer.addData(blockNumber, payload.data)
         }
         transfer.attempt = 0
         transfer.updated = Date().time
@@ -481,9 +485,9 @@ open class EVAProtocol(
             return
         }
 
-        val timeToAcknowledge = payload.blockNumber == kotlin.math.min((transfer.ackedWindow + 1) * transfer.windowSize - 1, transfer.blockCount - 1)
+        val timeToAcknowledge = blockNumber == kotlin.math.min((transfer.ackedWindow + 1) * transfer.windowSize - 1, transfer.blockCount - 1)
         if (timeToAcknowledge) {
-            if (payload.blockNumber < (transfer.ackedWindow + 1) * transfer.windowSize) {
+            if (blockNumber < (transfer.ackedWindow + 1) * transfer.windowSize) {
                 transfer.ackedWindow += 1
             }
             sendAcknowledgement(peer, transfer)

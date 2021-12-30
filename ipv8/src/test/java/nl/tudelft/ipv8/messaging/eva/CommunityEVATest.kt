@@ -47,7 +47,7 @@ class CommunityEVATest : BaseCommunityTest() {
         val data = dataString.toByteArray(Charsets.UTF_8)
         val dataSize = data.size.toULong()
         val blockSize = 10
-        val blockCount = BigDecimal(data.size).divide(BigDecimal(blockSize), RoundingMode.UP).toInt()
+        val blockCount = BigDecimal(data.size).divide(BigDecimal(blockSize), RoundingMode.UP).toInt().toUInt()
 
         community.createEVAWriteRequest(
             info,
@@ -73,7 +73,7 @@ class CommunityEVATest : BaseCommunityTest() {
             "0123456789",
             1234.toULong(),
             10000.toULong(),
-            10
+            10.toUInt()
         ).let { packet ->
             community.onEVAWriteRequestPacket(Packet(myPeer.address, packet))
         }
@@ -137,7 +137,7 @@ class CommunityEVATest : BaseCommunityTest() {
 
         community.createEVAData(
             myPeer,
-            blockNumber,
+            blockNumber.toUInt(),
             nonce,
             data
         ).let { packet ->
@@ -161,7 +161,7 @@ class CommunityEVATest : BaseCommunityTest() {
 
         community.createEVAData(
             myPeer,
-            blockNumber,
+            blockNumber.toUInt(),
             nonce,
             data
         ).let { packet ->
@@ -221,7 +221,7 @@ class CommunityEVATest : BaseCommunityTest() {
             "01245678",
             (0..EVAProtocol.MAX_NONCE).random().toULong(),
             "lorem ipsum".toByteArray().size.toULong(),
-            5
+            5.toUInt()
         ).let { packet ->
             community.endpoint.send(community.myPeer, packet)
         }
@@ -267,7 +267,7 @@ class CommunityEVATest : BaseCommunityTest() {
 
         community.createEVAData(
             community.myPeer,
-            5,
+            5.toUInt(),
             (0..EVAProtocol.MAX_NONCE).random().toULong(),
             "Lorem ipsum dolor sit amet".toByteArray(Charsets.UTF_8)
         ).let { packet ->

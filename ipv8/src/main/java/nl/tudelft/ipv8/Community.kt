@@ -256,7 +256,7 @@ abstract class Community : Overlay {
     /**
      * EVA serialized packets for different EVA payloads
      */
-    fun createEVAWriteRequest(info: String, id: String, nonce: ULong, dataSize: ULong, blockCount: Int): ByteArray {
+    fun createEVAWriteRequest(info: String, id: String, nonce: ULong, dataSize: ULong, blockCount: UInt): ByteArray {
         val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount)
         return serializePacket(MessageId.EVA_WRITE_REQUEST, payload)
     }
@@ -266,7 +266,7 @@ abstract class Community : Overlay {
         return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload)
     }
 
-    fun createEVAData(peer: Peer, blockNumber: Int, nonce: ULong, data: ByteArray): ByteArray {
+    fun createEVAData(peer: Peer, blockNumber: UInt, nonce: ULong, data: ByteArray): ByteArray {
         val payload = EVADataPayload(blockNumber, nonce, data)
         return serializePacket(MessageId.EVA_DATA, payload, encrypt = true, recipient = peer)
     }

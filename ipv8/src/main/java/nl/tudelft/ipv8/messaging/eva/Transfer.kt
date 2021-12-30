@@ -115,7 +115,7 @@ data class Transfer(
         100.0 - (unReceivedBlocks.size.toDouble() / blockCount.toDouble()) * 100.0
 
     override fun toString(): String {
-        return "Type: '$type'. Info: '$info'. ID: '$id'. Data size: '$dataSize', Window size: '$windowSize'. Updated: '$updated'. Nonce: '$nonce'. AckWindow: '$ackedWindow'."
+        return "Type: '$type'. Info: '$info'. ID: '$id'. Data size: '$dataSize'. Block size: '$blockSize'. Block count: '$blockCount'. Window size: '$windowSize'. Updated: '$updated'. Nonce: '$nonce'. AckWindow: '$ackedWindow'."
     }
 
     companion object {

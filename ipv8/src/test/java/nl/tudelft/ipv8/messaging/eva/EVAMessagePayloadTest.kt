@@ -13,7 +13,7 @@ class EVAMessagePayloadTest {
         val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
         val dataSize = 293123456.toULong()
         val blockCount = 50
-        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount)
+        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount.toUInt())
 
         assertEquals(Community.MessageId.EVA_WRITE_REQUEST, payload.type)
     }
@@ -24,7 +24,7 @@ class EVAMessagePayloadTest {
         val id = "8ac5bc15a71f1e4189f6199fc573e7c7199ba81024f1c819311efeadd236870f"
         val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
         val dataSize = 293123456.toULong()
-        val blockCount = 50
+        val blockCount = 50.toUInt()
         val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount)
 
         val serialized = payload.serialize()
@@ -56,7 +56,7 @@ class EVAMessagePayloadTest {
 
     @Test
     fun serialize_deserialize_data() {
-        val blockNumber = 33
+        val blockNumber = 33.toUInt()
         val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
         val data = byteArrayOf(0x4c, 0x6f, 0x72, 0x65, 0x6d, 0x20, 0x69, 0x70, 0x73, 0x75, 0x6d, 0x20, 0x64, 0x6f, 0x6c, 0x6f, 0x72, 0x20, 0x73, 0x69, 0x74, 0x20, 0x61, 0x6d, 0x65, 0x74)
         val payload = EVADataPayload(blockNumber, nonce, data)
