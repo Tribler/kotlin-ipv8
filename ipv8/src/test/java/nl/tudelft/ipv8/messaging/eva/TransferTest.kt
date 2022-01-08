@@ -46,6 +46,46 @@ class TransferTest {
     }
 
     @Test
+    fun scheduledTransfer_equals() {
+        val scheduledTransfer = createScheduledTransfer()
+        val transfer = createIncomingTransfer()
+        val scheduledTransferDifferentInfo = scheduledTransfer.copy(info = "DIFFERENT")
+        val scheduledTransferDifferentData = scheduledTransfer.copy(data = byteArrayOf())
+        val scheduledTransferDifferentNonce = scheduledTransfer.copy(nonce = 100L.toULong())
+        val scheduledTransferDifferentId = scheduledTransfer.copy(id = "123")
+        val scheduledTransferDifferentBlockCount = scheduledTransfer.copy(blockCount = 2)
+        val scheduledTransferDifferentDataSize = scheduledTransfer.copy(dataSize = 2.toULong())
+        val scheduledTransferDifferentBlockSize = scheduledTransfer.copy(blockSize = 2)
+        val scheduledTransferDifferentWindowSize = scheduledTransfer.copy(windowSize = 20)
+
+        assertEquals(true, scheduledTransfer.equals(scheduledTransfer))
+        assertEquals(scheduledTransfer::class.java, scheduledTransferDifferentInfo::class.java)
+        assertNotEquals(scheduledTransfer::class.java, transfer::class.java)
+        assertEquals(false, scheduledTransfer.equals(transfer))
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferDifferentInfo))
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferDifferentData))
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferDifferentNonce))
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferDifferentId))
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferDifferentBlockCount))
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferDifferentDataSize))
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferDifferentBlockSize))
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferDifferentWindowSize))
+    }
+
+    @Test
+    fun scheduledTransfer_hashCode() {
+        val scheduledTransfer = createScheduledTransfer()
+        val scheduledTransferCopy = createScheduledTransfer()
+        val scheduledTransferOther = scheduledTransfer.copy(info = "DIFFERENT")
+
+        assertEquals(true, scheduledTransfer.equals(scheduledTransferCopy) && scheduledTransferCopy.equals(scheduledTransfer))
+        assertEquals(scheduledTransfer.hashCode(), scheduledTransferCopy.hashCode())
+
+        assertEquals(false, scheduledTransfer.equals(scheduledTransferOther) && scheduledTransferOther.equals(scheduledTransfer))
+        assertNotEquals(scheduledTransfer.hashCode(), scheduledTransferOther.hashCode())
+    }
+
+    @Test
     fun transfer_correctness() {
         val transfer = createIncomingTransfer()
         transfer.windowSize = 5
