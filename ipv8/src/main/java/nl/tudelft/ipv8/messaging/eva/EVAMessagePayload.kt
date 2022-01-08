@@ -90,6 +90,7 @@ data class EVAAcknowledgementPayload(
         return result
     }
 
+
     companion object Deserializer : Deserializable<EVAAcknowledgementPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<EVAAcknowledgementPayload, Int> {
             var localOffset = 0

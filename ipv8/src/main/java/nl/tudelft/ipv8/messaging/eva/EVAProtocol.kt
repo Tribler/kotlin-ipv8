@@ -24,9 +24,7 @@ open class EVAProtocol(
     var terminateByTimeoutEnabled: Boolean = true,
     var blockSize: Int = BLOCK_SIZE,
     var retransmitEnabled: Boolean = true,
-    var loggingEnabled: Boolean = true,
-    var debugMode: Boolean = false,
-    var debuggerPath: String = DEBUGGER_PATH_DEFAULT
+    var loggingEnabled: Boolean = true
 ) {
     private var scheduled: MutableMap<Key, Queue<ScheduledTransfer>> = mutableMapOf()
     private var incoming: MutableMap<Key, Transfer> = mutableMapOf()
@@ -40,20 +38,18 @@ open class EVAProtocol(
     var onSendCompleteCallback: ((Peer, String, ULong) -> Unit)? = null
     var onErrorCallback: ((Peer, TransferException) -> Unit)? = null
 
-    private var evaDebugger: EVADebugger
-
     init {
         if (loggingEnabled) logger.debug {
             "EVAPROTOCOL: Initialized. Block size: ${blockSize}." +
-                "EVAPROTOCOL: Window size: ${windowSizeInBlocks}." +
-                "EVAPROTOCOL: Retransmit interval: ${retransmitIntervalInSec}sec." +
-                "EVAPROTOCOL: Max retransmit attempts: ${retransmitAttemptCount}." +
-                "EVAPROTOCOL: Timeout: ${timeoutIntervalInSec}sec." +
-                "EVAPROTOCOL: Scheduled send interval: ${scheduledSendIntervalInSec}sec." +
-                "EVAPROTOCOL: Binary size limit: ${binarySizeLimit}."
+                "Window size: ${windowSizeInBlocks}." +
+                "Retransmit enabled: ${retransmitEnabled}." +
+                "Retransmit interval: ${retransmitIntervalInSec}sec." +
+                "Max retransmit attempts: ${retransmitAttemptCount}." +
+                "Terminate by timeout enabled: ${terminateByTimeoutEnabled}." +
+                "Timeout: ${timeoutIntervalInSec}sec." +
+                "Scheduled send interval: ${scheduledSendIntervalInSec}sec." +
+                "Binary size limit: ${binarySizeLimit}."
         }
-
-        evaDebugger = EVADebugger(debuggerPath)
 
         /**
          * Coroutine that periodically executes the send scheduled transfers function
@@ -293,22 +289,6 @@ open class EVAProtocol(
         outgoing[peer.key] = transfer
         scheduleTerminate(outgoing, peer, transfer)
 
-        //*** FOR TEST
-        if (debugMode) {
-            val splittedID = id.split("-")
-            val fileSizeID = splittedID[0].toInt()
-            val windowSizeID = splittedID[1].toInt()
-            val blockSizeID = splittedID[2].toInt()
-            val retransmitID = splittedID[3].toInt()
-
-            evaDebugger.write(
-                id,
-                EVADebugger.TYPE_SEND_WRITE_REQUEST,
-                "${Date().time}|$fileSizeID|$windowSizeID|$blockSizeID|$retransmitID"
-            )
-        }
-        //***
-
         val writeRequestPacket = community.createEVAWriteRequest(
             info,
             id,
@@ -331,25 +311,6 @@ open class EVAProtocol(
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: On write request. Nonce: ${payload.nonce}. Peer: ${peer.publicKey.keyToBin().toHex()}. Info: ${payload.info}. BlockCount: ${payload.blockCount}. Blocksize: ${payload.blockSize.toInt()}. Window size: ${payload.windowSize.toInt()}. Payload datasize: ${payload.dataSize}, allowed datasize: $binarySizeLimit" }
 
         if (isIncoming(peer.key, payload.id) || isTransferred(peer.key, payload.id, finishedIncoming)) return
-
-        //*** FOR TEST
-        if (debugMode) {
-            val splittedID = payload.id.split("-")
-            val fileSizeID = splittedID[0].toInt()
-            val windowSizeID = splittedID[1].toInt()
-            val blockSizeID = splittedID[2].toInt()
-            val retransmitID = splittedID[3].toInt()
-            blockSize = blockSizeID
-            retransmitIntervalInSec = retransmitID
-            windowSizeInBlocks = windowSizeID
-
-            evaDebugger.write(
-                payload.id,
-                EVADebugger.TYPE_WRITE_REQUEST,
-                "${Date().time}|$fileSizeID|$windowSizeID|$blockSizeID|$retransmitID"
-            )
-        }
-        //***
 
         val scheduledTransfer = ScheduledTransfer(
             payload.info,
@@ -440,16 +401,6 @@ open class EVAProtocol(
 
         transfer.ackedWindow = payload.ackWindow.toInt()
 
-        //*** FOR TEST
-        if (debugMode) {
-            evaDebugger.write(
-                transfer.id,
-                EVADebugger.TYPE_ON_ACK,
-                "${Date().time}|${transfer.ackedWindow-1}|${payload.unAckedBlocks.toString(Charsets.UTF_8)}"
-            )
-        }
-        //***
-
         transfer.setSendSet().let {
             if (it.isEmpty()) {
                 finishOutgoingTransfer(peer, transfer)
@@ -471,44 +422,10 @@ open class EVAProtocol(
 
             if (loggingEnabled) logger.debug { "EVAPROTOCOL: Transmit($blockNumber/${transfer.blockCount-1})" }
 
-            //*** FOR TEST
-            if (debugMode) {
-                evaDebugger.write(
-                    transfer.id,
-                    EVADebugger.TYPE_SEND_DATA,
-                    "${Date().time}|${blockNumber}|${transfer.blockCount-1}|${transfer.ackedWindow}"
-                )
-            }
-            //***
-
             val dataPacket = community.createEVAData(peer, blockNumber.toUInt(), transfer.nonce, data)
             send(peer, dataPacket)
         }
-
-//        scheduleTask(Date().time + retransmitIntervalInSec * 1000) {
-//            if (loggingEnabled) logger.debug { "EVAPROTOCOL: Schedule resend data for transfer with id ${transfer.id} and nonce ${transfer.nonce}" }
-//            retransmitData(peer, transfer, transfer.ackedWindow + 1)
-//        }
     }
-
-//    private fun retransmitData(
-//        peer: Peer,
-//        transfer: Transfer,
-//        ackWindow: Int
-//    ) {
-//        if (loggingEnabled) logger.debug { "EVAPROTOCOL: Resend data for transfer with id ${transfer.id} and nonce ${transfer.nonce}, ${transfer.released}, ${transfer.attempt}" }
-//
-//        if (transfer.released || !retransmitEnabled || transfer.attempt >= retransmitAttemptCount - 1) return
-//
-//        if (loggingEnabled) logger.debug { "EVAPROTOCOL: Resend FIRST PART ${transfer.ackedWindow} $ackWindow" }
-//        if (transfer.ackedWindow != ackWindow) return
-//
-//        if (loggingEnabled) logger.debug { "EVAPROTOCOL: Executing resend data for transfer with id ${transfer.id} and nonce ${transfer.nonce}" }
-//
-//        transfer.attempt += 1
-//
-//        transmitData(peer, transfer)
-//    }
 
     /**
      * Upon receipt of an EVA data block, the binary data is added to the already received data.
@@ -543,16 +460,6 @@ open class EVAProtocol(
         transfer.attempt = 0
         transfer.updated = Date().time
 
-        //*** FOR TEST
-        if (debugMode) {
-            evaDebugger.write(
-                transfer.id,
-                EVADebugger.TYPE_ON_DATA,
-                "${Date().time}|${blockNumber}|${transfer.blockCount}|${transfer.ackedWindow}"
-            )
-        }
-        //***
-
         if (transfer.unReceivedBlocks.size == 0) {
             if (loggingEnabled) logger.debug { "EVAPROTOCOL: Final data packet received" }
             transfer.ackedWindow += 1
@@ -583,16 +490,6 @@ open class EVAProtocol(
         val transfer = outgoing[peer.key] ?: return
         terminate(outgoing, peer, transfer)
 
-        //*** FOR TEST
-        if (debugMode) {
-            evaDebugger.write(
-                transfer.id,
-                EVADebugger.TYPE_ON_ERROR,
-                "${Date().time}|${payload.message}"
-            )
-        }
-        //***
-
         notifyError(
             peer,
             TransferException(
@@ -616,16 +513,6 @@ open class EVAProtocol(
         } else byteArrayOf()
 
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Acknowledgement for window '${transfer.ackedWindow}' sent to ${peer.mid} with windowSize (${transfer.windowSize}) and nonce ${transfer.nonce}"}
-
-        //*** FOR TEST
-        if (debugMode) {
-            evaDebugger.write(
-                transfer.id,
-                EVADebugger.TYPE_SEND_ACK,
-                "${Date().time}|${transfer.ackedWindow-1}|${transfer.getUnreceivedBlocksUntil().decodeToIntegerList()}"
-            )
-        }
-        //***
 
         val ackPacket = community.createEVAAcknowledgement(
             transfer.nonce,
@@ -658,16 +545,6 @@ open class EVAProtocol(
             )
         )
 
-        //*** FOR TEST
-        if (debugMode) {
-            evaDebugger.write(
-                transfer.id,
-                EVADebugger.TYPE_FINISH_INCOMING,
-                "${Date().time}"
-            )
-        }
-        //***
-
         onReceiveCompleteCallback?.invoke(peer, info, transfer.id, data)
     }
 
@@ -682,16 +559,6 @@ open class EVAProtocol(
         val nonce = transfer.nonce
 
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Outgoing transfer finished: id: ${transfer.id}, nonce: ${transfer.nonce} and info $info" }
-
-        //*** FOR TEST
-        if (debugMode) {
-            evaDebugger.write(
-                transfer.id,
-                EVADebugger.TYPE_FINISH_OUTGOING,
-                "${Date().time}"
-            )
-        }
-        //***
 
         finishedOutgoing.add(peer.key, transfer.id)
         terminate(outgoing, peer, transfer)
@@ -866,7 +733,6 @@ open class EVAProtocol(
         const val SCHEDULED_SEND_INTERVAL_IN_SEC = 5
         const val TIMEOUT_INTERVAL_IN_SEC = 20
         const val BINARY_SIZE_LIMIT = 1024 * 1024 * 250
-        const val DEBUGGER_PATH_DEFAULT = "/sdcard/logsEVA/"
     }
 }
 

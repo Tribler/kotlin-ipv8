@@ -256,12 +256,25 @@ abstract class Community : Overlay {
     /**
      * EVA serialized packets for different EVA payloads
      */
-    fun createEVAWriteRequest(info: String, id: String, nonce: ULong, dataSize: ULong, blockCount: UInt, blockSize: UInt, windowSize: UInt): ByteArray {
-        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount, blockSize, windowSize)
+    fun createEVAWriteRequest(
+        info: String,
+        id: String,
+        nonce: ULong,
+        dataSize: ULong,
+        blockCount: UInt,
+        blockSize: UInt,
+        windowSize: UInt
+    ): ByteArray {
+        val payload =
+            EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount, blockSize, windowSize)
         return serializePacket(MessageId.EVA_WRITE_REQUEST, payload)
     }
 
-    fun createEVAAcknowledgement(nonce: ULong, ackWindow: UInt, unReceivedBlocks: ByteArray): ByteArray {
+    fun createEVAAcknowledgement(
+        nonce: ULong,
+        ackWindow: UInt,
+        unReceivedBlocks: ByteArray
+    ): ByteArray {
         val payload = EVAAcknowledgementPayload(nonce, ackWindow, unReceivedBlocks)
         return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload)
     }
@@ -387,19 +400,16 @@ abstract class Community : Overlay {
      * @param packet specific packets for the EVA protocol (write request, ack, data, error)
      */
     internal fun onEVAWriteRequestPacket(packet: Packet) {
-        logger.debug { "EVAPROTOCOL: On EVA write request packet from ${packet.source}"}
         val (peer, payload) = packet.getAuthPayload(EVAWriteRequestPayload.Deserializer)
         onEVAWriteRequest(peer, payload)
     }
 
     internal fun onEVAAcknowledgementPacket(packet: Packet) {
-        logger.debug { "EVAPROTOCOL: On EVA acknowledgement packet from ${packet.source}"}
         val (peer, payload) = packet.getAuthPayload(EVAAcknowledgementPayload.Deserializer)
         onEVAAcknowledgement(peer, payload)
     }
 
     internal fun onEVADataPacket(packet: Packet) {
-        logger.debug { "EVAPROTOCOL: On EVA data packet from ${packet.source}"}
         val (peer, payload) = packet.getDecryptedAuthPayload(
             EVADataPayload.Deserializer, myPeer.key as PrivateKey
         )
@@ -407,7 +417,6 @@ abstract class Community : Overlay {
     }
 
     internal fun onEVAErrorPacket(packet: Packet) {
-        logger.debug { "EVAPROTOCOL: On EVA error packet from ${packet.source}"}
         val (peer, payload) = packet.getAuthPayload(EVAErrorPayload.Deserializer)
         onEVAError(peer, payload)
     }
@@ -554,23 +563,23 @@ abstract class Community : Overlay {
      * EVA protocol on receive handlers
      */
     fun onEVAWriteRequest(peer: Peer, payload: EVAWriteRequestPayload) {
-        logger.debug { "EVAPROTOCOL: ON EVA WRITE REQUEST $payload" }
+        logger.debug { "ON EVA write request: $payload" }
 
         evaProtocol?.onWriteRequest(peer, payload)
     }
 
     fun onEVAAcknowledgement(peer: Peer, payload: EVAAcknowledgementPayload) {
-        logger.debug { "EVAPROTOCOL: ON EVA ACKNOWLEDGEMENT $payload" }
+        logger.debug { "ON EVA acknowledgement: $payload" }
         evaProtocol?.onAcknowledgement(peer, payload)
     }
 
     fun onEVAData(peer: Peer, payload: EVADataPayload) {
-        logger.debug { "EVAPROTOCOL: ON EVA DATA. BlockNumber (${payload.blockNumber}). Nonce (${payload.nonce})." }
+        logger.debug { "ON EVA acknowledgement: Block ${payload.blockNumber} with nonce ${payload.nonce}." }
         evaProtocol?.onData(peer, payload)
     }
 
     fun onEVAError(peer: Peer, payload: EVAErrorPayload) {
-        logger.debug { "EVAPROTOCOL: ON EVA ERROR $payload" }
+        logger.debug { "ON EVA error: $payload" }
         evaProtocol?.onError(peer, payload)
     }
 
@@ -653,6 +662,11 @@ abstract class Community : Overlay {
         const val EVA_ERROR = 133
     }
 
+    /**
+     * Every community initializes a different version of the EVA protocol (if enabled).
+     * To distinguish the incoming packets/requests an ID must be used to hold/let through the
+     * EVA related packets.
+     */
     object EVAId {
         const val EVA_UNSPECIFIED = ""
         const val EVA_PEERCHAT_ATTACHMENT = "eva_peerchat_attachment"
