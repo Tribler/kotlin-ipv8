@@ -54,7 +54,9 @@ class CommunityEVATest : BaseCommunityTest() {
             id,
             nonce,
             dataSize,
-            blockCount
+            blockCount,
+            EVAProtocol.BLOCK_SIZE.toUInt(),
+            EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
         ).let { packet ->
             community.onPacket(Packet(myPeer.address, packet))
         }
@@ -73,7 +75,9 @@ class CommunityEVATest : BaseCommunityTest() {
             "0123456789",
             1234.toULong(),
             10000.toULong(),
-            10.toUInt()
+            10.toUInt(),
+            EVAProtocol.BLOCK_SIZE.toUInt(),
+            EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
         ).let { packet ->
             community.onEVAWriteRequestPacket(Packet(myPeer.address, packet))
         }
@@ -91,9 +95,8 @@ class CommunityEVATest : BaseCommunityTest() {
         community.messageHandlers[Community.MessageId.EVA_ACKNOWLEDGEMENT] = handler
 
         community.createEVAAcknowledgement(
-            windowSize = 4,
             nonce = (0..EVAProtocol.MAX_NONCE).random().toULong(),
-            ackWindow = 2,
+            ackWindow = 2.toUInt(),
             unReceivedBlocks = listOf(1,2,3).encodeToByteArray()
         ).let { packet ->
             community.onPacket(Packet(myPeer.address, packet))
@@ -109,9 +112,8 @@ class CommunityEVATest : BaseCommunityTest() {
         val community = spyk(getCommunity())
 
         community.createEVAAcknowledgement(
-            windowSize = 4,
             nonce = (0..EVAProtocol.MAX_NONCE).random().toULong(),
-            ackWindow = 2,
+            ackWindow = 2.toUInt(),
             unReceivedBlocks = listOf(1,2,3).encodeToByteArray()
         ).let { packet ->
             community.onEVAAcknowledgementPacket(Packet(myPeer.address, packet))
@@ -221,7 +223,9 @@ class CommunityEVATest : BaseCommunityTest() {
             "01245678",
             (0..EVAProtocol.MAX_NONCE).random().toULong(),
             "lorem ipsum".toByteArray().size.toULong(),
-            5.toUInt()
+            5.toUInt(),
+            EVAProtocol.BLOCK_SIZE.toUInt(),
+            EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
         ).let { packet ->
             community.endpoint.send(community.myPeer, packet)
         }
@@ -242,9 +246,8 @@ class CommunityEVATest : BaseCommunityTest() {
         val previousRequest = community.myPeer.lastRequest
 
         community.createEVAAcknowledgement(
-            64,
             (0..EVAProtocol.MAX_NONCE).random().toULong(),
-            2,
+            2.toUInt(),
             listOf(10, 13).encodeToByteArray()
         ).let { packet ->
             community.endpoint.send(community.myPeer, packet)
@@ -310,7 +313,7 @@ class CommunityEVATest : BaseCommunityTest() {
         community.load()
 
         assertEquals(null, community.evaProtocol?.onSendCompleteCallback)
-        community.setOnEVASendCompleteCallback { _, _, _, _ -> }
+        community.setOnEVASendCompleteCallback { _, _, _ -> }
         assertNotEquals(null, community.evaProtocol?.onSendCompleteCallback)
 
         community.unload()

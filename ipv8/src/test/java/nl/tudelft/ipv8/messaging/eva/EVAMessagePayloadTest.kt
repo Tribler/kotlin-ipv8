@@ -13,7 +13,9 @@ class EVAMessagePayloadTest {
         val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
         val dataSize = 293123456.toULong()
         val blockCount = 50
-        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount.toUInt())
+        val blockSize = EVAProtocol.BLOCK_SIZE.toUInt()
+        val windowSize = EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount.toUInt(), blockSize, windowSize)
 
         assertEquals(Community.MessageId.EVA_WRITE_REQUEST, payload.type)
     }
@@ -25,7 +27,9 @@ class EVAMessagePayloadTest {
         val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
         val dataSize = 293123456.toULong()
         val blockCount = 50.toUInt()
-        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount)
+        val blockSize = EVAProtocol.BLOCK_SIZE.toUInt()
+        val windowSize = EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount, blockSize, windowSize)
 
         val serialized = payload.serialize()
         val (deserialized, size) = EVAWriteRequestPayload.deserialize(serialized)
@@ -39,16 +43,14 @@ class EVAMessagePayloadTest {
 
     @Test
     fun serialize_deserialize_acknowledgement() {
-        val windowSize = 16
         val nonce = (0..EVAProtocol.MAX_NONCE).random().toULong()
-        val ackWindow = 3
+        val ackWindow = 3.toUInt()
         val unAckedBlocks = "[1, 2]".encodeToByteArray()
-        val payload = EVAAcknowledgementPayload(windowSize, nonce, ackWindow, unAckedBlocks)
+        val payload = EVAAcknowledgementPayload(nonce, ackWindow, unAckedBlocks)
 
         val serialized = payload.serialize()
         val (deserialized, size) = EVAAcknowledgementPayload.deserialize(serialized)
         assertEquals(serialized.size, size)
-        assertEquals(windowSize, deserialized.windowSize)
         assertEquals(nonce, deserialized.nonce)
         assertEquals(ackWindow, deserialized.ackWindow)
         assertArrayEquals(unAckedBlocks, deserialized.unAckedBlocks)

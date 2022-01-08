@@ -9,7 +9,7 @@ class TransferExceptionTest {
 
     @Test
     fun sizeException() {
-        val scheduledTransfer = ScheduledTransfer(info, byteArrayOf(), 1.toULong(), "012345678", 10, 100.toULong(), 10)
+        val scheduledTransfer = ScheduledTransfer(info, byteArrayOf(), 1.toULong(), "012345678", 10, 100.toULong(), 10, 80)
         val transfer = Transfer(TransferType.INCOMING, scheduledTransfer)
         val exception = SizeException(message, info, transfer)
 
@@ -20,7 +20,7 @@ class TransferExceptionTest {
 
     @Test
     fun timeoutException() {
-        val scheduledTransfer = ScheduledTransfer(info, byteArrayOf(), 1.toULong(), "012345678", 10, 100.toULong(), 10)
+        val scheduledTransfer = ScheduledTransfer(info, byteArrayOf(), 1.toULong(), "012345678", 10, 100.toULong(), 10, 80)
         val transfer = Transfer(TransferType.INCOMING, scheduledTransfer)
         val exception = TimeoutException(message, info, transfer)
 
@@ -31,7 +31,7 @@ class TransferExceptionTest {
 
     @Test
     fun peerBusyException() {
-        val scheduledTransfer = ScheduledTransfer(info, byteArrayOf(), 1.toULong(), "012345678", 10, 100.toULong(), 10)
+        val scheduledTransfer = ScheduledTransfer(info, byteArrayOf(), 1.toULong(), "012345678", 10, 100.toULong(), 10, 80)
         val transfer = Transfer(TransferType.INCOMING, scheduledTransfer)
         val exception = PeerBusyException(message, info, transfer)
 

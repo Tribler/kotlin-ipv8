@@ -11,6 +11,7 @@ class TransferTest {
     private val data = "Lorem ipsum dolor sit amet".toByteArray(Charsets.UTF_8)
     private val blockCount = 6
     private val blockSize = 5
+    private val windowSize = 2
 
     private fun createScheduledTransfer() = ScheduledTransfer(
         info,
@@ -19,7 +20,8 @@ class TransferTest {
         id,
         blockCount,
         data.size.toULong(),
-        blockSize
+        blockSize,
+        windowSize
     )
 
     private fun createIncomingTransfer() = Transfer(
