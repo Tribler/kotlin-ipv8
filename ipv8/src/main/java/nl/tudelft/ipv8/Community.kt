@@ -256,13 +256,13 @@ abstract class Community : Overlay {
     /**
      * EVA serialized packets for different EVA payloads
      */
-    fun createEVAWriteRequest(info: String, id: String, nonce: ULong, dataSize: ULong, blockCount: UInt): ByteArray {
-        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount)
+    fun createEVAWriteRequest(info: String, id: String, nonce: ULong, dataSize: ULong, blockCount: UInt, blockSize: UInt, windowSize: UInt): ByteArray {
+        val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount, blockSize, windowSize)
         return serializePacket(MessageId.EVA_WRITE_REQUEST, payload)
     }
 
-    fun createEVAAcknowledgement(windowSize: Int, nonce: ULong, ackWindow: Int, unReceivedBlocks: ByteArray): ByteArray {
-        val payload = EVAAcknowledgementPayload(windowSize, nonce, ackWindow, unReceivedBlocks)
+    fun createEVAAcknowledgement(nonce: ULong, ackWindow: UInt, unReceivedBlocks: ByteArray): ByteArray {
+        val payload = EVAAcknowledgementPayload(nonce, ackWindow, unReceivedBlocks)
         return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload)
     }
 
@@ -589,14 +589,12 @@ abstract class Community : Overlay {
         id: String,
         data: ByteArray,
         nonce: Long? = null
-    ) {
-        evaProtocol?.sendBinary(peer, info, id, data, nonce)
-    }
+    ) = evaProtocol?.sendBinary(peer, info, id, data, nonce)
 
     /**
      * EVA protocol callbacks for other communities and classes
      */
-    fun setOnEVASendCompleteCallback(callback: (peer: Peer, info: String, data: ByteArray?, nonce: ULong) -> Unit) {
+    fun setOnEVASendCompleteCallback(callback: (peer: Peer, info: String, nonce: ULong) -> Unit) {
         evaProtocol?.onSendCompleteCallback = callback
     }
 

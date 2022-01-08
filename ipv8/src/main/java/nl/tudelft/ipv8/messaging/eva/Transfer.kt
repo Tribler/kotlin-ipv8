@@ -16,7 +16,7 @@ data class Transfer(
     var blockSize = scheduledTransfer.blockSize
 
     var attempt = 0
-    var windowSize = 0
+    var windowSize = scheduledTransfer.windowSize
     var ackedWindow = 0
     var updated = Date().time
     var released = false
@@ -135,7 +135,8 @@ data class ScheduledTransfer(
     val id: String,
     val blockCount: Int,
     val dataSize: ULong,
-    val blockSize: Int
+    val blockSize: Int,
+    val windowSize: Int
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -150,6 +151,7 @@ data class ScheduledTransfer(
         if (blockCount != other.blockCount) return false
         if (dataSize != other.dataSize) return false
         if (blockSize != other.blockSize) return false
+        if (windowSize != other.windowSize) return false
 
         return true
     }
@@ -162,6 +164,7 @@ data class ScheduledTransfer(
         result = 31 * result + blockCount
         result = 31 * result + dataSize.hashCode()
         result = 31 * result + blockSize
+        result = 31 * result + windowSize
         return result
     }
 
