@@ -24,7 +24,7 @@ open class EVAProtocol(
     var terminateByTimeoutEnabled: Boolean = true,
     var blockSize: Int = BLOCK_SIZE,
     var retransmitEnabled: Boolean = true,
-    var loggingEnabled: Boolean = true
+    var loggingEnabled: Boolean = false,
 ) {
     private var scheduled: MutableMap<Key, Queue<ScheduledTransfer>> = mutableMapOf()
     private var incoming: MutableMap<Key, Transfer> = mutableMapOf()
@@ -59,7 +59,7 @@ open class EVAProtocol(
             while (isActive) {
                 sendScheduled()
 
-                delay((scheduledSendIntervalInSec * 1000).toLong())
+                delay(scheduledSendIntervalInSec * 1000L)
             }
         }
 
@@ -75,7 +75,7 @@ open class EVAProtocol(
                     task.action.invoke()
                 }
 
-                delay(1000L)
+                delay(SEND_SCHEDULED_CHECK_DELAY)
             }
         }
     }
@@ -733,6 +733,7 @@ open class EVAProtocol(
         const val SCHEDULED_SEND_INTERVAL_IN_SEC = 5
         const val TIMEOUT_INTERVAL_IN_SEC = 20
         const val BINARY_SIZE_LIMIT = 1024 * 1024 * 250
+        const val SEND_SCHEDULED_CHECK_DELAY = 1000L
     }
 }
 
