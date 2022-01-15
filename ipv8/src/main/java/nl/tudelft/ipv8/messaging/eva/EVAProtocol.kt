@@ -29,6 +29,7 @@ open class EVAProtocol(
     private var scheduled: MutableMap<Key, Queue<ScheduledTransfer>> = mutableMapOf()
     private var incoming: MutableMap<Key, Transfer> = mutableMapOf()
     private var outgoing: MutableMap<Key, Transfer> = mutableMapOf()
+    private var stoppedIncoming: MutableMap<Key, MutableSet<String>> = mutableMapOf()
     private var finishedIncoming: MutableMap<Key, MutableSet<String>> = mutableMapOf()
     private var finishedOutgoing: MutableMap<Key, MutableSet<String>> = mutableMapOf()
     private var scheduledTasks = PriorityQueue<ScheduledTask>()
@@ -149,6 +150,18 @@ open class EVAProtocol(
     private fun isIncoming(key: Key, id: String): Boolean {
         return incoming.any {
             it.key == key && it.value.id == id
+        }
+    }
+
+    /**
+     * Check if the transfer of an incoming file has been stopped
+     *
+     * @param key the key of sender
+     * @param id an id of the file
+     */
+    fun isStopped(key: Key, id: String): Boolean {
+        return stoppedIncoming.any {
+            it.key == key && it.value.contains(id)
         }
     }
 
@@ -310,7 +323,7 @@ open class EVAProtocol(
     fun onWriteRequest(peer: Peer, payload: EVAWriteRequestPayload) {
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: On write request. Nonce: ${payload.nonce}. Peer: ${peer.publicKey.keyToBin().toHex()}. Info: ${payload.info}. BlockCount: ${payload.blockCount}. Blocksize: ${payload.blockSize.toInt()}. Window size: ${payload.windowSize.toInt()}. Payload datasize: ${payload.dataSize}, allowed datasize: $binarySizeLimit" }
 
-        if (isIncoming(peer.key, payload.id) || isTransferred(peer.key, payload.id, finishedIncoming)) return
+        if (isIncoming(peer.key, payload.id) || isTransferred(peer.key, payload.id, finishedIncoming) || isStopped(peer.key, payload.id)) return
 
         val scheduledTransfer = ScheduledTransfer(
             payload.info,
@@ -391,6 +404,8 @@ open class EVAProtocol(
         val transfer = outgoing[peer.key] ?: return
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Transfer: $transfer"}
 
+        if (isStopped(peer.key, transfer.id)) return
+
         if (transfer.nonce != payload.nonce) return
         transfer.updated = Date().time
 
@@ -438,6 +453,8 @@ open class EVAProtocol(
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: On data(${payload.blockNumber}). Nonce ${payload.nonce}. Peer hash: ${peer.mid}." }
 
         val transfer = incoming[peer.key] ?: return
+
+        if (isStopped(peer.key, transfer.id)) return
 
         if (transfer.nonce != payload.nonce) return
 
@@ -722,6 +739,51 @@ open class EVAProtocol(
         scheduleTask(Date().time + retransmitIntervalInSec * 1000) {
             resendAcknowledge(peer, transfer)
         }
+    }
+
+    /**
+     * Toggle the state of an incoming transfer from downloading or scheduled to stopped,
+     * and vice versa. This also returns the state to the requestor. The requestor simply calls
+     * the function without knowing in what start state the transfer is, but will know the end state.
+     *
+     * @param peer the peer/sender of the transfer
+     * @param id the id of the file
+     * @return the state of the transfer
+     */
+    fun toggleIncomingTransfer(peer: Peer, id: String): TransferState {
+        return if (stoppedIncoming.containsKey(peer.key) && stoppedIncoming[peer.key]!!.contains(id)) {
+            stoppedIncoming[peer.key]!!.remove(id)
+
+            TransferState.SCHEDULED
+        } else {
+            if (incoming.containsKey(peer.key)) {
+                val transfer = incoming[peer.key]
+                if (transfer != null && transfer.id == id) {
+                    if (stopIncomingTransfer(peer, transfer)) {
+                        TransferState.STOPPED
+                    } else TransferState.UNKNOWN
+                } else TransferState.STOPPED
+            } else TransferState.STOPPED
+        }
+    }
+
+    /**
+     * Stops an incoming transfer by terminating the transfer in the incoming set and adding it to
+     * the stoppedIncoming set. Returns whether the transfer is added to the stoppedIncoming set.
+     *
+     * @param peer the peer/sender of the transfer
+     * @param transfer the transfer itself
+     * @return a boolean indicating if thet transfer is stopped
+     */
+    private fun stopIncomingTransfer(peer: Peer, transfer: Transfer): Boolean {
+
+        terminate(incoming, peer, transfer)
+        stoppedIncoming.add(peer.key, transfer.id)
+
+        return if (stoppedIncoming.containsKey(peer.key)) {
+            stoppedIncoming[peer.key]!!.contains(transfer.id)
+        } else false
+
     }
 
     companion object {
