@@ -25,6 +25,14 @@ interface Overlay : EndpointListener {
     /**
      * Called to inintialize this overlay.
      */
+    fun load() {
+        endpoint.addListener(this)
+    }
+
+
+    /**
+     * Called to inintialize this overlay.
+     */
     fun load(dispatcher: CoroutineDispatcher) {
         endpoint.addListener(this)
     }
