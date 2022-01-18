@@ -23,7 +23,7 @@ interface Overlay : EndpointListener {
         get() = myPeer.lamportTimestamp
 
     /**
-     * Called to inintialize this overlay.
+     * Called to initialize this overlay.
      */
     fun load() {
         endpoint.addListener(this)
@@ -31,7 +31,7 @@ interface Overlay : EndpointListener {
 
 
     /**
-     * Called to inintialize this overlay.
+     * Called to initialize this overlay.
      */
     fun load(dispatcher: CoroutineDispatcher) {
         endpoint.addListener(this)
