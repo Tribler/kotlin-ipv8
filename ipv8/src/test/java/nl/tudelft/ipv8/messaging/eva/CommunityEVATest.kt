@@ -214,7 +214,7 @@ class CommunityEVATest : BaseCommunityTest() {
     @Test
     fun sendEVAWriteRequest() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val previousRequest = community.myPeer.lastRequest
 
@@ -241,7 +241,7 @@ class CommunityEVATest : BaseCommunityTest() {
     @Test
     fun sendEVAAcknowledgement() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val previousRequest = community.myPeer.lastRequest
 
@@ -264,7 +264,7 @@ class CommunityEVATest : BaseCommunityTest() {
     @Test
     fun sendEVAData() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val previousRequest = community.myPeer.lastRequest
 
@@ -288,7 +288,7 @@ class CommunityEVATest : BaseCommunityTest() {
     @Test
     fun sendEVAError() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val previousRequest = community.myPeer.lastRequest
 
@@ -310,7 +310,7 @@ class CommunityEVATest : BaseCommunityTest() {
     @Test
     fun setOnEVASendCompleteCallback() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         assertEquals(null, community.evaProtocol?.onSendCompleteCallback)
         community.setOnEVASendCompleteCallback { _, _, _ -> }
@@ -322,7 +322,7 @@ class CommunityEVATest : BaseCommunityTest() {
     @Test
     fun setOnEVAReceiveCompleteCallback() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         assertEquals(null, community.evaProtocol?.onReceiveCompleteCallback)
         community.setOnEVAReceiveCompleteCallback { _, _, _, _ -> }
@@ -334,7 +334,7 @@ class CommunityEVATest : BaseCommunityTest() {
     @Test
     fun setOnEVAReceiveProgressCallback() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         assertEquals(null, community.evaProtocol?.onReceiveProgressCallback)
         community.setOnEVAReceiveProgressCallback { _, _, _ -> }
@@ -346,7 +346,7 @@ class CommunityEVATest : BaseCommunityTest() {
     @Test
     fun setOnEVAErrorCallback() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         assertEquals(null, community.evaProtocol?.onErrorCallback)
         community.setOnEVAErrorCallback { _, _ ->  }

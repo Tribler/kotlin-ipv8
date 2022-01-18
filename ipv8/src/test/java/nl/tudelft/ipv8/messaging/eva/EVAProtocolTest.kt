@@ -93,7 +93,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         val community = getCommunity()
 
         community.evaProtocolEnabled = true
-        community.load()
+        community.load(testDispatcher)
         assertEquals(community.evaProtocol != null, true)
 
         community.unload()
@@ -104,7 +104,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         val community = getCommunity()
 
         community.evaProtocolEnabled = false
-        community.load()
+        community.load(testDispatcher)
         assertEquals(community.evaProtocol != null, false)
 
         community.unload()
@@ -113,7 +113,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun scheduleTask() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         assertEquals(community.evaProtocol != null, true)
 
@@ -146,7 +146,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun send() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         community.evaProtocol?.let { evaProtocol ->
             evaProtocol.javaClass.declaredMethods.first {
@@ -178,7 +178,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun sendBinary_scheduled() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var transferState = ""
         community.setOnEVAReceiveProgressCallback { _, _, progress ->
@@ -205,7 +205,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun startOutgoingTransfer_scheduled() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var transferState = ""
         community.setOnEVAReceiveProgressCallback { _, _, progress ->
@@ -243,7 +243,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun startOutgoingTransfer_send() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         assertEquals(0, community.getPeers().size)
 
@@ -285,7 +285,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun startOutgoingTransfer_datasize_over_limit() = runBlocking {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         // Initialize eva protocol with smaller binary size limit
         val binarySizeLimit = 1000000
@@ -341,7 +341,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onWriteRequest_datasize_zero() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var error = ""
         var exp: TransferException? = null
@@ -371,7 +371,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onWriteRequest_datasize_over_limit() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var error = ""
         var exp: TransferException? = null
@@ -403,7 +403,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onWriteRequest_peer_busy() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var error = ""
         var exp: TransferException? = null
@@ -437,7 +437,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onWriteRequest() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val incoming = community.getIncoming()
 
@@ -451,7 +451,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onAcknowledgement() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val transfer = Transfer(TransferType.OUTGOING, createScheduledTransfer())
         transfer.ackedWindow = 1
@@ -480,7 +480,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun transmitData() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val transfer = Transfer(TransferType.OUTGOING, createScheduledTransfer())
         transfer.windowSize = 5
@@ -507,7 +507,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onData_initializing() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var progressState = ""
         community.setOnEVAReceiveProgressCallback { _, _, progress ->
@@ -541,7 +541,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onData_downloading() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var progressState = ""
         community.setOnEVAReceiveProgressCallback { _, _, progress ->
@@ -582,7 +582,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onData_last_block() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val transfer = Transfer(TransferType.INCOMING, createScheduledTransfer())
         transfer.windowSize = 2
@@ -621,7 +621,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun onError() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var error = ""
         community.setOnEVAErrorCallback { _, exception ->
@@ -651,7 +651,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun sendAcknowledgement() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val transfer = Transfer(TransferType.INCOMING, createScheduledTransfer())
         transfer.windowSize = 2
@@ -679,7 +679,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun finishIncomingTransfer_receive_callbacks() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var progressState = ""
         community.setOnEVAReceiveProgressCallback { _, _, progress ->
@@ -718,7 +718,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun finishOutgoingTransfer_sent_callback() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var receiveFinished = false
         community.setOnEVASendCompleteCallback { _, _, _ ->
@@ -749,7 +749,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun terminateByTimeout() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var error = ""
         community.setOnEVAErrorCallback { _, exception ->
@@ -777,7 +777,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun terminateByTimeout_remaining_time() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         var error = ""
         community.setOnEVAErrorCallback { _, exception ->
@@ -810,7 +810,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun resendAcknowledge() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val transfer = Transfer(TransferType.OUTGOING, createScheduledTransfer())
         transfer.updated = Date().time - EVAProtocol.TIMEOUT_INTERVAL_IN_SEC * 1000 - 1000
@@ -837,7 +837,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun sendScheduled() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         assertEquals(0, community.getPeers().size)
 
@@ -876,7 +876,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun isScheduled_true() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val key = community.myPeer.key
         val value = createScheduledTransfer()
@@ -902,7 +902,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun isScheduled_false() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val key = community.myPeer.key
         val value = createScheduledTransfer()
@@ -926,7 +926,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun isOutgoing_true() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val key = community.myPeer.key
         val value = Transfer(TransferType.OUTGOING, createScheduledTransfer())
@@ -952,7 +952,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun isOutgoing_false() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val key = community.myPeer.key
         val value = Transfer(TransferType.OUTGOING, createScheduledTransfer())
@@ -976,7 +976,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun isIncoming_true() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val key = community.myPeer.key
         val value = Transfer(TransferType.OUTGOING, createScheduledTransfer())
@@ -1002,7 +1002,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun isIncoming_false() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val key = community.myPeer.key
         val value = Transfer(TransferType.OUTGOING, createScheduledTransfer())
@@ -1026,7 +1026,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun isTransferred_true() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val key = community.myPeer.key
         val id = "0123456789"
@@ -1052,7 +1052,7 @@ class EVAProtocolTest : BaseCommunityTest() {
     @Test
     fun isTransferred_false() {
         val community = getCommunity()
-        community.load()
+        community.load(testDispatcher)
 
         val key = community.myPeer.key
         val id = "0123456789"
