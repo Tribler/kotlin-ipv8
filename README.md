@@ -35,6 +35,9 @@ The project is a composed of several modules:
 - `demo-jvm` (JVM app) – The CLI app demonstrating the usage of `ipv8-jvm` library.
 - `tracker` (JVM app) – The bootstrap server implementation.
 
+## Building Kotlin-ipv8
+When building `kotlin-ipv8`, run `gradlew` using JDK 1.8. Either modify your `JAVA_HOME` path variable to point to JDK 1.8 or add a line to `gradle.properties` with `org.gradle.java.home=</path_to_jdk_directory>` (see this [stackoverflow link](https://stackoverflow.com/questions/18487406/how-do-i-tell-gradle-to-use-specific-jdk-version) for a discussion on the topic). Make sure to use forward slashes (`/`) for your path. To build specific modules, execute `gradlew :<module-name>:build`. To run, execute `gradlew :<module-name>:run`. For instance, run the JVM demo with `gradlew :demo-jvm:run`.
+
 ## Building Kotlin-ipv8 as a library using Gradle
 
 The following list contains reminders and recommendations to help you import this project locally using Gradle,
