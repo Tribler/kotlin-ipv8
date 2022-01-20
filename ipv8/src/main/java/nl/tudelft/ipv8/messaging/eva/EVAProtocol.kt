@@ -303,6 +303,7 @@ open class EVAProtocol(
         scheduleTerminate(outgoing, peer, transfer)
 
         val writeRequestPacket = community.createEVAWriteRequest(
+            peer,
             info,
             id,
             nonce.toULong(),
@@ -634,7 +635,7 @@ open class EVAProtocol(
     private fun incomingError(peer: Peer, transfer: Transfer, exception: TransferException) {
         terminate(incoming, peer, transfer)
 
-        val errorPacket = community.createEVAError(exception.info, exception.localizedMessage ?: "Unknown error")
+        val errorPacket = community.createEVAError(peer, exception.info, exception.localizedMessage ?: "Unknown error")
         send(peer, errorPacket)
 
         notifyError(peer, exception)

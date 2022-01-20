@@ -157,6 +157,7 @@ class EVAProtocolTest : BaseCommunityTest() {
                 assertEquals(community.myPeer.lastRequest, null)
 
                 val packet = community.createEVAWriteRequest(
+                    community.myPeer,
                     Community.EVAId.EVA_PEERCHAT_ATTACHMENT,
                     "0123456789",
                     1234.toULong(),
