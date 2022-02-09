@@ -54,7 +54,7 @@ class CommunityEVATest : BaseCommunityTest() {
             dataSize,
             blockCount,
             EVAProtocol.BLOCK_SIZE.toUInt(),
-            EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+            EVAProtocol.WINDOW_SIZE.toUInt()
         ).let { packet ->
             community.onPacket(Packet(myPeer.address, packet))
         }
@@ -76,7 +76,7 @@ class CommunityEVATest : BaseCommunityTest() {
             10000.toULong(),
             10.toUInt(),
             EVAProtocol.BLOCK_SIZE.toUInt(),
-            EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+            EVAProtocol.WINDOW_SIZE.toUInt()
         ).let { packet ->
             community.onEVAWriteRequestPacket(Packet(myPeer.address, packet))
         }
@@ -229,7 +229,7 @@ class CommunityEVATest : BaseCommunityTest() {
             "lorem ipsum".toByteArray().size.toULong(),
             5.toUInt(),
             EVAProtocol.BLOCK_SIZE.toUInt(),
-            EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+            EVAProtocol.WINDOW_SIZE.toUInt()
         ).let { packet ->
             community.endpoint.send(community.myPeer, packet)
         }

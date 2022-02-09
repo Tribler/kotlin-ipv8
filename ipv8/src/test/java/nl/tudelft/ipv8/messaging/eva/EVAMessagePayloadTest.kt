@@ -27,7 +27,7 @@ class EVAMessagePayloadTest {
         val dataSize = 293123456.toULong()
         val blockCount = 50
         val blockSize = EVAProtocol.BLOCK_SIZE.toUInt()
-        val windowSize = EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+        val windowSize = EVAProtocol.WINDOW_SIZE.toUInt()
         val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount.toUInt(), blockSize, windowSize)
 
         assertEquals(Community.MessageId.EVA_WRITE_REQUEST, payload.type)
@@ -41,7 +41,7 @@ class EVAMessagePayloadTest {
         val dataSize = 293123456.toULong()
         val blockCount = 50.toUInt()
         val blockSize = EVAProtocol.BLOCK_SIZE.toUInt()
-        val windowSize = EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+        val windowSize = EVAProtocol.WINDOW_SIZE.toUInt()
         val payload = EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount, blockSize, windowSize)
 
         val serialized = payload.serialize()

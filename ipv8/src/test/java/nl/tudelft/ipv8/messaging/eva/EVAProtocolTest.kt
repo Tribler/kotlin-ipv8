@@ -34,7 +34,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         10000.toULong(),
         10.toUInt(),
         EVAProtocol.BLOCK_SIZE.toUInt(),
-        EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+        EVAProtocol.WINDOW_SIZE.toUInt()
     )
 
     private fun createScheduledTransfer(id: String = "0123456789abcdefghijklmnopqrst"): ScheduledTransfer {
@@ -43,7 +43,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         val data = "Lorem ipsum dolor sit amet".toByteArray(Charsets.UTF_8)
         val blockCount = 6
         val blockSize = 5
-        val windowSize = EVAProtocol.WINDOW_SIZE_IN_BLOCKS
+        val windowSize = EVAProtocol.WINDOW_SIZE
 
         return ScheduledTransfer(info, data, nonce, id, blockCount, data.size.toULong(), blockSize, windowSize)
     }
@@ -164,7 +164,7 @@ class EVAProtocolTest : BaseCommunityTest() {
                     100.toULong(),
                     10.toUInt(),
                     EVAProtocol.BLOCK_SIZE.toUInt(),
-                    EVAProtocol.WINDOW_SIZE_IN_BLOCKS.toUInt()
+                    EVAProtocol.WINDOW_SIZE.toUInt()
                 )
 
                 method.invoke(evaProtocol, community.myPeer, packet)
@@ -758,7 +758,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         }
 
         val transfer = Transfer(TransferType.OUTGOING, createScheduledTransfer())
-        transfer.updated = Date().time - EVAProtocol.TIMEOUT_INTERVAL_IN_SEC * 1000 - 1000
+        transfer.updated = Date().time - EVAProtocol.TIMEOUT_INTERVAL - 1000
 
         community.evaProtocol?.let { evaProtocol ->
             evaProtocol.javaClass.declaredMethods.first {
@@ -768,7 +768,7 @@ class EVAProtocolTest : BaseCommunityTest() {
 
                 method.invoke(evaProtocol, mutableMapOf<Key, Transfer>(), community.myPeer, transfer)
 
-                assertEquals("Terminated by timeout. Timeout is ${EVAProtocol.TIMEOUT_INTERVAL_IN_SEC} sec", error)
+                assertEquals("Terminated by timeout. Timeout is ${EVAProtocol.TIMEOUT_INTERVAL / 1000} sec", error)
             }
         }
 
@@ -786,7 +786,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         }
 
         val transfer = Transfer(TransferType.OUTGOING, createScheduledTransfer())
-        transfer.updated = Date().time - EVAProtocol.TIMEOUT_INTERVAL_IN_SEC * 1000 / 2
+        transfer.updated = Date().time - EVAProtocol.TIMEOUT_INTERVAL / 2
 
         community.evaProtocol?.let { evaProtocol ->
             @Suppress("UNCHECKED_CAST")
@@ -814,7 +814,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         community.load()
 
         val transfer = Transfer(TransferType.OUTGOING, createScheduledTransfer())
-        transfer.updated = Date().time - EVAProtocol.TIMEOUT_INTERVAL_IN_SEC * 1000 - 1000
+        transfer.updated = Date().time - EVAProtocol.TIMEOUT_INTERVAL - 1000
 
         community.evaProtocol?.let { evaProtocol ->
             @Suppress("UNCHECKED_CAST")
