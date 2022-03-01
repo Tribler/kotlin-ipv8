@@ -88,6 +88,21 @@ class EVAProtocolTest : BaseCommunityTest() {
         return evaProtocol?.getPrivateProperty("finishedOutgoing") as MutableMap<Key, MutableSet<String>>
     }
 
+    @Suppress("UNCHECKED_CAST")
+    fun Community.getTimedOutOutgoing(): HashMap<String, Int> {
+        return evaProtocol?.getPrivateProperty("timedOutOutgoing") as HashMap<String, Int>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun Community.getStoppedIncoming(): MutableMap<Key, MutableSet<String>> {
+        return evaProtocol?.getPrivateProperty("stoppedIncoming") as MutableMap<Key, MutableSet<String>>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun Community.setStoppedIncoming(map: MutableMap<Key, MutableSet<String>>): MutableMap<Key, MutableSet<String>> {
+        return evaProtocol?.setAndReturnPrivateProperty("stoppedIncoming", map) as MutableMap<Key, MutableSet<String>>
+    }
+
     @Test
     fun startProtocol_true() {
         val community = getCommunity()
@@ -1068,6 +1083,232 @@ class EVAProtocolTest : BaseCommunityTest() {
 
                 val result = method.invoke(evaProtocol, key, id, container)
                 assertEquals(false, result)
+            }
+        }
+
+        community.unload()
+    }
+
+    @Test
+    fun test_increment() {
+        val community = getCommunity()
+        community.load()
+
+        val key = "TEST"
+        val map = community.getTimedOutOutgoing()
+        assertEquals(0, map.size)
+        map.increment(key)
+        assertEquals(1, community.getTimedOutOutgoing().size)
+        map.increment(key)
+        assertEquals(2, community.getTimedOutOutgoing()[key])
+
+        community.unload()
+    }
+
+    @Test
+    fun test_isStopped() {
+        val community = getCommunity()
+        community.load()
+
+        val mockPeer = Peer(mockk())
+        val transfer = TransferTest().createIncomingTransfer()
+
+        assertEquals(0, community.getIncoming().size)
+        assertEquals(0, community.getStoppedIncoming().size)
+
+        val stoppedIncomingMap: MutableMap<Key, MutableSet<String>> = mutableMapOf(Pair(mockPeer.key, mutableSetOf(transfer.id)))
+        val stoppedIncoming = community.setStoppedIncoming(stoppedIncomingMap)
+        assertEquals(1, stoppedIncoming.size)
+
+        community.evaProtocol?.let { evaProtocol ->
+            evaProtocol.javaClass.declaredMethods.first {
+                it.name == "isStopped"
+            }.let { method ->
+                method.isAccessible = true
+
+                val isStopped = method.invoke(
+                    evaProtocol,
+                    mockPeer.key,
+                    transfer.id
+                )
+
+                assertEquals(true, isStopped)
+            }
+        }
+
+        community.unload()
+    }
+
+    @Test
+    fun stopIncomingTransfer_true() {
+        val community = getCommunity()
+        community.load()
+
+        val mockPeer = Peer(mockk())
+        val transfer = TransferTest().createIncomingTransfer()
+
+        assertEquals(0, community.getIncoming().size)
+        assertEquals(0, community.getStoppedIncoming().size)
+
+        val incomingMap: MutableMap<Key, Transfer> = mutableMapOf(Pair(mockPeer.key, transfer))
+        val incoming = community.setIncoming(incomingMap)
+        assertEquals(1, incoming.size)
+
+        community.evaProtocol?.let { evaProtocol ->
+            evaProtocol.javaClass.declaredMethods.first {
+                it.name == "stopIncomingTransfer"
+            }.let { method ->
+                method.isAccessible = true
+
+                val isStopped = method.invoke(
+                    evaProtocol,
+                    mockPeer,
+                    transfer
+                )
+
+                assertEquals(0, community.getIncoming().size)
+                assertEquals(1, community.getStoppedIncoming().size)
+                assertEquals(true, isStopped)
+            }
+        }
+
+        community.unload()
+    }
+
+    @Test
+    fun toggleIncomingTransfer_scheduled() {
+        val community = getCommunity()
+        community.load()
+
+        val mockPeer = Peer(mockk())
+        val transfer = TransferTest().createIncomingTransfer()
+
+        assertEquals(0, community.getIncoming().size)
+        assertEquals(0, community.getStoppedIncoming().size)
+
+        val stoppedIncomingMap: MutableMap<Key, MutableSet<String>> = mutableMapOf(Pair(mockPeer.key, mutableSetOf(transfer.id)))
+        val stoppedIncoming = community.setStoppedIncoming(stoppedIncomingMap)
+        assertEquals(1, stoppedIncoming.size)
+
+        community.evaProtocol?.let { evaProtocol ->
+            evaProtocol.javaClass.declaredMethods.first {
+                it.name == "toggleIncomingTransfer"
+            }.let { method ->
+                method.isAccessible = true
+
+                val state = method.invoke(
+                    evaProtocol,
+                    mockPeer,
+                    transfer.id
+                )
+
+                assertEquals(0, community.getIncoming().size)
+                assertEquals(1, community.getStoppedIncoming().size)
+                assertEquals(TransferState.SCHEDULED, state)
+            }
+        }
+
+        community.unload()
+    }
+
+    @Test
+    fun toggleIncomingTransfer_stopped() {
+        val community = getCommunity()
+        community.load()
+
+        val mockPeer = Peer(mockk())
+        val transfer = TransferTest().createIncomingTransfer()
+
+        assertEquals(0, community.getIncoming().size)
+        assertEquals(0, community.getStoppedIncoming().size)
+
+        val incomingMap: MutableMap<Key, Transfer> = mutableMapOf(Pair(mockPeer.key, transfer))
+        val incoming = community.setIncoming(incomingMap)
+        assertEquals(1, incoming.size)
+
+        community.evaProtocol?.let { evaProtocol ->
+            evaProtocol.javaClass.declaredMethods.first {
+                it.name == "toggleIncomingTransfer"
+            }.let { method ->
+                method.isAccessible = true
+
+                val state = method.invoke(
+                    evaProtocol,
+                    mockPeer,
+                    transfer.id
+                )
+
+                assertEquals(0, community.getIncoming().size)
+                assertEquals(1, community.getStoppedIncoming().size)
+                assertEquals(TransferState.STOPPED, state)
+            }
+        }
+
+        community.unload()
+    }
+
+    @Test
+    fun toggleIncomingTransfer_unknown_notfound() {
+        val community = getCommunity()
+        community.load()
+
+        val mockPeer = Peer(mockk())
+        val transfer = TransferTest().createIncomingTransfer()
+
+        assertEquals(0, community.getIncoming().size)
+        assertEquals(0, community.getStoppedIncoming().size)
+
+        community.evaProtocol?.let { evaProtocol ->
+            evaProtocol.javaClass.declaredMethods.first {
+                it.name == "toggleIncomingTransfer"
+            }.let { method ->
+                method.isAccessible = true
+
+                val state = method.invoke(
+                    evaProtocol,
+                    mockPeer,
+                    transfer.id
+                )
+
+                assertEquals(0, community.getIncoming().size)
+                assertEquals(0, community.getStoppedIncoming().size)
+                assertEquals(TransferState.UNKNOWN, state)
+            }
+        }
+
+        community.unload()
+    }
+
+    @Test
+    fun toggleIncomingTransfer_unknown_other_transfer() {
+        val community = getCommunity()
+        community.load()
+
+        val mockPeer = Peer(mockk())
+        val transfer = TransferTest().createIncomingTransfer()
+
+        assertEquals(0, community.getIncoming().size)
+        assertEquals(0, community.getStoppedIncoming().size)
+
+        val incomingMap: MutableMap<Key, Transfer> = mutableMapOf(Pair(mockPeer.key, transfer))
+        val incoming = community.setIncoming(incomingMap)
+        assertEquals(1, incoming.size)
+
+        community.evaProtocol?.let { evaProtocol ->
+            evaProtocol.javaClass.declaredMethods.first {
+                it.name == "toggleIncomingTransfer"
+            }.let { method ->
+                method.isAccessible = true
+
+                val state = method.invoke(
+                    evaProtocol,
+                    mockPeer,
+                    transfer.id + "_2"
+                )
+
+                assertEquals(1, community.getIncoming().size)
+                assertEquals(0, community.getStoppedIncoming().size)
+                assertEquals(TransferState.UNKNOWN, state)
             }
         }
 

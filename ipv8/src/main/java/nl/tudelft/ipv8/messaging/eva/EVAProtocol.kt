@@ -799,8 +799,8 @@ open class EVAProtocol(
                     if (stopIncomingTransfer(peer, transfer)) {
                         TransferState.STOPPED
                     } else TransferState.UNKNOWN
-                } else TransferState.STOPPED
-            } else TransferState.STOPPED
+                } else TransferState.UNKNOWN
+            } else TransferState.UNKNOWN
         }
     }
 
@@ -828,7 +828,7 @@ open class EVAProtocol(
         const val BLOCK_SIZE = 1200
         const val WINDOW_SIZE = 80
         const val BINARY_SIZE_LIMIT = 1024 * 1024 * 250
-        const val RETRANSMIT_INTERVAL = 4000L
+        const val RETRANSMIT_INTERVAL = 2000L
         const val RETRANSMIT_ATTEMPT_COUNT = 3
         const val TIMEOUT_INTERVAL = 12000L
         const val REDUCE_WINDOW_AFTER_TIMEOUT = 16

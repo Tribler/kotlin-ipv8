@@ -24,7 +24,7 @@ class TransferTest {
         windowSize
     )
 
-    private fun createIncomingTransfer() = Transfer(
+    fun createIncomingTransfer() = Transfer(
         TransferType.INCOMING,
         createScheduledTransfer()
     )
