@@ -15,22 +15,26 @@ private val logger = KotlinLogging.logger {}
 open class EVAProtocol(
     private var community: Community,
     scope: CoroutineScope,
-    var windowSizeInBlocks: Int = WINDOW_SIZE_IN_BLOCKS,
-    var retransmitIntervalInSec: Int = RETRANSMIT_INTERVAL_IN_SEC,
-    var retransmitAttemptCount: Int = RETRANSMIT_ATTEMPT_COUNT,
-    var scheduledSendIntervalInSec: Int = SCHEDULED_SEND_INTERVAL_IN_SEC,
-    var timeoutIntervalInSec: Int = TIMEOUT_INTERVAL_IN_SEC,
-    var binarySizeLimit: Int = BINARY_SIZE_LIMIT,
-    var terminateByTimeoutEnabled: Boolean = true,
     var blockSize: Int = BLOCK_SIZE,
+    var windowSize: Int = WINDOW_SIZE,
+    var binarySizeLimit: Int = BINARY_SIZE_LIMIT,
     var retransmitEnabled: Boolean = true,
-    var loggingEnabled: Boolean = true
+    var retransmitInterval: Long = RETRANSMIT_INTERVAL,
+    var retransmitAttemptCount: Int = RETRANSMIT_ATTEMPT_COUNT,
+    var scheduledSendInterval: Long = SCHEDULED_SEND_INTERVAL,
+    var scheduledTasksCheckInterval: Long = SCHEDULED_TASKS_CHECK_DELAY,
+    var terminateByTimeoutEnabled: Boolean = true,
+    var timeoutInterval: Long = TIMEOUT_INTERVAL,
+    var reduceWindowAfterTimeout: Int = REDUCE_WINDOW_AFTER_TIMEOUT,
+    var loggingEnabled: Boolean = true,
 ) {
     private var scheduled: MutableMap<Key, Queue<ScheduledTransfer>> = mutableMapOf()
     private var incoming: MutableMap<Key, Transfer> = mutableMapOf()
     private var outgoing: MutableMap<Key, Transfer> = mutableMapOf()
+    private var stoppedIncoming: MutableMap<Key, MutableSet<String>> = mutableMapOf()
     private var finishedIncoming: MutableMap<Key, MutableSet<String>> = mutableMapOf()
     private var finishedOutgoing: MutableMap<Key, MutableSet<String>> = mutableMapOf()
+    private var timedOutOutgoing: HashMap<String, Int> = HashMap()
     private var scheduledTasks = PriorityQueue<ScheduledTask>()
 
     var onReceiveProgressCallback: ((Peer, String, TransferProgress) -> Unit)? = null
@@ -40,15 +44,19 @@ open class EVAProtocol(
 
     init {
         if (loggingEnabled) logger.debug {
-            "EVAPROTOCOL: Initialized. Block size: ${blockSize}." +
-                "Window size: ${windowSizeInBlocks}." +
+            "EVAPROTOCOL: Initialized. " +
+                "Block size: ${blockSize}." +
+                "Window size: ${windowSize}." +
+                "Binary size limit: ${binarySizeLimit}." +
                 "Retransmit enabled: ${retransmitEnabled}." +
-                "Retransmit interval: ${retransmitIntervalInSec}sec." +
+                "Retransmit interval: ${retransmitInterval}millis." +
                 "Max retransmit attempts: ${retransmitAttemptCount}." +
+                "Scheduled send interval: ${scheduledSendInterval}millis." +
+                "Scheduled tasks check interval: ${scheduledTasksCheckInterval}millis." +
                 "Terminate by timeout enabled: ${terminateByTimeoutEnabled}." +
-                "Timeout: ${timeoutIntervalInSec}sec." +
-                "Scheduled send interval: ${scheduledSendIntervalInSec}sec." +
-                "Binary size limit: ${binarySizeLimit}."
+                "Timeout interval: ${timeoutInterval}millis." +
+                "Reduce window after timeout: ${reduceWindowAfterTimeout}." +
+                "Logging enabled: $loggingEnabled."
         }
 
         /**
@@ -59,7 +67,7 @@ open class EVAProtocol(
             while (isActive) {
                 sendScheduled()
 
-                delay((scheduledSendIntervalInSec * 1000).toLong())
+                delay(scheduledSendInterval)
             }
         }
 
@@ -75,7 +83,7 @@ open class EVAProtocol(
                     task.action.invoke()
                 }
 
-                delay(1000L)
+                delay(scheduledTasksCheckInterval)
             }
         }
     }
@@ -153,6 +161,18 @@ open class EVAProtocol(
     }
 
     /**
+     * Check if the transfer of an incoming file has been stopped
+     *
+     * @param key the key of sender
+     * @param id an id of the file
+     */
+    fun isStopped(key: Key, id: String): Boolean {
+        return stoppedIncoming.any {
+            it.key == key && it.value.contains(id)
+        }
+    }
+
+    /**
      * Check if the transfer of an outgoing or incoming file has already been transferred
      *
      * @param key the key of the receiver
@@ -167,6 +187,31 @@ open class EVAProtocol(
         return if (container.containsKey(key)) {
             container[key]!!.contains(id)
         } else false
+    }
+
+    /**
+     * Lookup the number of timeouts for a particular file transfer to a particular peer]
+     *
+     * @param key the key of a peer
+     * @param id the file ID
+     * @return the count of timeouts, otherwise 0
+     */
+    private fun getTimedOutCount(key: Key, id: String) : Int {
+        return timedOutOutgoing[key.toString() + id] ?: 0
+    }
+
+    /**
+     * Determine the window size, including a reduction factor if timeout(s) happened before. In situations
+     * where the connection is bad or suddenly dropped it may be profitable to use a lower window.
+     * For every timeout that happened for a particular file transfer the window size is dropped
+     * by default 16 blocks.
+     *
+     * @param key the key of a peer
+     * @param id the file ID
+     * @return the window size in blocks
+     */
+    private fun getWindowSize(key: Key, id: String) : Int {
+        return kotlin.math.max(MIN_WINDOW_SIZE, windowSize - (getTimedOutCount(key, id) * reduceWindowAfterTimeout))
     }
 
     /**
@@ -196,9 +241,10 @@ open class EVAProtocol(
 
         if (outgoing.containsKey(peer.key) || incoming.containsKey(peer.key) || getConnectedPeer(peer.key) == null) {
             if (!isScheduled(peer.key, id)) {
+                val windowSize = getWindowSize(peer.key, id)
                 scheduled.addValue(
                     peer.key,
-                    ScheduledTransfer(info, data, nonceValue.toULong(), id, 0, data.size.toULong(), blockSize, windowSizeInBlocks)
+                    ScheduledTransfer(info, data, nonceValue.toULong(), id, 0, data.size.toULong(), blockSize, windowSize)
                 )
 
                 onReceiveProgressCallback?.invoke(
@@ -228,17 +274,23 @@ open class EVAProtocol(
     private fun startOutgoingTransfer(peer: Peer, info: String, id: String, data: ByteArray, nonce: Long) {
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Start outgoing transfer." }
 
-        if (getConnectedPeer(peer.key) == null ||
-            isOutgoing(peer.key, id) ||
-            isTransferred(peer.key, id, finishedOutgoing) ||
-            outgoing.containsKey(peer.key) ||
+        val scheduledTransfer = ScheduledTransfer(
+            info,
+            byteArrayOf(),
+            nonce.toULong(),
+            id,
+            BigDecimal(data.size).divide(BigDecimal(blockSize), RoundingMode.UP).toInt(),
+            data.size.toULong(),
+            blockSize,
+            getWindowSize(peer.key, id)
+        )
+
+        if (getConnectedPeer(peer.key) == null || isOutgoing(peer.key, id) ||
+            isTransferred(peer.key, id, finishedOutgoing) || outgoing.containsKey(peer.key) ||
             incoming.containsKey(peer.key)
         ) {
             if (!isScheduled(peer.key, id)) {
-                scheduled.addValue(
-                    peer.key,
-                    ScheduledTransfer(info, data, nonce.toULong(), id, 0, data.size.toULong(), blockSize, windowSizeInBlocks)
-                )
+                scheduled.addValue(peer.key, scheduledTransfer)
 
                 onReceiveProgressCallback?.invoke(
                     peer, info, TransferProgress(
@@ -252,27 +304,14 @@ open class EVAProtocol(
             return
         }
 
-        val dataSize = data.size
-        val blockCount = BigDecimal(dataSize).divide(BigDecimal(blockSize), RoundingMode.UP).toInt()
-
-        if (loggingEnabled) logger.debug { "EVAPROTOCOL: SIZE AND COUNT: $dataSize $blockSize $blockCount" }
-
-        val scheduledTransfer = scheduled[peer.key]?.firstOrNull { it.id == id } ?: ScheduledTransfer(
-            info,
-            byteArrayOf(),
-            nonce.toULong(),
-            id,
-            blockCount,
-            dataSize.toULong(),
-            blockSize,
-            windowSizeInBlocks
+        val transfer = Transfer(
+            TransferType.OUTGOING,
+            scheduled[peer.key]?.firstOrNull { it.id == id } ?: scheduledTransfer
         )
 
-        val transfer = Transfer(TransferType.OUTGOING, scheduledTransfer)
+        if (loggingEnabled) logger.debug { "EVAPROTOCOL: Outgoing transfer blockCount: ${transfer.blockCount}, size: ${transfer.dataSize}, nonce: ${transfer.nonce}, window: ${transfer.windowSize}"}
 
-        if (loggingEnabled) logger.debug { "EVAPROTOCOL: Outgoing transfer blockCount: ${transfer.blockCount}, size: ${dataSize}, nonce: ${transfer.nonce}"}
-
-        if (dataSize > binarySizeLimit) {
+        if (transfer.dataSize.toLong() > binarySizeLimit) {
             notifyError(
                 peer,
                 SizeException(
@@ -290,10 +329,11 @@ open class EVAProtocol(
         scheduleTerminate(outgoing, peer, transfer)
 
         val writeRequestPacket = community.createEVAWriteRequest(
+            peer,
             info,
             id,
             nonce.toULong(),
-            dataSize.toULong(),
+            transfer.dataSize,
             transfer.blockCount.toUInt(),
             transfer.blockSize.toUInt(),
             transfer.windowSize.toUInt()
@@ -310,7 +350,7 @@ open class EVAProtocol(
     fun onWriteRequest(peer: Peer, payload: EVAWriteRequestPayload) {
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: On write request. Nonce: ${payload.nonce}. Peer: ${peer.publicKey.keyToBin().toHex()}. Info: ${payload.info}. BlockCount: ${payload.blockCount}. Blocksize: ${payload.blockSize.toInt()}. Window size: ${payload.windowSize.toInt()}. Payload datasize: ${payload.dataSize}, allowed datasize: $binarySizeLimit" }
 
-        if (isIncoming(peer.key, payload.id) || isTransferred(peer.key, payload.id, finishedIncoming)) return
+        if (isIncoming(peer.key, payload.id) || isTransferred(peer.key, payload.id, finishedIncoming) || isStopped(peer.key, payload.id)) return
 
         val scheduledTransfer = ScheduledTransfer(
             payload.info,
@@ -391,6 +431,8 @@ open class EVAProtocol(
         val transfer = outgoing[peer.key] ?: return
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Transfer: $transfer"}
 
+        if (isStopped(peer.key, transfer.id)) return
+
         if (transfer.nonce != payload.nonce) return
         transfer.updated = Date().time
 
@@ -439,6 +481,8 @@ open class EVAProtocol(
 
         val transfer = incoming[peer.key] ?: return
 
+        if (isStopped(peer.key, transfer.id)) return
+
         if (transfer.nonce != payload.nonce) return
 
         val blockNumber = payload.blockNumber.toInt()
@@ -450,7 +494,7 @@ open class EVAProtocol(
             else -> {
                 TransferProgress(transfer.id, TransferState.DOWNLOADING, transfer.getProgress())
             }
-        }.also {
+        }.let {
             onReceiveProgressCallback?.invoke(peer, transfer.info, it)
         }
 
@@ -515,6 +559,7 @@ open class EVAProtocol(
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Acknowledgement for window '${transfer.ackedWindow}' sent to ${peer.mid} with windowSize (${transfer.windowSize}) and nonce ${transfer.nonce}"}
 
         val ackPacket = community.createEVAAcknowledgement(
+            peer,
             transfer.nonce,
             transfer.ackedWindow.toUInt(),
             unReceivedBlocks
@@ -561,7 +606,10 @@ open class EVAProtocol(
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Outgoing transfer finished: id: ${transfer.id}, nonce: ${transfer.nonce} and info $info" }
 
         finishedOutgoing.add(peer.key, transfer.id)
+        timedOutOutgoing.remove(peer.key.toString() + transfer.id)
         terminate(outgoing, peer, transfer)
+
+        if (loggingEnabled) logger.debug { "EVAPROTOCOL: Timeout map AFTER TRANSFER: $timedOutOutgoing" }
 
         onSendCompleteCallback?.invoke(peer, info, nonce)
 
@@ -617,7 +665,7 @@ open class EVAProtocol(
     private fun incomingError(peer: Peer, transfer: Transfer, exception: TransferException) {
         terminate(incoming, peer, transfer)
 
-        val errorPacket = community.createEVAError(exception.info, exception.localizedMessage ?: "Unknown error")
+        val errorPacket = community.createEVAError(peer, exception.info, exception.localizedMessage ?: "Unknown error")
         send(peer, errorPacket)
 
         notifyError(peer, exception)
@@ -646,14 +694,15 @@ open class EVAProtocol(
 
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Schedule terminate for transfer with id ${transfer.id} and nonce ${transfer.nonce}" }
 
-        scheduleTask(Date().time + timeoutIntervalInSec * 1000) {
+        scheduleTask(Date().time + timeoutInterval) {
             terminateByTimeout(container, peer, transfer)
         }
     }
 
     /**
      * Terminate an transfer when timeout passed and no remaining time left or schedule new timeout
-     * task to check the timeout conditions.
+     * task to check the timeout conditions. If the transfer is outgoing and there's no remaining
+     * time, the window size will be lowered in the next transfer.
      *
      * @param container transfer in incoming/outgoing set of transfers
      * @param peer the sender/receiver
@@ -664,8 +713,7 @@ open class EVAProtocol(
 
         if (transfer.released || !terminateByTimeoutEnabled) return
 
-        val timeout = timeoutIntervalInSec * 1000
-        val remainingTime = timeout - (Date().time - transfer.updated)
+        val remainingTime = timeoutInterval - (Date().time - transfer.updated)
 
         if (remainingTime > 0) {
             scheduleTask(Date().time + remainingTime) {
@@ -675,10 +723,16 @@ open class EVAProtocol(
         }
 
         terminate(container, peer, transfer)
+
+        if (transfer.type == TransferType.OUTGOING) {
+            if (loggingEnabled) logger.debug { "EVAPROTOCOL: Incrementing timedOutOutgoing count for transfer to ${getTimedOutCount(peer.key, transfer.id)}." }
+            timedOutOutgoing.increment(peer.key.toString() + transfer.id)
+        }
+
         notifyError(
             peer,
             TimeoutException(
-                "Terminated by timeout. Timeout is ${timeout / 1000} sec",
+                "Terminated by timeout. Timeout is ${timeoutInterval / 1000} sec",
                 transfer.info,
                 transfer
             )
@@ -694,7 +748,7 @@ open class EVAProtocol(
     private fun scheduleResendAcknowledge(peer: Peer, transfer: Transfer) {
         if (!retransmitEnabled) return
 
-        scheduleTask(Date().time + retransmitIntervalInSec * 1000) {
+        scheduleTask(Date().time + retransmitInterval) {
             resendAcknowledge(peer, transfer)
         }
     }
@@ -711,7 +765,7 @@ open class EVAProtocol(
     private fun resendAcknowledge(peer: Peer, transfer: Transfer) {
         if (transfer.released || !retransmitEnabled || transfer.attempt >= retransmitAttemptCount - 1) return
 
-        if (Date().time - transfer.updated >= retransmitIntervalInSec * 1000) {
+        if (Date().time - transfer.updated >= retransmitInterval) {
             transfer.attempt += 1
 
             if (loggingEnabled) logger.debug { "EVAPROTOCOL: Re-acknowledgement attempt ${transfer.attempt + 1}/$retransmitAttemptCount for window ${transfer.ackedWindow}." }
@@ -719,20 +773,68 @@ open class EVAProtocol(
             sendAcknowledgement(peer, transfer)
         }
 
-        scheduleTask(Date().time + retransmitIntervalInSec * 1000) {
+        scheduleTask(Date().time + retransmitInterval) {
             resendAcknowledge(peer, transfer)
         }
+    }
+
+    /**
+     * Toggle the state of an incoming transfer from downloading or scheduled to stopped,
+     * and vice versa. This also returns the state to the requestor. The requestor simply calls
+     * the function without knowing in what start state the transfer is, but will know the end state.
+     *
+     * @param peer the peer/sender of the transfer
+     * @param id the id of the file
+     * @return the state of the transfer
+     */
+    fun toggleIncomingTransfer(peer: Peer, id: String): TransferState {
+        return if (stoppedIncoming.containsKey(peer.key) && stoppedIncoming[peer.key]!!.contains(id)) {
+            stoppedIncoming[peer.key]!!.remove(id)
+
+            TransferState.SCHEDULED
+        } else {
+            if (incoming.containsKey(peer.key)) {
+                val transfer = incoming[peer.key]
+                if (transfer != null && transfer.id == id) {
+                    if (stopIncomingTransfer(peer, transfer)) {
+                        TransferState.STOPPED
+                    } else TransferState.UNKNOWN
+                } else TransferState.UNKNOWN
+            } else TransferState.UNKNOWN
+        }
+    }
+
+    /**
+     * Stops an incoming transfer by terminating the transfer in the incoming set and adding it to
+     * the stoppedIncoming set. Returns whether the transfer is added to the stoppedIncoming set.
+     *
+     * @param peer the peer/sender of the transfer
+     * @param transfer the transfer itself
+     * @return a boolean indicating if thet transfer is stopped
+     */
+    private fun stopIncomingTransfer(peer: Peer, transfer: Transfer): Boolean {
+
+        terminate(incoming, peer, transfer)
+        stoppedIncoming.add(peer.key, transfer.id)
+
+        return if (stoppedIncoming.containsKey(peer.key)) {
+            stoppedIncoming[peer.key]!!.contains(transfer.id)
+        } else false
+
     }
 
     companion object {
         const val MAX_NONCE = Integer.MAX_VALUE.toLong() * 2
         const val BLOCK_SIZE = 1200
-        const val WINDOW_SIZE_IN_BLOCKS = 80
-        const val RETRANSMIT_INTERVAL_IN_SEC = 4
-        const val RETRANSMIT_ATTEMPT_COUNT = 3
-        const val SCHEDULED_SEND_INTERVAL_IN_SEC = 5
-        const val TIMEOUT_INTERVAL_IN_SEC = 20
+        const val WINDOW_SIZE = 80
         const val BINARY_SIZE_LIMIT = 1024 * 1024 * 250
+        const val RETRANSMIT_INTERVAL = 2000L
+        const val RETRANSMIT_ATTEMPT_COUNT = 3
+        const val TIMEOUT_INTERVAL = 12000L
+        const val REDUCE_WINDOW_AFTER_TIMEOUT = 16
+        const val MIN_WINDOW_SIZE = 16
+        const val SCHEDULED_SEND_INTERVAL = 5000L
+        const val SCHEDULED_TASKS_CHECK_DELAY = 1000L
     }
 }
 
@@ -801,4 +903,17 @@ fun ByteArray.takeInRange(fromIndex: Int, toIndex: Int): ByteArray {
     } else toIndex
 
     return this.copyOfRange(fromIndex, to)
+}
+
+/**
+ * Increment an integer value in hashmap based on current value
+ *
+ * @property HashMap<K, Int> the map
+ * @param key the key in the map
+ */
+fun <K> HashMap<K, Int>.increment(key: K) {
+    when (val count = this[key]) {
+        null -> this[key] = 1
+        else -> this[key] = count + 1
+    }
 }
