@@ -180,7 +180,9 @@ enum class TransferState {
     SCHEDULED,
     INITIALIZING,
     DOWNLOADING,
-    FINISHED
+    STOPPED,
+    FINISHED,
+    UNKNOWN
 }
 
 fun CharSequence.splitIgnoreEmpty(vararg delimiters: String): List<String> {
