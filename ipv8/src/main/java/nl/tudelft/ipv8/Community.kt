@@ -344,6 +344,7 @@ abstract class Community : Overlay {
         recipient: Peer? = null
     ): ByteArray {
         var packet = prefix
+        @Suppress("DEPRECATION")
         packet += messageId.toChar().toByte()
 
         if (encrypt && recipient == null) {
