@@ -1,10 +1,12 @@
 package nl.tudelft.ipv8.messaging.eva
 
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import kotlinx.coroutines.*
-import kotlinx.coroutines.test.runBlockingTest
 import nl.tudelft.ipv8.*
 import nl.tudelft.ipv8.keyvault.Key
+import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.peerdiscovery.Network
 import org.junit.Assert.*
@@ -46,6 +48,17 @@ class EVAProtocolTest : BaseCommunityTest() {
         val windowSize = EVAProtocol.WINDOW_SIZE
 
         return ScheduledTransfer(info, data, nonce, id, blockCount, data.size.toULong(), blockSize, windowSize)
+    }
+
+    private fun addRandomTransfersToOutgoing(community: TestCommunity) {
+        val outgoingMap: MutableMap<Key, Transfer> = mutableMapOf()
+        List(10) {
+            Pair(mockk<Key>(), Transfer(TransferType.OUTGOING, createScheduledTransfer()))
+        }.forEach {
+            outgoingMap[it.first] = it.second
+        }
+        val outgoing = community.setOutgoing(outgoingMap)
+        assertEquals(10, outgoing.size)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -214,6 +227,44 @@ class EVAProtocolTest : BaseCommunityTest() {
 
         assertEquals(1, scheduled.size)
         assertEquals(TransferState.SCHEDULED.name, transferState)
+
+        community.unload()
+    }
+
+    @Test
+    fun sendBinaryAddsToScheduledWhenMaxTransfersExceeded() {
+        val community = spyk(getCommunity())
+        val mockPeer = mockk<Peer>(relaxed = true)
+        val mockPublicKey = mockk<PublicKey>()
+
+        every { mockPublicKey.encrypt(any()) } returns byteArrayOf()
+        every { mockPeer.publicKey } returns mockPublicKey
+        every { mockPeer.key } returns mockk()
+        every { community.getPeers() } returns listOf(mockPeer)
+        community.load()
+
+        val scheduled = community.getScheduled()
+        assertEquals(0, scheduled.size)
+
+        community.evaProtocol?.sendBinary(
+            mockPeer,
+            Community.EVAId.EVA_PEERCHAT_ATTACHMENT,
+            "012345678",
+            byteArrayOf(0, 1, 2, 3, 4, 5)
+        )
+
+        assertEquals(0, scheduled.size)
+
+        addRandomTransfersToOutgoing(community)
+
+        community.evaProtocol?.sendBinary(
+            mockPeer,
+            Community.EVAId.EVA_PEERCHAT_ATTACHMENT,
+            "012345678",
+            byteArrayOf(0, 1, 2, 3, 4, 5)
+        )
+
+        assertEquals(1, scheduled.size)
 
         community.unload()
     }
@@ -884,6 +935,44 @@ class EVAProtocolTest : BaseCommunityTest() {
                 assertEquals(1, outgoing.size)
             }
 
+        }
+
+        community.unload()
+    }
+
+    @Test
+    fun sendScheduledDoesntSendWhenMaxTransfersExceeded() {
+        val community = getCommunity()
+        community.load()
+
+        assertEquals(0, community.getPeers().size)
+
+        val address = IPv4Address("1.2.3.4", 1234)
+        val peer = Peer(defaultCryptoProvider.generateKey(), address)
+        community.network.addVerifiedPeer(peer)
+        community.network.discoverServices(peer, listOf(community.serviceId))
+
+        assertEquals(1, community.getPeers().size)
+
+        val scheduledTransfer = createScheduledTransfer()
+
+        community.evaProtocol?.let { evaProtocol ->
+            val scheduled = community.getScheduled()
+            assertEquals(0, scheduled.size)
+            scheduled.addValue(peer.key, scheduledTransfer)
+            assertEquals(1, community.getScheduled().size)
+
+            evaProtocol.javaClass.declaredMethods.first {
+                it.name == "sendScheduled"
+            }.let { method ->
+                method.isAccessible = true
+                addRandomTransfersToOutgoing(community)
+                val outgoing = community.getOutgoing()
+                assertEquals(10, outgoing.size)
+                method.invoke(evaProtocol)
+                assertEquals(1, scheduled.size)
+                assertEquals(10, outgoing.size)
+            }
         }
 
         community.unload()
