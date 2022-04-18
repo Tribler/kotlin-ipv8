@@ -14,7 +14,7 @@ private val logger = KotlinLogging.logger {}
 
 open class EVAProtocol(
     private var community: Community,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     var blockSize: Int = BLOCK_SIZE,
     var windowSize: Int = WINDOW_SIZE,
     var binarySizeLimit: Int = BINARY_SIZE_LIMIT,
@@ -339,6 +339,36 @@ open class EVAProtocol(
         outgoing[peer.key] = transfer
         scheduleTerminate(outgoing, peer, transfer)
 
+        sendWriteRequest(peer, info, id, nonce, transfer)
+        retryWriteRequestIfNeeded(transfer, peer)
+    }
+
+    private fun retryWriteRequestIfNeeded(
+        transfer: Transfer,
+        peer: Peer,
+    ) {
+        scope.launch {
+            if (retransmitEnabled) {
+                for (attempt in 1..retransmitAttemptCount) {
+                    delay(retransmitInterval)
+                    if (transfer.released || transfer.ackedWindow != 0)
+                        return@launch
+
+                    val currentAttempt = "$attempt/$retransmitAttemptCount"
+                    if (loggingEnabled) logger.debug { "EVAPROTOCOL: Retrying Write Request. Attempt $currentAttempt for peer: $peer" }
+                    sendWriteRequest(peer, transfer.info, transfer.id, transfer.nonce.toLong(), transfer)
+                }
+            }
+        }
+    }
+
+    private fun sendWriteRequest(
+        peer: Peer,
+        info: String,
+        id: String,
+        nonce: Long,
+        transfer: Transfer
+    ) {
         val writeRequestPacket = community.createEVAWriteRequest(
             peer,
             info,
