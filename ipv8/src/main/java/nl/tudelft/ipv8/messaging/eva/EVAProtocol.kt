@@ -339,7 +339,7 @@ open class EVAProtocol(
         outgoing[peer.key] = transfer
         scheduleTerminate(outgoing, peer, transfer)
 
-        sendWriteRequest(peer, info, id, nonce, transfer)
+        sendWriteRequest(peer, transfer)
         retryWriteRequestIfNeeded(transfer, peer)
     }
 
@@ -356,7 +356,7 @@ open class EVAProtocol(
 
                     val currentAttempt = "$attempt/$retransmitAttemptCount"
                     if (loggingEnabled) logger.debug { "EVAPROTOCOL: Retrying Write Request. Attempt $currentAttempt for peer: $peer" }
-                    sendWriteRequest(peer, transfer.info, transfer.id, transfer.nonce.toLong(), transfer)
+                    sendWriteRequest(peer, transfer)
                 }
             }
         }
@@ -364,16 +364,13 @@ open class EVAProtocol(
 
     private fun sendWriteRequest(
         peer: Peer,
-        info: String,
-        id: String,
-        nonce: Long,
         transfer: Transfer
     ) {
         val writeRequestPacket = community.createEVAWriteRequest(
             peer,
-            info,
-            id,
-            nonce.toULong(),
+            transfer.info,
+            transfer.id,
+            transfer.nonce,
             transfer.dataSize,
             transfer.blockCount.toUInt(),
             transfer.blockSize.toUInt(),
