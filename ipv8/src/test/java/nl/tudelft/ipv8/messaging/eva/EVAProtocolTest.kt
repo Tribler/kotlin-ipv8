@@ -469,8 +469,8 @@ class EVAProtocolTest : BaseCommunityTest() {
 
                 method.invoke(
                     evaProtocol,
-                    transfer,
-                    peer
+                    peer,
+                    transfer
                 )
 
                 for (i in 1..evaProtocol.retransmitAttemptCount) {

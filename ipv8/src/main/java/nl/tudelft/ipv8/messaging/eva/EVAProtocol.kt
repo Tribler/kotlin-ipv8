@@ -340,12 +340,12 @@ open class EVAProtocol(
         scheduleTerminate(outgoing, peer, transfer)
 
         sendWriteRequest(peer, transfer)
-        retryWriteRequestIfNeeded(transfer, peer)
+        retryWriteRequestIfNeeded(peer, transfer)
     }
 
     private fun retryWriteRequestIfNeeded(
-        transfer: Transfer,
         peer: Peer,
+        transfer: Transfer
     ) {
         scope.launch {
             if (retransmitEnabled) {
