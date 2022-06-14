@@ -3,7 +3,8 @@ CREATE TABLE revocations (
     version_id INTEGER NOT NULL,
     revoked_hash BLOB NOT NULL,
     FOREIGN KEY(authority_id) REFERENCES authorities(authority_id),
-    FOREIGN KEY(version_id) REFERENCES versions(version_id)
+    FOREIGN KEY(version_id) REFERENCES versions(version_id),
+    PRIMARY KEY(authority_id, version_id, revoked_hash)
 );
 
 CREATE TABLE versions (
@@ -23,7 +24,7 @@ CREATE TABLE authorities (
 );
 
 insertRevocation:
-INSERT INTO revocations (authority_id, version_id, revoked_hash)
+INSERT OR IGNORE INTO revocations (authority_id, version_id, revoked_hash)
 VALUES (?, ?, ?);
 
 insertVersion:
@@ -62,7 +63,7 @@ getRevocationsByAuthorityId:
 SELECT revoked_hash FROM revocations WHERE authority_id = ?;
 
 getRevocationsByAuthorityIdAndVersionId:
-SELECT revoked_hash FROM revocations WHERE authority_id = ? AND version_id = ?;
+SELECT revoked_hash FROM revocations WHERE authority_id = ? AND version_id = ? ORDER BY rowid;
 
 updateVersionFor:
 UPDATE authorities SET latest_version_id = ? WHERE public_key_hash = ?;
@@ -92,11 +93,20 @@ SELECT MIN(A.version_number) FROM versions AS A
 WHERE A.authority_id = ?1 AND
 NOT EXISTS (
     SELECT B.version_number FROM versions AS B
-    WHERE B.authority_id = ?1 AND A.version_number + 1 = B.version_number)
-GROUP BY A.version_number;
+    WHERE B.authority_id = ?1 AND A.version_number + 1 = B.version_number);
 
 isRevoked:
 SELECT 1 FROM revocations WHERE revoked_hash = ?;
 
 isRevokedBy:
 SELECT 1 FROM revocations WHERE revoked_hash = ? AND authority_id = ?;
+
+clearRevocations:
+DELETE FROM revocations;
+
+clearVersions:
+DELETE FROM versions;
+
+clearAuthorityVersions:
+UPDATE authorities
+SET latest_version_id = NULL;

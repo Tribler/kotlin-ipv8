@@ -19,7 +19,7 @@ import nl.tudelft.ipv8.messaging.*
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.*
 
-const val DELAY = 10000L
+const val DELAY = 2500L
 const val DEFAULT_GOSSIP_AMOUNT = 5
 private const val CHUNK_SIZE = 800
 
@@ -30,6 +30,7 @@ const val REVOCATION_UPDATE_REQUEST_PAYLOAD = 2
 const val REVOCATION_UPDATE_CHUNK_PAYLOAD = 3
 
 class RevocationCommunity(val authorityManager: AuthorityManager) : Community() {
+    private var udpDelay: Long = 0L
     override val serviceId = "fdbb9c5c18bf480a4baba08d352727e66ee89173"
 
     @Suppress("JoinDeclarationAndAssignment", "LateinitVarOverridesLateinitVar")
@@ -43,6 +44,8 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
 
     // Possibility to override the getPeers method when using shared network between Communities.
     private var fetchPeers: () -> List<Peer> = ::getPeers
+
+    var paused: Boolean = false
 
     private lateinit var revocationUpdateCallback: (publicKeyHash: ByteArray, version: Long, amount: Int) -> Unit
 
@@ -64,30 +67,56 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
     }
 
     private lateinit var gossipRoutine: Job
-    private val requestCache = RequestCache()
+    val requestCache = RequestCache()
 
     init {
         messageHandlers[REVOCATION_PRESENTATION_PAYLOAD] = ::onRevocationUpdatePreviewPayloadWrapper
         messageHandlers[REVOCATION_UPDATE_REQUEST_PAYLOAD] =
             ::onRevocationUpdateRequestPayloadWrapper
         messageHandlers[REVOCATION_UPDATE_CHUNK_PAYLOAD] = ::onRevocationUpdateChunkPayloadWrapper
-        start()
     }
 
-    fun start() {
-        this.gossipRoutine = GlobalScope.launch {
-            while (isActive) {
-                if (::network.isInitialized) {
-                    gossipRevocations(getRandomPeers(DEFAULT_GOSSIP_AMOUNT))
-                    delay(DELAY)
-                }
-            }
+    override fun load() {
+        super.load()
+        if (!this::network.isInitialized) {
+            this.network = super.network
         }
+
+        if (!this::myPeer.isInitialized) {
+            this.myPeer = super.myPeer
+        }
+
+        if (!this::endpoint.isInitialized) {
+            this.endpoint = super.endpoint
+        }
+        start()
     }
 
     override fun unload() {
         super.unload()
         this.gossipRoutine.cancel()
+    }
+
+    fun setUDPDelay(delay: Long) {
+        this.udpDelay = delay
+    }
+
+    fun start() {
+        this.gossipRoutine = GlobalScope.launch {
+            while (isActive) {
+                if (!paused) {
+                    try {
+                        gossipRevocations(getRandomPeers(DEFAULT_GOSSIP_AMOUNT))
+                    } catch (e: UninitializedPropertyAccessException) {
+                        logger.info("Community not fully initialised.")
+                    } finally {
+                        delay(DELAY)
+                    }
+                } else {
+                    delay(DELAY)
+                }
+            }
+        }
     }
 
     fun revokeAttestations(attestationHashes: List<ByteArray>) {
@@ -98,7 +127,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
             myAuthority = this.authorityManager.getAuthority(myPublicKeyHash)!!
         }
         val version = myAuthority.version + 1
-        var signableData = serializeULong(version.toULong())
+        var signableData = version.toByteArray()
         attestationHashes.forEach { signableData += it }
         val signature = (this.myPeer.key as PrivateKey).sign(sha3_256(signableData))
 
@@ -120,7 +149,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
     private fun onRevocationUpdateRequestPayloadWrapper(packet: Packet) {
         val (peer, payload) = packet.getAuthPayload(RevocationUpdateRequestPayload.Deserializer)
         logger.info("Received RevocationUpdateRequestPayload from ${peer.mid}.")
-        this.onRevocationUpdateRequestPayload(peer, payload)
+        GlobalScope.launch { onRevocationUpdateRequestPayload(peer, payload) }
     }
 
     private fun onRevocationUpdateChunkPayloadWrapper(packet: Packet) {
@@ -159,21 +188,33 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                                 this.requestCache,
                                 peer.publicKey.keyToHash(),
                                 key.bytes,
-                                i
+                                i,
+                                timeout = (30 + i * 10).toInt()
                             )
                         )
                     }
                 } else if (localVersion < remoteVersion) {
                     requestedRefs[key] = localVersion
                     for (i in (localVersion + 1L)..remoteVersion) {
-                        this.requestCache.add(
-                            PendingRevocationUpdateCache(
-                                this.requestCache,
-                                peer.publicKey.keyToHash(),
-                                key.bytes,
-                                i
+                        val peerHash = peer.publicKey.keyToHash()
+                        if (!this.requestCache.has(
+                                PendingRevocationUpdateCache.generateId(
+                                    peerHash,
+                                    key.bytes,
+                                    i
+                                )
                             )
-                        )
+                        ) {
+                            this.requestCache.add(
+                                PendingRevocationUpdateCache(
+                                    this.requestCache,
+                                    peerHash,
+                                    key.bytes,
+                                    i,
+                                    timeout = (30 + i * 10).toInt()
+                                )
+                            )
+                        }
                     }
                 }
             } else {
@@ -189,7 +230,8 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         }
     }
 
-    private fun onRevocationUpdateRequestPayload(
+    @OptIn(ExperimentalUnsignedTypes::class)
+    private suspend fun onRevocationUpdateRequestPayload(
         peer: Peer,
         payload: RevocationUpdateRequestPayload,
         bulkSending: Boolean = false,
@@ -203,6 +245,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
             val blob = serializeRevocationMap(revocations)
             val hash = sha1(blob)
             var sequenceNumber = 0
+            logger.info("Sending update chunks.")
             for (i in blob.indices step CHUNK_SIZE) {
                 val endIndex = if (i + CHUNK_SIZE > blob.size) blob.size else i + CHUNK_SIZE
                 val chunkPayload = RevocationUpdateChunkPayload(
@@ -219,15 +262,15 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
             }
         } else {
             val solicited =
-                this.requestCache.has(AllowedRevocationUpdateRequestCache.generateId(peer))
+                this.requestCache.pop(AllowedRevocationUpdateRequestCache.generateId(peer)) != null
             if (solicited) {
                 val revocations = mutableListOf<RevocationBlob>()
 
                 payload.revocationRefs.forEach { (hash, version) ->
                     revocations.addAll(this.authorityManager.getRevocations(hash.bytes, version))
                 }
-                logger.info("CLIENT REQUESTED THE FOLLOWING VERSIONS: ")
-                revocations.forEach { print("${it.version}, ") }
+
+                logger.info("Client request the following versions: ${revocations.forEachIndexed { index, it -> if (index != revocations.lastIndex) it.version.toString() + ", " else it.version }}")
 
                 // TODO: ths could be performed in coroutines, however, would most likely lead to package lost.
                 for (rev in revocations) {
@@ -244,6 +287,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                         val packet = serializePacket(REVOCATION_UPDATE_CHUNK_PAYLOAD, chunkPayload)
                         logger.info("Sending update chunk $sequenceNumber")
                         this.endpoint.send(peer, packet)
+                        delay(udpDelay)
                         sequenceNumber += 1
                     }
                 }
@@ -253,6 +297,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         }
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     private fun onRevocationUpdateChunkPayload(
         peer: Peer,
         payload: RevocationUpdateChunkPayload,
@@ -302,13 +347,17 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                                 blob.revocations
                             )
                             if (this::revocationUpdateCallback.isInitialized) {
-                                this.revocationUpdateCallback(hash.bytes, blob.version, blob.revocations.size)
+                                this.revocationUpdateCallback(
+                                    hash.bytes,
+                                    blob.version,
+                                    blob.revocations.size
+                                )
                             }
                         }
                     }
                 }
             } else {
-                logger.warn { "Received update we did not request, dropping." }
+                logger.warn("Received update we did not request, dropping.")
             }
         } else {
             val idPair =
@@ -347,6 +396,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                         logger.info("Inserting revocations without verification as authority is not recognized.")
                     }
 
+                    logger.info("IG-SSI: Inserting version ${revocationBlob.version} at ${System.currentTimeMillis()}, tot: ${this.authorityManager.authorityDatabase.getNumberOfRevocations()}")
                     this.authorityManager.insertRevocations(
                         revocationBlob.publicKeyHash,
                         revocationBlob.version,
@@ -362,11 +412,12 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
                     }
                 }
             } else {
-                logger.warn { "Received update for version ${payload.version} we did not request, dropping." }
+                logger.warn("Received update for version ${payload.version} we did not request, dropping.")
             }
         }
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     private fun serializeRevocationBlob(blob: RevocationBlob): ByteArray {
         var out =
             blob.publicKeyHash + blob.signature + serializeULong(blob.version.toULong()) + serializeUInt(
@@ -403,6 +454,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         return RevocationBlob(keyHash, version, signature, revocations)
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     private fun serializeRevocationMap(map: Map<ByteArrayKey, List<RevocationBlob>>): ByteArray {
         val size = map.size
         var out = serializeUInt(size.toUInt())
@@ -423,6 +475,7 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         return out
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     private fun deserializeRevocationMap(serialized: ByteArray): Map<ByteArrayKey, List<RevocationBlob>> {
         var localOffset = 0
         val out = hashMapOf<ByteArrayKey, List<RevocationBlob>>()
@@ -458,15 +511,15 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         return out
     }
 
-    private fun gossipMyRevocations() {
-        val peers = this.fetchPeers()
-        this.gossipRevocations(peers)
+    fun gossipRevocations() {
+        gossipRevocations(getRandomPeers(DEFAULT_GOSSIP_AMOUNT))
     }
 
     private fun getRandomPeers(amount: Int): List<Peer> {
         return this.fetchPeers().random(amount).toList()
     }
 
+    @OptIn(ExperimentalUnsignedTypes::class)
     private fun gossipRevocations(peers: List<Peer>) {
         val revocations = this.authorityManager.getLatestRevocationPreviews()
         if (revocations.isEmpty()) {
@@ -475,10 +528,19 @@ class RevocationCommunity(val authorityManager: AuthorityManager) : Community() 
         val payload = RevocationUpdatePreviewPayload(revocations)
         val packet = serializePacket(REVOCATION_PRESENTATION_PAYLOAD, payload)
         peers.forEach {
-            if (!requestCache.has(AllowedRevocationUpdateRequestCache.generateId(it))) {
-                logger.info("Sending revocation preview to ${it.mid}.")
-                endpoint.send(it, packet)
-                this.requestCache.add(AllowedRevocationUpdateRequestCache(this.requestCache, it))
+            if (!this.requestCache.has(AllowedRevocationUpdateRequestCache.generateId(it))) {
+                try {
+                    this.requestCache.add(
+                        AllowedRevocationUpdateRequestCache(
+                            this.requestCache,
+                            it
+                        )
+                    )
+                    logger.info("Sending revocation preview to ${it.mid}.")
+                    endpoint.send(it, packet)
+                } catch (e: RuntimeException) {
+                    // Other co-routine was faster.
+                }
             }
         }
     }

@@ -1,6 +1,5 @@
 package nl.tudelft.ipv8.attestation.revocation
 
-import mu.KotlinLogging
 import nl.tudelft.ipv8.attestation.common.Authority
 import nl.tudelft.ipv8.keyvault.PublicKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
@@ -19,8 +18,6 @@ private val authorityMapper: (
         recognized?.toInt() == 1
     )
 }
-
-private val logger = KotlinLogging.logger {}
 
 class AuthoritySQLiteStore(database: Database) : AuthorityStore {
     private val dao = database.dbAuthorityQueries
@@ -78,8 +75,13 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
                 .executeAsOne().version_id
         }
 
+        val authority = dao.getAuthorityByHash(publicKeyHash).executeAsOne()
+
         revokedHashes.forEach { dao.insertRevocation(authorityId, versionId, it) }
-        dao.updateVersionFor(versionId, publicKeyHash)
+
+        if ((authority.version_number ?: 0) < version) {
+            dao.updateVersionFor(versionId, publicKeyHash)
+        }
     }
 
     override fun getVersionsSince(publicKeyHash: ByteArray, sinceVersion: Long): List<Long> {
@@ -132,5 +134,11 @@ class AuthoritySQLiteStore(database: Database) : AuthorityStore {
         } else {
             dao.isRevokedBy(signature, authorityId).executeAsList().isNotEmpty()
         }
+    }
+
+    fun clearRevocations() {
+        dao.clearRevocations()
+        dao.clearVersions()
+        dao.clearAuthorityVersions()
     }
 }

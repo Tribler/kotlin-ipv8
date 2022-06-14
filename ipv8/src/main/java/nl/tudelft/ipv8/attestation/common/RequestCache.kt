@@ -13,13 +13,16 @@ class RequestCache {
     private val lock = Object()
     private val identifiers = hashMapOf<String, NumberCache>()
 
+    val size: Int
+        get() = this.identifiers.size
+
     fun add(cache: NumberCache): NumberCache? {
 
         synchronized(lock) {
             val identifier = this.createIdentifier(cache.prefix, cache.number)
 
             return if (identifiers.containsKey(identifier)) {
-                this.logger.error("Attempted to add cache with duplicate identifier $identifier.")
+                this.logger.warn("Attempted to add cache with duplicate identifier $identifier.")
                 null
             } else {
                 this.logger.debug("Add cache $cache")
@@ -57,8 +60,14 @@ class RequestCache {
         return this.get(identifierPair.first, identifierPair.second)
     }
 
+    fun clear() {
+        synchronized(lock) {
+            this.identifiers.values.forEach { it.stop() }
+            this.identifiers.clear()
+        }
+    }
+
     private fun createIdentifier(prefix: String, number: BigInteger): String {
         return "$prefix:$number"
     }
-
 }

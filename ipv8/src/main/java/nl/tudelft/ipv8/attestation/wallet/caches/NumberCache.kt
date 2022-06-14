@@ -30,12 +30,15 @@ abstract class NumberCache(
             val timeoutValue = (overWrittenTimeout ?: timeout) * SECOND_IN_MILLISECONDS
             withTimeout(timeoutValue) {
                 timeOutJob = launch {
-                    // Add some delta to ensure the timeout is triggered.
-                    delay(timeoutValue + SECOND_IN_MILLISECONDS)
+                    while (isActive) {
+                        // Add some delta to ensure the timeout is triggered.
+                        delay(timeoutValue + SECOND_IN_MILLISECONDS)
+                    }
                 }
             }
         } catch (e: TimeoutCancellationException) {
             logger.warn("Cache $prefix$number timed out")
+            requestCache.pop(prefix, number)
             calleeCallback?.invoke()
             onTimeout()
         }
