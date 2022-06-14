@@ -35,6 +35,28 @@ The project is a composed of several modules:
 - `demo-jvm` (JVM app) – The CLI app demonstrating the usage of `ipv8-jvm` library.
 - `tracker` (JVM app) – The bootstrap server implementation.
 
+## Building Kotlin-ipv8
+When building `kotlin-ipv8`, run `gradlew` using JDK 1.8. Either modify your `JAVA_HOME` path variable to point to JDK 1.8 or add a line to `gradle.properties` with `org.gradle.java.home=</path_to_jdk_directory>` (see this [stackoverflow link](https://stackoverflow.com/questions/18487406/how-do-i-tell-gradle-to-use-specific-jdk-version) for a discussion on the topic). Make sure to use forward slashes (`/`) for your path. To build specific modules, execute `gradlew :<module-name>:build`. To run, execute `gradlew :<module-name>:run`. For instance, run the JVM demo with `gradlew :demo-jvm:run`.
+
+## Building Kotlin-ipv8 as a library using Gradle
+
+The following list contains reminders and recommendations to help you import this project locally using Gradle,
+when using it as a library.
+
+- The project's root folder contains a `build.gradle` file that defines variables and dependencies that are used by
+the other `build.gradle` files in different modules. In order to use this project as a library, your own `build.gradle`
+file needs to define these variables and dependencies, too. A working template would be to simply copy parts of the root
+folder's `build.gradle` file.
+- Don't forget to `include ':ipv8'` into your own `settings.gradle`,
+as well as the module that you're going to use, presumably `ipv8-android` or `ipv8-jvm`.
+- This repository currently uses Gradle version `6.1.1`. Ensure that your `gradle-wrapper.properties` uses the same version.
+- This repository currently uses Java version `1.8`. Ensure that your Gradle builds with this, too.
+  - By default, Gradle looks at the `JAVA_HOME` variable, which might not point to `1.8`.
+- This repository currently uses Kotlin version `1.4.21`. Ensure that your Gradle builds with this Kotlin version.
+
+For an example of a project that uses this repository, refer to
+[the Trustchain app](https://github.com/Tribler/trustchain-superapp/).
+
 ## Sample apps
 
 ### Android
