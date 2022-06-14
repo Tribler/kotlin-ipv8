@@ -1,7 +1,7 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact
 
-import nl.tudelft.ipv8.attestation.wallet.primitives.FP2Value
-import nl.tudelft.ipv8.attestation.wallet.primitives.weilParing
+import nl.tudelft.ipv8.attestation.wallet.cryptography.primitives.FP2Value
+import nl.tudelft.ipv8.attestation.wallet.cryptography.primitives.weilParing
 import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.SecureRandom

@@ -76,9 +76,8 @@ abstract class Community : Overlay {
     }
 
     override fun unload() {
-        super.unload()
-
         job.cancel()
+        super.unload()
     }
 
     override fun bootstrap() {

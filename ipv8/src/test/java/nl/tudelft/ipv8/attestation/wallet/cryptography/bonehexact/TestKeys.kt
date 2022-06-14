@@ -1,6 +1,6 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact
 
-import nl.tudelft.ipv8.attestation.schema.SchemaManager
+import nl.tudelft.ipv8.attestation.common.SchemaManager
 import nl.tudelft.ipv8.util.toHex
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -23,5 +23,4 @@ class TestKeys {
         assertEquals(keyRecovHex, keyHex)
         assertEquals(key, keyRecov)
     }
-
 }

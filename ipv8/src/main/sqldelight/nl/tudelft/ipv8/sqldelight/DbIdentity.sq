@@ -1,0 +1,66 @@
+CREATE TABLE tokens (
+    public_key BLOB NOT NULL,
+    previous_token_hash BLOB NOT NULL,
+    signature BLOB NOT NULL,
+    content_hash BLOB NOT NULL,
+    content BLOB,
+    PRIMARY KEY (public_key, previous_token_hash, content_hash)
+);
+
+CREATE TABLE metadata (
+    public_key BLOB NOT NULL,
+    token_pointer BLOB NOT NULL,
+    signature BLOB NOT NULL,
+    serialized_json BLOB NOT NULL,
+    PRIMARY KEY (public_key, token_pointer)
+);
+
+CREATE TABLE identity_attestations (
+    public_key BLOB NOT NULL,
+    authority_key BLOB NOT NULL,
+    metadata_pointer BLOB NOT NULL,
+    signature BLOB NOT NULL,
+    PRIMARY KEY (public_key, metadata_pointer)
+);
+
+insertToken:
+INSERT OR IGNORE INTO tokens (public_key, previous_token_hash, signature, content_hash, content) VALUES(?, ?, ?, ?, ?);
+
+insertMetadata:
+INSERT OR IGNORE INTO metadata (public_key, token_pointer, signature, serialized_json) VALUES(?, ?, ?, ?);
+
+insertIdentityAttestation:
+INSERT OR IGNORE INTO identity_attestations (public_key, authority_key, metadata_pointer, signature) VALUES(?, ?, ?, ?);
+
+getTokensFor:
+SELECT previous_token_hash, signature, content_hash, content FROM tokens WHERE public_key = ?;
+
+getMetadataFor:
+SELECT token_pointer, signature, serialized_json FROM metadata WHERE public_key = ?;
+
+getAttestationsFor:
+SELECT metadata_pointer, signature FROM identity_attestations WHERE public_key = ?;
+
+getAttestationsBy:
+SELECT metadata_pointer, signature FROM identity_attestations WHERE authority_key = ?;
+
+getAttestationsOver:
+SELECT metadata_pointer, signature FROM identity_attestations WHERE metadata_pointer = ?;
+
+getAuthority:
+SELECT authority_key FROM identity_attestations WHERE signature = ?;
+
+getKnownIdentities:
+SELECT public_key FROM tokens;
+
+getKnownSubjects:
+SELECT DISTINCT public_key FROM metadata;
+
+deleteTokensFor:
+DELETE FROM tokens WHERE public_key = ?;
+
+deleteMetadataFor:
+DELETE FROM metadata WHERE public_key = ?;
+
+deleteIdentityAttestationsFor:
+DELETE FROM identity_attestations WHERE public_key = ?;

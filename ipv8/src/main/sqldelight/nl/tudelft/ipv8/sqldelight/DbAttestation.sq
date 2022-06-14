@@ -3,39 +3,24 @@ CREATE TABLE attestations (
     blob BLOB NOT NULL,
     key  BLOB NOT NULL,
     id_format TEXT NOT NULL,
-    meta_data TEXT,
-    signature BLOB,
-    attestor_key BLOB
-);
-
-CREATE TABLE authorities (
-    public_key BLOB NOT NULL,
-    hash TEXT NOT NULL
+    value BLOB,
+    PRIMARY KEY(hash)
 );
 
 getAllAttestations:
 SELECT * FROM attestations;
 
 insertAttestation:
-INSERT INTO attestations (hash, blob, key, id_format, meta_data, signature, attestor_key) VALUES(?, ?, ?, ?, ?, ?, ?);
+INSERT INTO attestations (hash, blob, key, id_format, value) VALUES(?, ?, ?, ?, ?);
 
 getAttestationByHash:
 SELECT blob FROM attestations WHERE hash = ?;
 
+getValueByHash:
+SELECT value FROM attestations WHERE hash = ?;
+
 deleteAttestationByHash:
 DELETE FROM attestations WHERE hash = ?;
 
-getAllAuthorities:
-SELECT * FROM authorities;
-
-insertAuthority:
-INSERT INTO authorities (public_key, hash) VALUES (?, ?);
-
-getAuthorityByPublicKey:
-SELECT public_key, hash FROM authorities WHERE public_key = ?;
-
-getAuthorityByHash:
-SELECT public_key, hash FROM authorities WHERE hash = ?;
-
-deleteAuthorityByHash:
-DELETE FROM authorities WHERE hash = ?;
+deleteAttestations:
+DELETE FROM attestations WHERE hash IN ?;

@@ -10,7 +10,7 @@ private val logger = KotlinLogging.logger {}
  * A strategy for selecting discovered Bluetooth peers we should connect to.
  */
 class BluetoothLeDiscovery(
-    private val overlay: Overlay,
+    override val overlay: Overlay,
     private val peers: Int
 ) : DiscoveryStrategy {
     override fun takeStep() {

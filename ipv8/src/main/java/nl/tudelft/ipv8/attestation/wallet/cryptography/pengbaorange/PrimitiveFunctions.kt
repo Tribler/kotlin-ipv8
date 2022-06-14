@@ -1,9 +1,14 @@
 package nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange
 
 import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPublicKey
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.attestations.PengBaoAttestation
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.boudot.primitives.EL
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.boudot.primitives.SQR
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.commitments.PengBaoCommitment
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.commitments.PengBaoPrivateData
+import nl.tudelft.ipv8.attestation.wallet.cryptography.pengbaorange.commitments.PengBaoPublicData
 import java.math.BigInteger
 import java.security.SecureRandom
-
 
 private fun randomNumber(bitLength: Int): BigInteger {
     return BigInteger(bitLength, SecureRandom())
@@ -60,7 +65,8 @@ fun createAttestationPair(
     val ca2 = publicKey.g.bigIntPow(m2) * publicKey.h.bigIntPow(r2)
     val ca3 = caa / (ca1 * ca2)
 
-    val el = EL.create(b.toBigInteger() - value + BigInteger.ONE,
+    val el = EL.create(
+        b.toBigInteger() - value + BigInteger.ONE,
         -r,
         ra,
         publicKey.g,
@@ -68,13 +74,14 @@ fun createAttestationPair(
         c1,
         publicKey.h,
         b,
-        bitSpace)
+        bitSpace
+    )
     val sqr1 = SQR.create(w, raa, ca, publicKey.h, b, bitSpace)
     val sqr2 = SQR.create(m4, r3, publicKey.g, publicKey.h, b, bitSpace)
 
     val publicData =
         PengBaoPublicData(publicKey, bitSpace, PengBaoCommitment(c, c1, c2, ca, ca1, ca2, ca3, caa), el, sqr1, sqr2)
-    val privateData = PengBaoCommitmentPrivate(m1, m2, m3, r1, r2, r3)
+    val privateData = PengBaoPrivateData(m1, m2, m3, r1, r2, r3)
 
     return PengBaoAttestation(publicData, privateData)
 }
@@ -95,3 +102,4 @@ fun sqrt(n: BigInteger): BigInteger? {
     }
     return a.subtract(BigInteger.ONE)
 }
+

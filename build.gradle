@@ -2,7 +2,7 @@
 
 buildscript {
     ext.kotlin_version = '1.4.21'
-    ext.ktlint_version = '0.36.0'
+    ext.ktlint_version = '0.41.0'
     ext.coroutines_version = '1.4.2'
     ext.ktlint_gradle_version = '9.1.1'
     // https://github.com/cashapp/sqldelight/issues/1574
@@ -18,7 +18,7 @@ buildscript {
         maven { url 'https://jitpack.io' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.0.0'
+        classpath 'com.android.tools.build:gradle:4.1.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlint_gradle_version"
         classpath "com.squareup.sqldelight:gradle-plugin:$sqldelight_version"

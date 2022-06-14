@@ -10,6 +10,8 @@ apply plugin: 'org.jlleitschuh.gradle.ktlint'
 
 apply plugin: 'com.squareup.sqldelight'
 
+apply plugin: 'kotlin-kapt'
+
 dokka {
     outputFormat = 'html'
     outputDirectory = "$buildDir/dokka"
@@ -78,6 +80,13 @@ dependencies {
     testImplementation "com.squareup.sqldelight:sqlite-driver:$sqldelight_version"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
 
+    implementation "org.openjdk.jmh:jmh-core:1.21"
+    kapt "org.openjdk.jmh:jmh-generator-annprocess:1.21"
+
+    // Guava
+    implementation "com.google.guava:guava:30.1.1-jre"
+    implementation "com.squareup.sqldelight:sqlite-driver:$sqldelight_version"
+
 
     // https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk15to18', version: '1.63'
@@ -88,6 +97,7 @@ dependencies {
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions.freeCompilerArgs += [
         "-Xuse-experimental=kotlin.Experimental,kotlin.ExperimentalUnsignedTypes",
+        "-Xopt-in=kotlin.RequiresOptIn",
         "-Werror" // Set Kotlin compiler warnings as errors
     ]
 }

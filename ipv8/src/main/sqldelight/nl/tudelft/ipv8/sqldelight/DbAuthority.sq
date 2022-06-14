@@ -1,0 +1,112 @@
+CREATE TABLE revocations (
+    authority_id INTEGER NOT NULL,
+    version_id INTEGER NOT NULL,
+    revoked_hash BLOB NOT NULL,
+    FOREIGN KEY(authority_id) REFERENCES authorities(authority_id),
+    FOREIGN KEY(version_id) REFERENCES versions(version_id),
+    PRIMARY KEY(authority_id, version_id, revoked_hash)
+);
+
+CREATE TABLE versions (
+    version_id INTEGER PRIMARY KEY,
+    authority_id INTEGER NOT NULL,
+    version_number INTEGER NOT NULL,
+    signature BLOB NOT NULL,
+    FOREIGN KEY(authority_id) REFERENCES authorities(authority_id)
+);
+
+CREATE TABLE authorities (
+    authority_id INTEGER PRIMARY KEY,
+    public_key BLOB,
+    public_key_hash BLOB UNIQUE NOT NULL,
+    latest_version_id INTEGER,
+    recognized INTEGER
+);
+
+insertRevocation:
+INSERT OR IGNORE INTO revocations (authority_id, version_id, revoked_hash)
+VALUES (?, ?, ?);
+
+insertVersion:
+INSERT INTO versions (authority_id, version_number, signature)
+VALUES (?, ?, ?);
+
+insertAuthority:
+INSERT INTO authorities (public_key, public_key_hash, latest_version_id, recognized)
+VALUES (?, ?, ?, ?);
+
+getAllRecognizedAuthorities:
+SELECT A.public_key, A.public_key_hash, V.version_number, A.recognized FROM authorities AS A
+LEFT JOIN versions AS V ON A.latest_version_id = V.version_id
+WHERE A.recognized = 1;
+
+getAllAuthorities:
+SELECT A.public_key, A.public_key_hash, V.version_number, A.recognized FROM authorities AS A
+LEFT JOIN versions AS V ON A.latest_version_id = V.version_id;
+
+getAuthorityIdByHash:
+SELECT authority_id FROM authorities
+WHERE authorities.public_key_hash = ? LIMIT 1;
+
+getAuthorityByHash:
+SELECT A.public_key, A.public_key_hash, V.version_number, A.recognized FROM authorities AS A
+LEFT JOIN versions AS V ON A.latest_version_id = V.version_id
+WHERE public_key_hash = ?;
+
+recognizeAuthority:
+UPDATE authorities SET recognized = 1 WHERE public_key_hash = ?;
+
+disregardAuthority:
+UPDATE authorities SET recognized = 0 WHERE public_key_hash = ?;
+
+getRevocationsByAuthorityId:
+SELECT revoked_hash FROM revocations WHERE authority_id = ?;
+
+getRevocationsByAuthorityIdAndVersionId:
+SELECT revoked_hash FROM revocations WHERE authority_id = ? AND version_id = ? ORDER BY rowid;
+
+updateVersionFor:
+UPDATE authorities SET latest_version_id = ? WHERE public_key_hash = ?;
+
+getVersionByAuthorityIDandVersionNumber:
+SELECT * FROM versions WHERE authority_id = ? AND version_number = ?;
+
+getVersionsByAuthorityIDandVersionNumbers:
+SELECT * FROM versions WHERE authority_id = ? AND version_number IN ?;
+
+getVersionsSince:
+SELECT version_number FROM versions WHERE authority_id = ? AND version_number > ?;
+
+getAllRevocations:
+SELECT A.public_key_hash, V.version_number, V.signature, R.revoked_hash FROM authorities AS A
+LEFT JOIN versions AS V ON A.latest_version_id = V.version_id
+LEFT JOIN revocations AS R ON A.authority_id = R.authority_id;
+
+getRevocations:
+SELECT revoked_hash FROM revocations;
+
+getNumberOfRevocations:
+SELECT COUNT(*) FROM revocations;
+
+getMissingVersionByAuthorityID:
+SELECT MIN(A.version_number) FROM versions AS A
+WHERE A.authority_id = ?1 AND
+NOT EXISTS (
+    SELECT B.version_number FROM versions AS B
+    WHERE B.authority_id = ?1 AND A.version_number + 1 = B.version_number);
+
+isRevoked:
+SELECT 1 FROM revocations WHERE revoked_hash = ?;
+
+isRevokedBy:
+SELECT 1 FROM revocations WHERE revoked_hash = ? AND authority_id = ?;
+
+clearRevocations:
+DELETE FROM revocations;
+
+clearVersions:
+DELETE FROM versions;
+
+clearAuthorityVersions:
+UPDATE authorities
+SET latest_version_id = NULL;

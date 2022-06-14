@@ -1,9 +1,23 @@
 package nl.tudelft.ipv8.attestation.wallet.caches
 
-import nl.tudelft.ipv8.attestation.wallet.RequestCache
+import kotlinx.coroutines.*
+import mu.KotlinLogging
+import nl.tudelft.ipv8.attestation.common.RequestCache
 import java.math.BigInteger
 
-abstract class NumberCache(val requestCache: RequestCache, val prefix: String, val number: BigInteger) {
+private val logger = KotlinLogging.logger {}
+
+const val DEFAULT_TIMEOUT = 180
+const val SECOND_IN_MILLISECONDS = 1000L
+
+abstract class NumberCache(
+    val requestCache: RequestCache,
+    val prefix: String,
+    val number: BigInteger,
+    open val timeout: Int = DEFAULT_TIMEOUT,
+    private val onTimeout: () -> Unit = {},
+) {
+    private lateinit var timeOutJob: Job
 
     init {
         if (requestCache.has(prefix, number)) {
@@ -11,6 +25,29 @@ abstract class NumberCache(val requestCache: RequestCache, val prefix: String, v
         }
     }
 
-    // TODO: implement futures.
+    suspend fun start(overWrittenTimeout: Int? = null, calleeCallback: (() -> Unit)? = null) {
+        try {
+            val timeoutValue = (overWrittenTimeout ?: timeout) * SECOND_IN_MILLISECONDS
+            withTimeout(timeoutValue) {
+                timeOutJob = launch {
+                    while (isActive) {
+                        // Add some delta to ensure the timeout is triggered.
+                        delay(timeoutValue + SECOND_IN_MILLISECONDS)
+                    }
+                }
+            }
+        } catch (e: TimeoutCancellationException) {
+            logger.warn("Cache $prefix$number timed out")
+            requestCache.pop(prefix, number)
+            calleeCallback?.invoke()
+            onTimeout()
+        }
+    }
+
+    fun stop() {
+        if (this::timeOutJob.isInitialized) {
+            this.timeOutJob.cancel()
+        }
+    }
 
 }
