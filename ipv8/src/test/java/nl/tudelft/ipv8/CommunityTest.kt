@@ -1,24 +1,20 @@
 package nl.tudelft.ipv8
 
-import com.goterl.lazycode.lazysodium.LazySodiumJava
-import com.goterl.lazycode.lazysodium.SodiumJava
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import nl.tudelft.ipv8.keyvault.*
+import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
+import nl.tudelft.ipv8.keyvault.PrivateKey
+import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.Address
 import nl.tudelft.ipv8.messaging.Packet
-import nl.tudelft.ipv8.messaging.payload.BinMemberAuthenticationPayload
-import nl.tudelft.ipv8.messaging.payload.GlobalTimeDistributionPayload
 import nl.tudelft.ipv8.messaging.payload.PunctureRequestPayload
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.hexToBytes
 import nl.tudelft.ipv8.util.toHex
 import org.junit.Assert
 import org.junit.Test
-
-private val lazySodium = LazySodiumJava(SodiumJava())
 
 class CommunityTest : BaseCommunityTest() {
     private fun getCommunity(): TestCommunity {
