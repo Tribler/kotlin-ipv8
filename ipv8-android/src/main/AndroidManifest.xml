@@ -22,7 +22,7 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <application>
-        <service android:name=".service.IPv8Service" />
-        <receiver android:name=".service.StopIPv8Receiver" />
+        <service android:exported="true" android:name=".service.IPv8Service" />
+        <receiver android:exported="true" android:name=".service.StopIPv8Receiver" />
     </application>
 </manifest>

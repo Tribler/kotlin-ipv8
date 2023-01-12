@@ -40,7 +40,7 @@ class TFTPServer(
                 handleWrite(packet)
             }
         } else {
-            buffer.offer(packet)
+            buffer.trySend(packet).isSuccess
         }
     }
 
