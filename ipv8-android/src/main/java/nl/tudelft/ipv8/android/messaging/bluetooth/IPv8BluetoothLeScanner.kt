@@ -1,5 +1,6 @@
 package nl.tudelft.ipv8.android.messaging.bluetooth
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.*
 import android.os.ParcelUuid
@@ -62,6 +63,7 @@ class IPv8BluetoothLeScanner(
         }
     }
 
+    @SuppressLint("MissingPermission") // TODO: Fix permission usage.
     fun start() {
         logger.debug { "startScan" }
 
@@ -77,6 +79,7 @@ class IPv8BluetoothLeScanner(
         leScanner.startScan(listOf(serviceScanFilter), settingsBuilder.build(), scanCallback)
     }
 
+    @SuppressLint("MissingPermission") // TODO: Fix permission usage.
     fun stop() {
         logger.debug { "stopScan" }
 

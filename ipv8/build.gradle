@@ -64,7 +64,7 @@ dependencies {
     implementation 'commons-net:commons-net:3.6'
 
     // Crypto
-    implementation "com.goterl:lazysodium-java:5.0.1"
+    implementation "com.goterl:lazysodium-java:5.1.4"
 
     // Logging
     implementation 'io.github.microutils:kotlin-logging:1.7.7'
@@ -87,7 +87,7 @@ dependencies {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions.freeCompilerArgs += [
-        "-Xuse-experimental=kotlin.Experimental,kotlin.ExperimentalUnsignedTypes",
+        "-opt-in=kotlin.Experimental,kotlin.ExperimentalUnsignedTypes",
         "-Werror" // Set Kotlin compiler warnings as errors
     ]
 }

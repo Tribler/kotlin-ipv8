@@ -39,14 +39,14 @@ class TFTPClientTest {
                     val ack = TFTPAckPacket(clientHost, clientPort, 0)
                     ack.address = serverHost
                     ack.port = serverPort
-                    socket.receiveBuffer.offer(ack.newDatagram())
+                    socket.receiveBuffer.trySend(ack.newDatagram()).isSuccess
                 }
                 TFTPPacket.DATA -> {
                     val dataPacket = tftpPacket as TFTPDataPacket
                     val ack = TFTPAckPacket(clientHost, clientPort, dataPacket.blockNumber)
                     ack.address = serverHost
                     ack.port = serverPort
-                    socket.receiveBuffer.offer(ack.newDatagram())
+                    socket.receiveBuffer.trySend(ack.newDatagram()).isSuccess
                 }
                 else -> {
                     throw IllegalStateException("Unsupported packet type: ${tftpPacket.type}")
@@ -98,7 +98,7 @@ class TFTPClientTest {
             val datagram = packet.newDatagram()
             datagram.address = serverHost
             datagram.port = serverPort
-            socket.receiveBuffer.offer(datagram)
+            socket.receiveBuffer.trySend(datagram).isSuccess
         }
 
         val sentPackets = mutableListOf<TFTPPacket>()

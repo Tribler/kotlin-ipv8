@@ -23,7 +23,7 @@ class AndroidUdpEndpoint(
             logger.debug("onLinkPropertiesChanged " + linkProperties.linkAddresses)
             for (linkAddress in linkProperties.linkAddresses) {
                 if (linkAddress.address is Inet4Address && !linkAddress.address.isLoopbackAddress) {
-                    val estimatedAddress = IPv4Address(linkAddress.address.hostAddress, getSocketPort())
+                    val estimatedAddress = IPv4Address(linkAddress.address.hostAddress!!, getSocketPort())
                     setEstimatedLan(estimatedAddress)
                 }
             }

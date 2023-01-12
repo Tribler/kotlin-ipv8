@@ -1,5 +1,6 @@
 package nl.tudelft.ipv8.android.messaging.bluetooth
 
+import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.content.Context
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -92,9 +93,11 @@ class BluetoothLeEndpoint(
     /**
      * Enable Bluetooth if not enabled.
      */
+    @SuppressLint("MissingPermission")
     private fun ensureBluetoothEnabled() {
         val bluetoothAdapter = bluetoothManager.adapter
         if (!bluetoothAdapter.isEnabled) {
+            @Suppress("DEPRECATION") // TODO: fix bluetooth permission handling.
             bluetoothAdapter.enable()
         }
     }
