@@ -15,6 +15,7 @@ import java.net.InetAddress
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TFTPEndpointTest {
+    @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
     fun send() = runBlockingTest {
         val tftpClient = spyk<TFTPClient>()
@@ -39,6 +40,7 @@ class TFTPEndpointTest {
         */
     }
 
+    @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     /* @Test */
     fun onPacket_forServer() = runBlockingTest {
         val tftpClient = mockk<TFTPClient>(relaxed = true)
@@ -69,6 +71,7 @@ class TFTPEndpointTest {
         }
     }
 
+    @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
     fun onPacket_forClient() = runBlockingTest {
         val tftpClient = TFTPClient()

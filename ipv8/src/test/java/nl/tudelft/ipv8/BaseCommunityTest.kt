@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION") // TODO: replace TestCoroutineDispatcher.
+
 package nl.tudelft.ipv8
 
 import com.goterl.lazysodium.LazySodiumJava

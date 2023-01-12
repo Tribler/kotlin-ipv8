@@ -36,6 +36,7 @@ class TrustChainCrawlerTest : BaseCommunityTest() {
         return community
     }
 
+    @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
     fun crawlChain_noop() = runBlockingTest {
         val crawler = TrustChainCrawler()
@@ -65,6 +66,7 @@ class TrustChainCrawlerTest : BaseCommunityTest() {
         Assert.assertEquals(1, trustChainCommunity.database.getAllBlocks().size)
     }
 
+    @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
     fun crawlChain_singleBlock() = runBlockingTest {
         val crawler = TrustChainCrawler()
@@ -114,6 +116,7 @@ class TrustChainCrawlerTest : BaseCommunityTest() {
         Assert.assertEquals(2, trustChainCommunity.database.getAllBlocks().size)
     }
 
+    @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
     fun crawlChain_fillGap() = runBlockingTest {
         val crawler = TrustChainCrawler()
