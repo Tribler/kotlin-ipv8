@@ -63,7 +63,7 @@ dependencies {
 
     // Crypto
     implementation "com.goterl:lazysodium-android:5.0.1@aar"
-    implementation 'net.java.dev.jna:jna:5.5.0@aar'
+    implementation 'net.java.dev.jna:jna:5.8.0'
 
     // BLE
     implementation 'no.nordicsemi.android:ble:2.2.0-alpha06'
