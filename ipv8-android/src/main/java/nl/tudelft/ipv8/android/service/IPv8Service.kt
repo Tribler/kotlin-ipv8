@@ -3,9 +3,12 @@ package nl.tudelft.ipv8.android.service
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_IMMUTABLE
+import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.os.Build.VERSION.SDK_INT
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
@@ -68,7 +71,7 @@ open class IPv8Service : Service(), LifecycleObserver {
     private fun createNotificationChannel() {
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_LOW
             val channel = NotificationChannel(
                 NOTIFICATION_CHANNEL_CONNECTION,
@@ -85,9 +88,13 @@ open class IPv8Service : Service(), LifecycleObserver {
 
     private fun showForegroundNotification() {
         val cancelBroadcastIntent = Intent(this, StopIPv8Receiver::class.java)
+        val flags = when {
+            SDK_INT >= Build.VERSION_CODES.M -> FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE
+            else -> FLAG_UPDATE_CURRENT
+        }
         val cancelPendingIntent = PendingIntent.getBroadcast(
             applicationContext,
-            0, cancelBroadcastIntent, 0
+            0, cancelBroadcastIntent, flags
         )
 
         val builder = createNotification()

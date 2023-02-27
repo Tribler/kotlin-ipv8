@@ -101,7 +101,7 @@ class TFTPEndpoint(
                 tftpServer.onPacket(tftpPacket)
             } else if (tftpPacket is TFTPAckPacket || tftpPacket is TFTPErrorPacket) {
                 // This is a packet for the client
-                tftpSocket.buffer.offer(packet)
+                tftpSocket.buffer.trySend(packet).isSuccess
             } else {
                 // This is an unsupported packet (ReadRequest)
                 logger.debug { "Unsupported TFTP packet type" }
