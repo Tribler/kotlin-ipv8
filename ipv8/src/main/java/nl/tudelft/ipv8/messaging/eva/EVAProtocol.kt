@@ -27,6 +27,7 @@ open class EVAProtocol(
     var timeoutInterval: Long = TIMEOUT_INTERVAL,
     var reduceWindowAfterTimeout: Int = REDUCE_WINDOW_AFTER_TIMEOUT,
     var loggingEnabled: Boolean = true,
+    var encrypt: Boolean = false
 ) {
     private var scheduled: MutableMap<Key, Queue<ScheduledTransfer>> = mutableMapOf()
     private var incoming: MutableMap<Key, Transfer> = mutableMapOf()

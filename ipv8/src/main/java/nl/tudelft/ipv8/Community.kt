@@ -268,7 +268,7 @@ abstract class Community : Overlay {
     ): ByteArray {
         val payload =
             EVAWriteRequestPayload(info, id, nonce, dataSize, blockCount, blockSize, windowSize)
-        return serializePacket(MessageId.EVA_WRITE_REQUEST, payload, encrypt = ENCRYPT_EVA, recipient = peer)
+        return serializePacket(MessageId.EVA_WRITE_REQUEST, payload, encrypt = evaProtocol?.encrypt ?: false, recipient = peer)
     }
 
     fun createEVAAcknowledgement(
@@ -278,17 +278,17 @@ abstract class Community : Overlay {
         unReceivedBlocks: ByteArray
     ): ByteArray {
         val payload = EVAAcknowledgementPayload(nonce, ackWindow, unReceivedBlocks)
-        return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload, encrypt = ENCRYPT_EVA, recipient = peer)
+        return serializePacket(MessageId.EVA_ACKNOWLEDGEMENT, payload, encrypt = evaProtocol?.encrypt ?: false, recipient = peer)
     }
 
     fun createEVAData(peer: Peer, blockNumber: UInt, nonce: ULong, data: ByteArray): ByteArray {
         val payload = EVADataPayload(blockNumber, nonce, data)
-        return serializePacket(MessageId.EVA_DATA, payload, encrypt = ENCRYPT_EVA, recipient = peer)
+        return serializePacket(MessageId.EVA_DATA, payload, encrypt = evaProtocol?.encrypt ?: false, recipient = peer)
     }
 
     fun createEVAError(peer: Peer, info: String, message: String): ByteArray {
         val payload = EVAErrorPayload(info, message)
-        return serializePacket(MessageId.EVA_ERROR, payload, encrypt = ENCRYPT_EVA, recipient = peer)
+        return serializePacket(MessageId.EVA_ERROR, payload, encrypt = evaProtocol?.encrypt ?: false, recipient = peer)
     }
 
     /**
@@ -403,7 +403,7 @@ abstract class Community : Overlay {
      * @param packet specific packets for the EVA protocol (write request, ack, data, error)
      */
     internal fun onEVAWriteRequestPacket(packet: Packet) {
-        val (peer, payload) = if (ENCRYPT_EVA) {
+        val (peer, payload) = if (evaProtocol?.encrypt == true) {
             packet.getDecryptedAuthPayload(
                 EVAWriteRequestPayload.Deserializer,
                 myPeer.key as PrivateKey)
@@ -415,7 +415,7 @@ abstract class Community : Overlay {
     }
 
     internal fun onEVAAcknowledgementPacket(packet: Packet) {
-        val (peer, payload) = if (ENCRYPT_EVA) {
+        val (peer, payload) = if (evaProtocol?.encrypt == true) {
             packet.getDecryptedAuthPayload(
                 EVAAcknowledgementPayload.Deserializer,
                 myPeer.key as PrivateKey
@@ -428,7 +428,7 @@ abstract class Community : Overlay {
     }
 
     internal fun onEVADataPacket(packet: Packet) {
-        val (peer, payload) = if (ENCRYPT_EVA) {
+        val (peer, payload) = if (evaProtocol?.encrypt == true) {
             packet.getDecryptedAuthPayload(
                 EVADataPayload.Deserializer,
                 myPeer.key as PrivateKey
@@ -441,7 +441,7 @@ abstract class Community : Overlay {
     }
 
     internal fun onEVAErrorPacket(packet: Packet) {
-        val (peer, payload) = if (ENCRYPT_EVA) {
+        val (peer, payload) = if (evaProtocol?.encrypt == true) {
             packet.getDecryptedAuthPayload(
                 EVAErrorPayload.Deserializer,
                 myPeer.key as PrivateKey
@@ -681,8 +681,6 @@ abstract class Community : Overlay {
 
         const val PREFIX_IPV8: Byte = 0
         const val VERSION: Byte = 2
-
-        const val ENCRYPT_EVA = false
     }
 
     object MessageId {
