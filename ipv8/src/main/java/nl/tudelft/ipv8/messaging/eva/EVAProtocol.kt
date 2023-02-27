@@ -619,6 +619,7 @@ open class EVAProtocol(
     /**
      * Send the next scheduled transfer
      */
+    @Synchronized
     private fun sendScheduled() {
         val idlePeerKeys = scheduled
             .filter { !outgoing.contains(it.key) }

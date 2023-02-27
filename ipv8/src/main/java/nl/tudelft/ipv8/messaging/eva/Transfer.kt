@@ -192,16 +192,35 @@ fun CharSequence.splitIgnoreEmpty(vararg delimiters: String): List<String> {
 }
 
 fun ByteArray.decodeToIntegerList(): List<Int> {
-    return this.decodeToString()
-        .removeSurrounding("[", "]")
-        .replace(" ", "")
-        .splitIgnoreEmpty(",")
-        .map { it.toInt() }
+    val list = mutableListOf<Int>()
+
+    var i = 0
+    while (i < size) {
+        list.add(
+            (this[i + 3].toInt() shl 24) or
+                (this[i + 2].toInt() and 0xff shl 16) or
+                (this[i + 1].toInt() and 0xff shl 8) or
+                (this[i].toInt() and 0xff)
+        )
+
+        i += 4
+    }
+
+    return list
 }
 
 fun List<Int>.encodeToByteArray(): ByteArray {
-    return this.map { it.toString() }
-        .toTypedArray()
-        .contentToString()
-        .encodeToByteArray()
+    val byteArray = ByteArray(size * 4)
+
+    var i = 0
+    for (number in this) {
+        byteArray[i] = (number shr 0).toByte()
+        byteArray[i + 1] = (number shr 8).toByte()
+        byteArray[i + 2] = (number shr 16).toByte()
+        byteArray[i + 3] = (number shr 24).toByte()
+
+        i += 4
+    }
+
+    return byteArray
 }
