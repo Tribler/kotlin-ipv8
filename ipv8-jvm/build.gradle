@@ -6,6 +6,6 @@ dependencies {
     api project(':ipv8')
 
     implementation "net.java.dev.jna:jna:5.5.0"
-    implementation 'org.slf4j:slf4j-simple:1.7.29'
+    implementation 'org.slf4j:slf4j-simple:2.0.6'
     implementation "com.squareup.sqldelight:sqlite-driver:$sqldelight_version"
 }
