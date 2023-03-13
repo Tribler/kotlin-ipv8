@@ -2,8 +2,8 @@ package nl.tudelft.ipv8.messaging.eva
 
 import io.mockk.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.test.TestCoroutineScope
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import nl.tudelft.ipv8.*
 import nl.tudelft.ipv8.keyvault.Key
 import nl.tudelft.ipv8.keyvault.PrivateKey
@@ -354,7 +354,7 @@ class EVAProtocolTest : BaseCommunityTest() {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun startOutgoingTransferRetriesWriteRequestOnFailure() = runBlockingTest {
+    fun startOutgoingTransferRetriesWriteRequestOnFailure() = runBlocking {
         val community = spyk(getCommunity())
         community.load()
 
@@ -371,7 +371,7 @@ class EVAProtocolTest : BaseCommunityTest() {
 
         assertEquals(1, community.getPeers().size)
 
-        val scope = TestCoroutineScope()
+        val scope = TestScope()
         community.evaProtocol = EVAProtocol(community, scope, timeoutInterval = 30000)
 
         community.evaProtocol?.let { evaProtocol ->
@@ -396,8 +396,7 @@ class EVAProtocolTest : BaseCommunityTest() {
                 )
 
                 for (i in 1..evaProtocol.retransmitAttemptCount) {
-                    scope.advanceTimeBy(evaProtocol.retransmitInterval)
-                    delay(1000)
+                    scope.advanceTimeBy(evaProtocol.retransmitInterval + 1000)
                 }
 
                 verify(
@@ -425,13 +424,13 @@ class EVAProtocolTest : BaseCommunityTest() {
 
             }
         }
-
+        scope.cancel()
         community.unload()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun doesNotRetryWriteRequestIfNotNeeded() = runBlockingTest {
+    fun doesNotRetryWriteRequestIfNotNeeded() = runBlocking {
         val community = spyk(getCommunity())
         community.load()
 
@@ -448,7 +447,7 @@ class EVAProtocolTest : BaseCommunityTest() {
 
         assertEquals(1, community.getPeers().size)
 
-        val scope = TestCoroutineScope()
+        val scope = TestScope()
 
         community.evaProtocol = EVAProtocol(community, scope, timeoutInterval = 30000)
 
@@ -486,7 +485,7 @@ class EVAProtocolTest : BaseCommunityTest() {
                 }
             }
         }
-
+        scope.cancel()
         community.unload()
     }
 
