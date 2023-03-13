@@ -473,8 +473,7 @@ class EVAProtocolTest : BaseCommunityTest() {
                 )
 
                 for (i in 1..evaProtocol.retransmitAttemptCount) {
-                    scope.advanceTimeBy(evaProtocol.retransmitInterval)
-                    delay(1000)
+                    scope.advanceTimeBy(evaProtocol.retransmitInterval + 1000)
                 }
 
                 verify(
