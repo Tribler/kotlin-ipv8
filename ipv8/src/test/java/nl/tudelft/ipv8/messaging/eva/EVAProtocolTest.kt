@@ -3,7 +3,6 @@ package nl.tudelft.ipv8.messaging.eva
 import io.mockk.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.TestCoroutineScope
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runBlockingTest
 import nl.tudelft.ipv8.*
 import nl.tudelft.ipv8.keyvault.Key
@@ -353,7 +352,6 @@ class EVAProtocolTest : BaseCommunityTest() {
         community.unload()
     }
 
-    @Suppress("DEPRECATION")
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun startOutgoingTransferRetriesWriteRequestOnFailure() = runBlockingTest {
@@ -373,7 +371,6 @@ class EVAProtocolTest : BaseCommunityTest() {
 
         assertEquals(1, community.getPeers().size)
 
-        @Suppress("DEPRECATION")
         val scope = TestCoroutineScope()
         community.evaProtocol = EVAProtocol(community, scope, timeoutInterval = 30000)
 
@@ -399,7 +396,6 @@ class EVAProtocolTest : BaseCommunityTest() {
                 )
 
                 for (i in 1..evaProtocol.retransmitAttemptCount) {
-                    @Suppress("DEPRECATION")
                     scope.advanceTimeBy(evaProtocol.retransmitInterval)
                     delay(1000)
                 }
@@ -433,7 +429,6 @@ class EVAProtocolTest : BaseCommunityTest() {
         community.unload()
     }
 
-    @Suppress("DEPRECATION")
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun doesNotRetryWriteRequestIfNotNeeded() = runBlockingTest {
@@ -453,7 +448,6 @@ class EVAProtocolTest : BaseCommunityTest() {
 
         assertEquals(1, community.getPeers().size)
 
-        @Suppress("DEPRECATION")
         val scope = TestCoroutineScope()
 
         community.evaProtocol = EVAProtocol(community, scope, timeoutInterval = 30000)
@@ -480,7 +474,6 @@ class EVAProtocolTest : BaseCommunityTest() {
                 )
 
                 for (i in 1..evaProtocol.retransmitAttemptCount) {
-                    @Suppress("DEPRECATION")
                     scope.advanceTimeBy(evaProtocol.retransmitInterval)
                     delay(1000)
                 }
