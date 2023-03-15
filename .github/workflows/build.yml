@@ -25,17 +25,20 @@ jobs:
       - name: Run Check
         run: ./gradlew check
 
+      - name: Run Jacoco
+        run: ./gradlew jacocoTestReport
+
       - name: Upload Report
         uses: 'actions/upload-artifact@v2'
         with:
           name: report.xml
-          path: ${{ github.workspace }}/build/reports/jacoco/testCoverage/testCoverage.xml
+          path: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/jacocoTestReport.xml
 
       - name: Add coverage to PR
         id: jacoco
         uses: madrapps/jacoco-report@v1.3
         with:
-          paths: ${{ github.workspace }}/build/reports/jacoco/testCoverage/testCoverage.xml
+          paths: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 40
           min-coverage-changed-files: 60
