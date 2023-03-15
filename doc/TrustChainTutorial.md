@@ -29,7 +29,7 @@ In TrustChain, a half-block pair represents exactly one transaction. A half-bloc
 
 We get a reference to the TrustChainCommunity:
  ```kotlin
- val trustchain = IPV8Android.getInstance().getOverlay<TrustChainCommunity>()!!
+ val trustchain = IPv8Android.getInstance().getOverlay<TrustChainCommunity>()!!
  ```
 
 We start by creating a proposal block. We use `TrustChainCommunity.createProposalBlock` method that takes three parameters:

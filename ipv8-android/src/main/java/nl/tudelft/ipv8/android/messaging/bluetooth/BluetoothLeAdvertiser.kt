@@ -1,5 +1,6 @@
 package nl.tudelft.ipv8.android.messaging.bluetooth
 
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
@@ -34,6 +35,7 @@ class IPv8BluetoothLeAdvertiser(
 
     private var isAdvertising = false
 
+    @SuppressLint("MissingPermission") // TODO: Fix permission usage.
     fun start(myPeer: Peer) {
         val settings = AdvertiseSettings.Builder()
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
@@ -48,6 +50,7 @@ class IPv8BluetoothLeAdvertiser(
         leAdvertiser?.startAdvertising(settings, advertiseData, scanResponse, advertiseCallback)
     }
 
+    @SuppressLint("MissingPermission") // TODO: Fix permission usage.
     fun stop() {
         leAdvertiser?.stopAdvertising(advertiseCallback)
     }
