@@ -2,12 +2,12 @@ package nl.tudelft.ipv8.android.peerdiscovery
 
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import kotlin.random.Random
 import mu.KotlinLogging
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.peerdiscovery.strategy.DiscoveryStrategy
-import kotlin.random.Random
 
 private val logger = KotlinLogging.logger {}
 

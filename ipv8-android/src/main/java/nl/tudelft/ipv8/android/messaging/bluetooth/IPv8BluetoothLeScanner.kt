@@ -4,13 +4,13 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.*
 import android.os.ParcelUuid
+import java.lang.Exception
 import kotlinx.coroutines.*
 import mu.KotlinLogging
 import nl.tudelft.ipv8.android.messaging.bluetooth.GattServerManager.Companion.SERVICE_UUID
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothPeerCandidate
 import nl.tudelft.ipv8.peerdiscovery.Network
-import java.lang.Exception
 
 private val logger = KotlinLogging.logger {}
 

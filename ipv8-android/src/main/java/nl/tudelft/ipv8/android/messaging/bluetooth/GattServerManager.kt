@@ -4,9 +4,9 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
 import android.content.Context
 import android.util.Log
+import java.util.*
 import nl.tudelft.ipv8.Peer
 import no.nordicsemi.android.ble.BleServerManager
-import java.util.*
 
 class GattServerManager(
     context: Context,

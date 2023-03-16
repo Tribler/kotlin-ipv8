@@ -46,8 +46,12 @@ class GattClientManager(context: Context) : BleManager<GattClientCallbacks>(cont
 
             val gattService = gatt.getService(GattServerManager.SERVICE_UUID)
             return if (gattService != null) {
-                writeCharacteristic = gattService.getCharacteristic(GattServerManager.WRITE_CHARACTERISTIC_UUID)
-                identityCharacteristic = gattService.getCharacteristic(GattServerManager.IDENTITY_CHARACTERISTIC_UUID)
+                writeCharacteristic = gattService.getCharacteristic(
+                    GattServerManager.WRITE_CHARACTERISTIC_UUID
+                )
+                identityCharacteristic = gattService.getCharacteristic(
+                    GattServerManager.IDENTITY_CHARACTERISTIC_UUID
+                )
                 true
             } else {
                 false

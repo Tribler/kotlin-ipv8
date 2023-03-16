@@ -12,23 +12,20 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.content.getSystemService
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
-import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.*
+import kotlin.system.exitProcess
 import kotlinx.coroutines.*
 import nl.tudelft.ipv8.*
 import nl.tudelft.ipv8.android.IPv8Android
 import nl.tudelft.ipv8.android.R
-import kotlin.system.exitProcess
 
-open class IPv8Service : Service(), LifecycleObserver {
+open class IPv8Service : Service(), DefaultLifecycleObserver {
     private val scope = CoroutineScope(Dispatchers.Default)
 
     private var isForeground = false
 
     override fun onCreate() {
-        super.onCreate()
+        super<Service>.onCreate()
 
         createNotificationChannel()
         showForegroundNotification()
@@ -50,20 +47,28 @@ open class IPv8Service : Service(), LifecycleObserver {
             .lifecycle
             .removeObserver(this)
 
-        super.onDestroy()
+        super<Service>.onDestroy()
 
         // We need to kill the app as IPv8 is started in Application.onCreate
         exitProcess(0)
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-    fun onBackground() {
+    override fun onStop(owner: LifecycleOwner) {
+        super.onStop(owner)
+        onBackground()
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        super<DefaultLifecycleObserver>.onStart(owner)
+        onForeground()
+    }
+
+    private fun onBackground() {
         isForeground = false
         showForegroundNotification()
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    fun onForeground() {
+    private fun onForeground() {
         isForeground = true
         showForegroundNotification()
     }
@@ -94,7 +99,9 @@ open class IPv8Service : Service(), LifecycleObserver {
         }
         val cancelPendingIntent = PendingIntent.getBroadcast(
             applicationContext,
-            0, cancelBroadcastIntent, flags
+            0,
+            cancelBroadcastIntent,
+            flags
         )
 
         val builder = createNotification()

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Build
 import androidx.core.content.getSystemService
+import java.net.InetAddress
 import nl.tudelft.ipv8.IPv8
 import nl.tudelft.ipv8.IPv8Configuration
 import nl.tudelft.ipv8.Peer
@@ -24,7 +25,6 @@ import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.defaultEncodingUtils
-import java.net.InetAddress
 
 object IPv8Android {
     private var ipv8: IPv8? = null
@@ -35,7 +35,7 @@ object IPv8Android {
     }
 
     class Factory(
-        private val application: Application,
+        private val application: Application
     ) {
 
         private var privateKey: PrivateKey? = null
@@ -126,9 +126,19 @@ object IPv8Android {
             val bleScanner = IPv8BluetoothLeScanner(bluetoothManager, network)
             val bluetoothEndpoint = if (
                 bluetoothManager.adapter != null && Build.VERSION.SDK_INT >= 24
-            ) BluetoothLeEndpoint(
-                application, bluetoothManager, gattServer, bleAdvertiser, bleScanner, network, myPeer
-            ) else null
+            ) {
+                BluetoothLeEndpoint(
+                    application,
+                    bluetoothManager,
+                    gattServer,
+                    bleAdvertiser,
+                    bleScanner,
+                    network,
+                    myPeer
+                )
+            } else {
+                null
+            }
 
             val endpointAggregator = EndpointAggregator(
                 udpEndpoint,

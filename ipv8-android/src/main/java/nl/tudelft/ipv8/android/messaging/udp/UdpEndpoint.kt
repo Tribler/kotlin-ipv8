@@ -7,7 +7,8 @@ import android.os.Build
 import mu.KotlinLogging
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
-import java.net.*
+import java.net.Inet4Address
+import java.net.InetAddress
 
 private val logger = KotlinLogging.logger {}
 
@@ -23,7 +24,10 @@ class AndroidUdpEndpoint(
             logger.debug("onLinkPropertiesChanged " + linkProperties.linkAddresses)
             for (linkAddress in linkProperties.linkAddresses) {
                 if (linkAddress.address is Inet4Address && !linkAddress.address.isLoopbackAddress) {
-                    val estimatedAddress = IPv4Address(linkAddress.address.hostAddress!!, getSocketPort())
+                    val estimatedAddress = IPv4Address(
+                        linkAddress.address.hostAddress!!,
+                        getSocketPort()
+                    )
                     setEstimatedLan(estimatedAddress)
                 }
             }

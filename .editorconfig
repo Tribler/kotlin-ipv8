@@ -10,4 +10,5 @@ insert_final_newline = true
 end_of_line = lf
 
 # ktlint
-disabled_rules=no-wildcard-imports,import-ordering,max-line-length
+[*.{kt,kts}]
+ktlint_no-wildcard-imports = disabled
