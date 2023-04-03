@@ -1040,6 +1040,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         community.unload()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun sendScheduled() {
         val community = getCommunity()
@@ -1069,7 +1070,7 @@ class EVAProtocolTest : BaseCommunityTest() {
 
                 val outgoing = community.getOutgoing()
                 assertEquals(0, outgoing.size)
-                method.invoke(evaProtocol)
+                method.invoke(evaProtocol, TestScope())
                 assertEquals(0, scheduled.size)
                 assertEquals(1, outgoing.size)
             }
@@ -1079,6 +1080,7 @@ class EVAProtocolTest : BaseCommunityTest() {
         community.unload()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun sendScheduledDoesntSendWhenMaxTransfersExceeded() {
         val community = getCommunity()
@@ -1108,7 +1110,7 @@ class EVAProtocolTest : BaseCommunityTest() {
                 addRandomTransfersToOutgoing(community)
                 val outgoing = community.getOutgoing()
                 assertEquals(10, outgoing.size)
-                method.invoke(evaProtocol)
+                method.invoke(evaProtocol, TestScope())
                 assertEquals(1, scheduled.size)
                 assertEquals(10, outgoing.size)
             }
