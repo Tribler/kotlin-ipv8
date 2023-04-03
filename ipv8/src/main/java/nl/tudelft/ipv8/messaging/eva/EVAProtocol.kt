@@ -1,6 +1,8 @@
 package nl.tudelft.ipv8.messaging.eva
 
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.Peer
@@ -14,7 +16,7 @@ private val logger = KotlinLogging.logger {}
 
 open class EVAProtocol(
     private var community: Community,
-    scope: CoroutineScope,
+    var scope: CoroutineScope,
     var blockSize: Int = BLOCK_SIZE,
     var windowSize: Int = WINDOW_SIZE,
     var binarySizeLimit: Int = BINARY_SIZE_LIMIT,
@@ -26,9 +28,10 @@ open class EVAProtocol(
     var terminateByTimeoutEnabled: Boolean = true,
     var timeoutInterval: Long = TIMEOUT_INTERVAL,
     var reduceWindowAfterTimeout: Int = REDUCE_WINDOW_AFTER_TIMEOUT,
-    var loggingEnabled: Boolean = true,
-    var encrypt: Boolean = false
+    var loggingEnabled: Boolean = true
 ) {
+    private val mutex = Mutex()
+
     private var scheduled: MutableMap<Key, Queue<ScheduledTransfer>> = mutableMapOf()
     private var incoming: MutableMap<Key, Transfer> = mutableMapOf()
     private var outgoing: MutableMap<Key, Transfer> = mutableMapOf()
@@ -543,7 +546,10 @@ open class EVAProtocol(
                 transfer
             )
         )
-        sendScheduled()
+
+        scope.launch {
+            sendScheduled()
+        }
     }
 
     /**
@@ -614,31 +620,34 @@ open class EVAProtocol(
 
         onSendCompleteCallback?.invoke(peer, info, nonce)
 
-        sendScheduled()
+        scope.launch {
+            sendScheduled()
+        }
     }
 
     /**
      * Send the next scheduled transfer
      */
-    @Synchronized
-    private fun sendScheduled() {
-        val idlePeerKeys = scheduled
-            .filter { !outgoing.contains(it.key) }
-            .map { it.key }
+    private suspend fun sendScheduled() {
+        mutex.withLock {
+            val idlePeerKeys = scheduled
+                .filter { !outgoing.contains(it.key) }
+                .map { it.key }
 
-        for (key in idlePeerKeys) {
-            val peer = getConnectedPeer(key) ?: continue
+            for (key in idlePeerKeys) {
+                val peer = getConnectedPeer(key) ?: continue
 
-            if (!scheduled.containsKey(key)) continue
+                if (!scheduled.containsKey(key)) continue
 
-            scheduled.popValue(key)?.let { transfer ->
-                startOutgoingTransfer(
-                    peer,
-                    transfer.info,
-                    transfer.id,
-                    transfer.data,
-                    transfer.nonce.toLong(),
-                )
+                scheduled.popValue(key)?.let { transfer ->
+                    startOutgoingTransfer(
+                        peer,
+                        transfer.info,
+                        transfer.id,
+                        transfer.data,
+                        transfer.nonce.toLong(),
+                    )
+                }
             }
         }
     }
