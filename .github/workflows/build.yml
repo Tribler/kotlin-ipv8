@@ -1,7 +1,7 @@
 name: build
 
 on:
-  pull_request:
+  pull_request_target:
   push:
     branches: master
 
@@ -9,20 +9,46 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: Setup Java
-      uses: actions/setup-java@v1
-      with:
-        java-version: 11
+      - name: Setup Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+          java-package: jdk
 
-    - name: Run tests
-      uses: eskatos/gradle-command-action@v1
-      with:
-        arguments: check jacocoTestReport
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Run Check
+        run: ./gradlew check
+
+      - name: Run Jacoco
+        run: ./gradlew jacocoTestReport
+
+      - name: Upload Report
+        uses: 'actions/upload-artifact@v2'
+        with:
+          name: report.xml
+          path: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/jacocoTestReport.xml
+
+      - name: Add coverage to PR
+        id: jacoco
+        uses: madrapps/jacoco-report@v1.3
+        with:
+          paths: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: 60
+          min-coverage-changed-files: 80
+
+      - name: Get the Coverage info
+        run: |
+          echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"
+          echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
