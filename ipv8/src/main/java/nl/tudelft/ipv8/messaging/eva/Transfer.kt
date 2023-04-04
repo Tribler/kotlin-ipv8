@@ -191,6 +191,7 @@ fun CharSequence.splitIgnoreEmpty(vararg delimiters: String): List<String> {
     }
 }
 
+// TODO: Make compatible with py-ipv8
 fun ByteArray.decodeToIntegerList(): List<Int> {
     val list = mutableListOf<Int>()
 
@@ -209,6 +210,7 @@ fun ByteArray.decodeToIntegerList(): List<Int> {
     return list
 }
 
+// TODO: Make compatible with py-ipv8
 fun List<Int>.encodeToByteArray(): ByteArray {
     val byteArray = ByteArray(size * 4)
 
