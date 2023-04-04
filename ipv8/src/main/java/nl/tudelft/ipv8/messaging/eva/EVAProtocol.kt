@@ -238,7 +238,9 @@ open class EVAProtocol(
         data: ByteArray,
         nonce: Long? = null
     ) {
-        if (info.isEmpty() || id.isEmpty() || data.isEmpty() || peer == community.myPeer) return
+        if (info.isEmpty() || id.isEmpty() || data.isEmpty() || peer == community.myPeer) {
+            return
+        }
 
         // Stop if a transfer of the requested file is already scheduled, outgoing or transferred
         if (isScheduled(peer.key, id) || isOutgoing(peer.key, id) || isTransferred(
@@ -246,7 +248,9 @@ open class EVAProtocol(
                 id,
                 finishedOutgoing
             )
-        ) return
+        ) {
+            return
+        }
 
         val nonceValue = (nonce ?: (0..MAX_NONCE).random())
 
@@ -372,8 +376,9 @@ open class EVAProtocol(
             if (retransmitEnabled) {
                 for (attempt in 1..retransmitAttemptCount) {
                     delay(retransmitInterval)
-                    if (transfer.released || transfer.ackedWindow != 0)
+                    if (transfer.released || transfer.ackedWindow != 0) {
                         return@launch
+                    }
 
                     val currentAttempt = "$attempt/$retransmitAttemptCount"
                     if (loggingEnabled) logger.debug { "EVAPROTOCOL: Retrying Write Request. Attempt $currentAttempt for peer: $peer" }
@@ -418,7 +423,9 @@ open class EVAProtocol(
                 payload.id,
                 finishedIncoming
             ) || isStopped(peer.key, payload.id)
-        ) return
+        ) {
+            return
+        }
 
         val scheduledTransfer = ScheduledTransfer(
             payload.info,
@@ -500,9 +507,14 @@ open class EVAProtocol(
         val transfer = outgoing[peer.key] ?: return
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Transfer: $transfer" }
 
-        if (isStopped(peer.key, transfer.id)) return
+        if (isStopped(peer.key, transfer.id)) {
+            return
+        }
 
-        if (transfer.nonce != payload.nonce) return
+        if (transfer.nonce != payload.nonce) {
+            return
+        }
+
         transfer.updated = Date().time
 
         if (payload.ackWindow.toInt() > 0) {
@@ -525,13 +537,18 @@ open class EVAProtocol(
 
     private fun transmitData(peer: Peer, transfer: Transfer) {
         transfer.lastSentBlocks.forEach { blockNumber ->
-            if (blockNumber > transfer.blockCount - 1) return
+            if (blockNumber > transfer.blockCount - 1) {
+                return
+            }
 
             val data = transfer.getData(blockNumber)
+            if (data.isEmpty()) {
+                return
+            }
 
-            if (data.isEmpty()) return
-
-            if (loggingEnabled) logger.debug { "EVAPROTOCOL: Transmit($blockNumber/${transfer.blockCount - 1})" }
+            if (loggingEnabled) {
+                logger.debug { "EVAPROTOCOL: Transmit($blockNumber/${transfer.blockCount - 1})" }
+            }
 
             val dataPacket = community.createEVAData(peer, blockNumber.toUInt(), transfer.nonce, data)
             send(peer, dataPacket)
@@ -550,9 +567,13 @@ open class EVAProtocol(
 
         val transfer = incoming[peer.key] ?: return
 
-        if (isStopped(peer.key, transfer.id)) return
+        if (isStopped(peer.key, transfer.id)) {
+            return
+        }
 
-        if (transfer.nonce != payload.nonce) return
+        if (transfer.nonce != payload.nonce) {
+            return
+        }
 
         val blockNumber = payload.blockNumber.toInt()
 
@@ -699,8 +720,9 @@ open class EVAProtocol(
      */
     private suspend fun sendScheduled() {
         mutex.withLock {
-            if (isSimultaneouslyServedTransfersLimitExceeded())
+            if (isSimultaneouslyServedTransfersLimitExceeded()) {
                 return
+            }
 
             val idlePeerKeys = scheduled
                 .filter { !outgoing.contains(it.key) }
@@ -773,7 +795,9 @@ open class EVAProtocol(
      * @param transfer transfer to be terminated
      */
     private fun scheduleTerminate(container: MutableMap<Key, Transfer>, peer: Peer, transfer: Transfer) {
-        if (!terminateByTimeoutEnabled) return
+        if (!terminateByTimeoutEnabled) {
+            return
+        }
 
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Schedule terminate for transfer with id ${transfer.id} and nonce ${transfer.nonce}" }
 
@@ -794,7 +818,9 @@ open class EVAProtocol(
     private fun terminateByTimeout(container: MutableMap<Key, Transfer>, peer: Peer, transfer: Transfer) {
         if (loggingEnabled) logger.debug { "EVAPROTOCOL: Scheduled terminate task executed. Transfer is released: ${transfer.released}" }
 
-        if (transfer.released || !terminateByTimeoutEnabled) return
+        if (transfer.released || !terminateByTimeoutEnabled) {
+            return
+        }
 
         val remainingTime = timeoutInterval - (Date().time - transfer.updated)
 
@@ -836,7 +862,9 @@ open class EVAProtocol(
      * @param transfer corresponding transfer
      */
     private fun scheduleResendAcknowledge(peer: Peer, transfer: Transfer) {
-        if (!retransmitEnabled) return
+        if (!retransmitEnabled) {
+            return
+        }
 
         scheduleTask(Date().time + retransmitInterval) {
             resendAcknowledge(peer, transfer)
@@ -853,12 +881,16 @@ open class EVAProtocol(
      * @param transfer corresponding transfer
      */
     private fun resendAcknowledge(peer: Peer, transfer: Transfer) {
-        if (transfer.released || !retransmitEnabled || transfer.attempt >= retransmitAttemptCount - 1) return
+        if (transfer.released || !retransmitEnabled || transfer.attempt >= retransmitAttemptCount - 1) {
+            return
+        }
 
         if (Date().time - transfer.updated >= retransmitInterval) {
             transfer.attempt += 1
 
-            if (loggingEnabled) logger.debug { "EVAPROTOCOL: Re-acknowledgement attempt ${transfer.attempt + 1}/$retransmitAttemptCount for window ${transfer.ackedWindow}." }
+            if (loggingEnabled) {
+                logger.debug { "EVAPROTOCOL: Re-acknowledgement attempt ${transfer.attempt + 1}/$retransmitAttemptCount for window ${transfer.ackedWindow}." }
+            }
 
             sendAcknowledgement(peer, transfer)
         }
@@ -880,7 +912,6 @@ open class EVAProtocol(
     fun toggleIncomingTransfer(peer: Peer, id: String): TransferState {
         return if (stoppedIncoming.containsKey(peer.key) && stoppedIncoming[peer.key]!!.contains(id)) {
             stoppedIncoming[peer.key]!!.remove(id)
-
             TransferState.SCHEDULED
         } else {
             if (incoming.containsKey(peer.key)) {
