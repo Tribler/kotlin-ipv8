@@ -162,7 +162,7 @@ abstract class Community : Overlay {
             try {
                 handler(packet)
             } catch (e: Exception) {
-                when(e) {
+                when (e) {
                     is PacketDecodingException -> logger.warn("Unable to decode authenticated payload: $e")
                     else -> e.printStackTrace()
                 }
@@ -408,29 +408,37 @@ abstract class Community : Overlay {
      */
     internal fun onEVAWriteRequestPacket(packet: Packet) {
         val (peer, payload) = packet.getDecryptedAuthPayload(
-            EVAWriteRequestPayload.Deserializer, myPeer.key as PrivateKey
+            EVAWriteRequestPayload.Deserializer,
+            myPeer.key as PrivateKey
         )
+
         onEVAWriteRequest(peer, payload)
     }
 
     internal fun onEVAAcknowledgementPacket(packet: Packet) {
         val (peer, payload) = packet.getDecryptedAuthPayload(
-            EVAAcknowledgementPayload.Deserializer, myPeer.key as PrivateKey
+            EVAAcknowledgementPayload.Deserializer,
+            myPeer.key as PrivateKey
         )
+
         onEVAAcknowledgement(peer, payload)
     }
 
     internal fun onEVADataPacket(packet: Packet) {
         val (peer, payload) = packet.getDecryptedAuthPayload(
-            EVADataPayload.Deserializer, myPeer.key as PrivateKey
+            EVADataPayload.Deserializer,
+            myPeer.key as PrivateKey
         )
+
         onEVAData(peer, payload)
     }
 
     internal fun onEVAErrorPacket(packet: Packet) {
         val (peer, payload) = packet.getDecryptedAuthPayload(
-            EVAErrorPayload.Deserializer, myPeer.key as PrivateKey
+            EVAErrorPayload.Deserializer,
+            myPeer.key as PrivateKey
         )
+
         onEVAError(peer, payload)
     }
 
@@ -480,7 +488,8 @@ abstract class Community : Overlay {
 
         // Process introduced addresses
         if (!payload.wanIntroductionAddress.isEmpty() &&
-            payload.wanIntroductionAddress.ip != myEstimatedWan.ip) {
+            payload.wanIntroductionAddress.ip != myEstimatedWan.ip
+        ) {
             // WAN is not empty and it is not same as ours
 
             if (!payload.lanIntroductionAddress.isEmpty()) {
@@ -493,7 +502,8 @@ abstract class Community : Overlay {
             // request and probably already sent a puncture to us.
             discoverAddress(peer, payload.wanIntroductionAddress, serviceId)
         } else if (!payload.lanIntroductionAddress.isEmpty() &&
-            payload.wanIntroductionAddress.ip == myEstimatedWan.ip) {
+            payload.wanIntroductionAddress.ip == myEstimatedWan.ip
+        ) {
             // LAN is not empty and WAN is the same as ours => they are on the same LAN
             discoverAddress(peer, payload.lanIntroductionAddress, serviceId)
         } else if (!payload.wanIntroductionAddress.isEmpty()) {
@@ -505,8 +515,10 @@ abstract class Community : Overlay {
 
             // Assume LAN is same as ours (e.g. multiple instances running on a local machine),
             // and port same as for WAN (works only if NAT does not change port)
-            discoverAddress(peer, IPv4Address(myEstimatedLan.ip, payload.wanIntroductionAddress.port),
-                serviceId)
+            discoverAddress(
+                peer, IPv4Address(myEstimatedLan.ip, payload.wanIntroductionAddress.port),
+                serviceId
+            )
         }
     }
 
@@ -516,8 +528,10 @@ abstract class Community : Overlay {
         if (!addressIsLan(peer.address) && !peer.address.isLoopback() && !peer.address.isEmpty()) {
             // If this is a new peer, add our estimated WAN to the WAN estimation log which can be
             // used to determine symmetric NAT behavior
-            network.wanLog.addItem(WanEstimationLog.WanLogItem(
-                Date(), peer.address, myEstimatedLan, wan)
+            network.wanLog.addItem(
+                WanEstimationLog.WanLogItem(
+                    Date(), peer.address, myEstimatedLan, wan
+                )
             )
         }
     }
