@@ -1,6 +1,9 @@
 package nl.tudelft.ipv8.messaging.eva
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import mu.KotlinLogging
@@ -201,7 +204,7 @@ open class EVAProtocol(
      * @param id the file ID
      * @return the count of timeouts, otherwise 0
      */
-    private fun getTimedOutCount(key: Key, id: String) : Int {
+    private fun getTimedOutCount(key: Key, id: String): Int {
         return timedOutOutgoing[key.toString() + id] ?: 0
     }
 
@@ -215,7 +218,7 @@ open class EVAProtocol(
      * @param id the file ID
      * @return the window size in blocks
      */
-    private fun getWindowSize(key: Key, id: String) : Int {
+    private fun getWindowSize(key: Key, id: String): Int {
         return kotlin.math.max(MIN_WINDOW_SIZE, windowSize - (getTimedOutCount(key, id) * reduceWindowAfterTimeout))
     }
 
@@ -238,7 +241,12 @@ open class EVAProtocol(
         if (info.isEmpty() || id.isEmpty() || data.isEmpty() || peer == community.myPeer) return
 
         // Stop if a transfer of the requested file is already scheduled, outgoing or transferred
-        if (isScheduled(peer.key, id) || isOutgoing(peer.key, id) || isTransferred(peer.key, id, finishedOutgoing)) return
+        if (isScheduled(peer.key, id) || isOutgoing(peer.key, id) || isTransferred(
+                peer.key,
+                id,
+                finishedOutgoing
+            )
+        ) return
 
         val nonceValue = (nonce ?: (0..MAX_NONCE).random())
 
@@ -249,7 +257,16 @@ open class EVAProtocol(
                 val windowSize = getWindowSize(peer.key, id)
                 scheduled.addValue(
                     peer.key,
-                    ScheduledTransfer(info, data, nonceValue.toULong(), id, 0, data.size.toULong(), blockSize, windowSize)
+                    ScheduledTransfer(
+                        info,
+                        data,
+                        nonceValue.toULong(),
+                        id,
+                        0,
+                        data.size.toULong(),
+                        blockSize,
+                        windowSize
+                    )
                 )
 
                 onReceiveProgressCallback?.invoke(
@@ -324,7 +341,7 @@ open class EVAProtocol(
             scheduled[peer.key]?.firstOrNull { it.id == id } ?: scheduledTransfer
         )
 
-        if (loggingEnabled) logger.debug { "EVAPROTOCOL: Outgoing transfer blockCount: ${transfer.blockCount}, size: ${transfer.dataSize}, nonce: ${transfer.nonce}, window: ${transfer.windowSize}"}
+        if (loggingEnabled) logger.debug { "EVAPROTOCOL: Outgoing transfer blockCount: ${transfer.blockCount}, size: ${transfer.dataSize}, nonce: ${transfer.nonce}, window: ${transfer.windowSize}" }
 
         if (transfer.dataSize.toLong() > binarySizeLimit) {
             notifyError(
@@ -390,9 +407,18 @@ open class EVAProtocol(
      * @param payload information about the coming transfer (size, blocks, nonce, id, class)
      */
     fun onWriteRequest(peer: Peer, payload: EVAWriteRequestPayload) {
-        if (loggingEnabled) logger.debug { "EVAPROTOCOL: On write request. Nonce: ${payload.nonce}. Peer: ${peer.publicKey.keyToBin().toHex()}. Info: ${payload.info}. BlockCount: ${payload.blockCount}. Blocksize: ${payload.blockSize.toInt()}. Window size: ${payload.windowSize.toInt()}. Payload datasize: ${payload.dataSize}, allowed datasize: $binarySizeLimit" }
+        if (loggingEnabled) logger.debug {
+            "EVAPROTOCOL: On write request. Nonce: ${payload.nonce}. Peer: ${
+                peer.publicKey.keyToBin().toHex()
+            }. Info: ${payload.info}. BlockCount: ${payload.blockCount}. Blocksize: ${payload.blockSize.toInt()}. Window size: ${payload.windowSize.toInt()}. Payload datasize: ${payload.dataSize}, allowed datasize: $binarySizeLimit"
+        }
 
-        if (isIncoming(peer.key, payload.id) || isTransferred(peer.key, payload.id, finishedIncoming) || isStopped(peer.key, payload.id)) return
+        if (isIncoming(peer.key, payload.id) || isTransferred(
+                peer.key,
+                payload.id,
+                finishedIncoming
+            ) || isStopped(peer.key, payload.id)
+        ) return
 
         val scheduledTransfer = ScheduledTransfer(
             payload.info,
@@ -421,6 +447,7 @@ open class EVAProtocol(
                 )
                 return
             }
+
             payload.dataSize.toInt() > binarySizeLimit -> {
                 incomingError(
                     peer,
@@ -533,6 +560,7 @@ open class EVAProtocol(
             0 -> {
                 TransferProgress(transfer.id, TransferState.INITIALIZING, 0.0)
             }
+
             else -> {
                 TransferProgress(transfer.id, TransferState.DOWNLOADING, transfer.getProgress())
             }
@@ -554,7 +582,10 @@ open class EVAProtocol(
             return
         }
 
-        val timeToAcknowledge = blockNumber == kotlin.math.min((transfer.ackedWindow + 1) * transfer.windowSize - 1, transfer.blockCount - 1)
+        val timeToAcknowledge = blockNumber == kotlin.math.min(
+            (transfer.ackedWindow + 1) * transfer.windowSize - 1,
+            transfer.blockCount - 1
+        )
         if (timeToAcknowledge) {
             if (blockNumber < (transfer.ackedWindow + 1) * transfer.windowSize) {
                 transfer.ackedWindow += 1
@@ -777,7 +808,14 @@ open class EVAProtocol(
         terminate(container, peer, transfer)
 
         if (transfer.type == TransferType.OUTGOING) {
-            if (loggingEnabled) logger.debug { "EVAPROTOCOL: Incrementing timedOutOutgoing count for transfer to ${getTimedOutCount(peer.key, transfer.id)}." }
+            if (loggingEnabled) logger.debug {
+                "EVAPROTOCOL: Incrementing timedOutOutgoing count for transfer to ${
+                    getTimedOutCount(
+                        peer.key,
+                        transfer.id
+                    )
+                }."
+            }
             timedOutOutgoing.increment(peer.key.toString() + transfer.id)
         }
 

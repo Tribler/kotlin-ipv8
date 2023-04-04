@@ -1346,7 +1346,8 @@ class EVAProtocolTest : BaseCommunityTest() {
         assertEquals(0, community.getIncoming().size)
         assertEquals(0, community.getStoppedIncoming().size)
 
-        val stoppedIncomingMap: MutableMap<Key, MutableSet<String>> = mutableMapOf(Pair(mockPeer.key, mutableSetOf(transfer.id)))
+        val stoppedIncomingMap: MutableMap<Key, MutableSet<String>> =
+            mutableMapOf(Pair(mockPeer.key, mutableSetOf(transfer.id)))
         val stoppedIncoming = community.setStoppedIncoming(stoppedIncomingMap)
         assertEquals(1, stoppedIncoming.size)
 
@@ -1416,7 +1417,8 @@ class EVAProtocolTest : BaseCommunityTest() {
         assertEquals(0, community.getIncoming().size)
         assertEquals(0, community.getStoppedIncoming().size)
 
-        val stoppedIncomingMap: MutableMap<Key, MutableSet<String>> = mutableMapOf(Pair(mockPeer.key, mutableSetOf(transfer.id)))
+        val stoppedIncomingMap: MutableMap<Key, MutableSet<String>> =
+            mutableMapOf(Pair(mockPeer.key, mutableSetOf(transfer.id)))
         val stoppedIncoming = community.setStoppedIncoming(stoppedIncomingMap)
         assertEquals(1, stoppedIncoming.size)
 
