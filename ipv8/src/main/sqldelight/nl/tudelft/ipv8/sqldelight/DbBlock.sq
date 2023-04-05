@@ -39,10 +39,10 @@ SELECT * FROM blocks WHERE public_key = ? AND sequence_number =
 (SELECT MAX(sequence_number) FROM blocks WHERE public_key = ?) LIMIT 1;
 
 getLatestBlocksWithTypes:
-SELECT * FROM blocks WHERE public_key = ? AND type IN (?) ORDER BY sequence_number DESC LIMIT ?;
+SELECT * FROM blocks WHERE public_key = ? AND type IN (?) ORDER BY sequence_number DESC LIMIT :rowNumbers;
 
 getLatestBlocks:
-SELECT * FROM blocks WHERE public_key = ? ORDER BY sequence_number DESC LIMIT ?;
+SELECT * FROM blocks WHERE public_key = ? ORDER BY sequence_number DESC LIMIT :rowNumbers;
 
 getBlockAfterWithType:
 SELECT * FROM blocks WHERE sequence_number > ? AND public_key = ? AND type = ?
@@ -82,25 +82,25 @@ SELECT * FROM
     (SELECT * FROM blocks WHERE
         sequence_number >= ? AND
         sequence_number <= ? AND
-        public_key = ? LIMIT ?)
+        public_key = ? LIMIT :rowNumbers1)
 UNION
 SELECT * FROM
     (SELECT * FROM blocks WHERE
         link_sequence_number >= ? AND
         link_sequence_number <= ? AND
         link_sequence_number != 0 AND
-        link_public_key = ? LIMIT ?);
+        link_public_key = ? LIMIT :rowNumbers2);
 
 getRecentBlocks:
-SELECT * FROM blocks ORDER BY block_timestamp DESC LIMIT ? OFFSET ?;
+SELECT * FROM blocks ORDER BY block_timestamp DESC LIMIT :rowNumbers OFFSET :offset;
 
 getUsers:
 SELECT DISTINCT public_key, MAX(sequence_number) FROM blocks GROUP BY public_key
-ORDER BY MAX(sequence_number) DESC LIMIT ?;
+ORDER BY MAX(sequence_number) DESC LIMIT :rowNumbers;
 
 getMutualBlocks:
 SELECT * FROM blocks WHERE public_key = ? OR link_public_key = ?
-ORDER BY block_timestamp DESC LIMIT ?;
+ORDER BY block_timestamp DESC LIMIT :rowNumbers;
 
 getBlockCountWithPublicKey:
 SELECT COUNT(*) FROM blocks WHERE public_key = ?;

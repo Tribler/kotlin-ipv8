@@ -1,16 +1,17 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext.kotlin_version = '1.7.10'
-    ext.ktlint_version = '0.44.0'
+    ext.kotlin_version = '1.8.10'
+    ext.ktlint_version = '0.48.2'
     ext.coroutines_version = '1.6.4'
-    ext.ktlint_gradle_version = '11.0.0'
-    // https://github.com/cashapp/sqldelight/issues/1574
-    ext.sqldelight_version = '1.5.2'
+    ext.ktlint_gradle_version = '11.3.1'
+    ext.sqldelight_version = '1.5.5'
     ext.nav_version = "2.5.3"
-    ext.fragment_version = "1.5.4"
-    ext.lifecycle_version = "2.5.1"
-    ext.dokka_version = "0.10.1"
+    ext.fragment_version = "1.5.5"
+    ext.lifecycle_version = "2.6.0"
+    ext.dokka_version = "1.8.10"
     repositories {
         google()
         mavenCentral()
@@ -23,13 +24,17 @@ buildscript {
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlint_gradle_version"
         classpath "com.squareup.sqldelight:gradle-plugin:$sqldelight_version"
         classpath "androidx.navigation:navigation-safe-args-gradle-plugin:$nav_version"
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
 }
 
+plugins {
+    id("org.jetbrains.dokka") version "$dokka_version"
+}
+
 allprojects {
+
     repositories {
         google()
         mavenCentral()
@@ -37,20 +42,20 @@ allprojects {
     }
 
     // Temp fix for issue https://github.com/mockk/mockk/issues/281
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
             force("org.objenesis:objenesis:2.6")
         }
     }
 }
 
-task clean(type: Delete) {
+tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+tasks.withType(KotlinCompile).configureEach {
     kotlinOptions.freeCompilerArgs += [
-        "-opt-in=kotlin.Experimental,kotlin.ExperimentalUnsignedTypes",
-        "-opt-in=kotlin.RequiresOptIn"
+        "-opt-in=kotlin.ExperimentalUnsignedTypes,kotlin.RequiresOptIn",
     ]
+    kotlinOptions.jvmTarget = JavaVersion.VERSION_11.toString()
 }
