@@ -126,14 +126,14 @@ class NetworkServiceDiscovery(
 
                 val peer = overlay.myPeer
 
-                val hostAddress = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    serviceInfo.hostAddresses.first().hostAddress!!
-                } else {
-                    @Suppress("DEPRECATION") // Deprecated in API 34. So false positive.
-                    serviceInfo.host.hostAddress!!
-                }
+                val hostAddress =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        serviceInfo.hostAddresses.first().hostAddress!!
+                    } else {
+                        @Suppress("DEPRECATION") // Deprecated in API 34. So false positive.
+                        serviceInfo.host.hostAddress!!
+                    }
                 val address = IPv4Address(hostAddress, serviceInfo.port)
-
 
                 if (overlay.myEstimatedLan != address) {
                     logger.debug { "Discovered address: $address" }
