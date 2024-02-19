@@ -13,7 +13,7 @@ import nl.tudelft.ipv8.util.hexToBytes
 private val logger = KotlinLogging.logger {}
 
 class IPv8BluetoothLeAdvertiser(
-    bluetoothManager: BluetoothManager
+    bluetoothManager: BluetoothManager,
 ) {
     private val bluetoothAdapter = bluetoothManager.adapter
 
@@ -21,28 +21,30 @@ class IPv8BluetoothLeAdvertiser(
         bluetoothAdapter.bluetoothLeAdvertiser
     }
 
-    private val advertiseCallback = object : AdvertiseCallback() {
-        override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
-            logger.debug { "onStartSuccess" }
-            isAdvertising = true
-        }
+    private val advertiseCallback =
+        object : AdvertiseCallback() {
+            override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+                logger.debug { "onStartSuccess" }
+                isAdvertising = true
+            }
 
-        override fun onStartFailure(errorCode: Int) {
-            logger.error { "onStartFailure $errorCode" }
-            isAdvertising = false
+            override fun onStartFailure(errorCode: Int) {
+                logger.error { "onStartFailure $errorCode" }
+                isAdvertising = false
+            }
         }
-    }
 
     private var isAdvertising = false
 
     @SuppressLint("MissingPermission") // TODO: Fix permission usage.
     fun start(myPeer: Peer) {
-        val settings = AdvertiseSettings.Builder()
-            .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
-            .setTimeout(0)
-            // make sure the server is connectable!
-            .setConnectable(true)
-            .build()
+        val settings =
+            AdvertiseSettings.Builder()
+                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_POWER)
+                .setTimeout(0)
+                // make sure the server is connectable!
+                .setConnectable(true)
+                .build()
 
         val advertiseData = getAdvertiseData()
         val scanResponse = getScanResponse(myPeer)
@@ -67,7 +69,7 @@ class IPv8BluetoothLeAdvertiser(
             .setIncludeDeviceName(false)
             .addServiceData(
                 ParcelUuid(GattServerManager.ADVERTISE_IDENTITY_UUID),
-                myPeer.mid.hexToBytes()
+                myPeer.mid.hexToBytes(),
             )
             .build()
     }

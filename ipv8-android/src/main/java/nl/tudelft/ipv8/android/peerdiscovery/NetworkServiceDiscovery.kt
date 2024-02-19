@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.android.peerdiscovery
 
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
 import mu.KotlinLogging
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Overlay
@@ -16,90 +17,106 @@ private val logger = KotlinLogging.logger {}
  */
 class NetworkServiceDiscovery(
     private val nsdManager: NsdManager,
-    private val overlay: Overlay
+    private val overlay: Overlay,
 ) : DiscoveryStrategy {
     private var serviceName: String? = null
 
-    private val registrationListener = object : NsdManager.RegistrationListener {
-        override fun onServiceRegistered(serviceInfo: NsdServiceInfo) {
-            // Save the service name. Android may have changed it in order to
-            // resolve a conflict, so update the name you initially requested
-            // with the name Android actually used.
-            logger.info { "Service registered: $serviceInfo" }
-            serviceName = serviceInfo.serviceName
-        }
+    private val registrationListener =
+        object : NsdManager.RegistrationListener {
+            override fun onServiceRegistered(serviceInfo: NsdServiceInfo) {
+                // Save the service name. Android may have changed it in order to
+                // resolve a conflict, so update the name you initially requested
+                // with the name Android actually used.
+                logger.info { "Service registered: $serviceInfo" }
+                serviceName = serviceInfo.serviceName
+            }
 
-        override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-            // Registration failed! Put debugging code here to determine why.
-            logger.error { "Service registration failed: $errorCode" }
-        }
+            override fun onRegistrationFailed(
+                serviceInfo: NsdServiceInfo,
+                errorCode: Int,
+            ) {
+                // Registration failed! Put debugging code here to determine why.
+                logger.error { "Service registration failed: $errorCode" }
+            }
 
-        override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
-            // Service has been unregistered. This only happens when you call
-            // NsdManager.unregisterService() and pass in this listener.
-            logger.info { "Service unregistered: $serviceInfo" }
-        }
+            override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
+                // Service has been unregistered. This only happens when you call
+                // NsdManager.unregisterService() and pass in this listener.
+                logger.info { "Service unregistered: $serviceInfo" }
+            }
 
-        override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-            // Unregistration failed. Put debugging code here to determine why.
-            logger.error { "Service unregistration failed: $errorCode" }
-        }
-    }
-
-    // Instantiate a new DiscoveryListener
-    private val discoveryListener = object : NsdManager.DiscoveryListener {
-
-        // Called as soon as service discovery begins.
-        override fun onDiscoveryStarted(regType: String) {
-            logger.debug { "Service discovery started" }
-        }
-
-        override fun onServiceFound(serviceInfo: NsdServiceInfo) {
-            // A service was found! Do something with it.
-            logger.debug { "Service found: $serviceInfo" }
-
-            if (serviceInfo.serviceType == SERVICE_TYPE) {
-                // This is IPv8 service
-
-                if (serviceInfo.serviceName == serviceName) {
-                    logger.debug { "Found its own service" }
-                }
-
-                val serviceId = getServiceId(serviceInfo.serviceName)
-
-                logger.debug { "Service ID: $serviceId" }
-
-                if (serviceId == overlay.serviceId) {
-                    nsdManager.resolveService(serviceInfo, createResolveListener())
-                }
+            override fun onUnregistrationFailed(
+                serviceInfo: NsdServiceInfo,
+                errorCode: Int,
+            ) {
+                // Unregistration failed. Put debugging code here to determine why.
+                logger.error { "Service unregistration failed: $errorCode" }
             }
         }
 
-        override fun onServiceLost(service: NsdServiceInfo) {
-            // When the network service is no longer available.
-            // Internal bookkeeping code goes here.
-            logger.debug { "Service lost: $service" }
-        }
+    // Instantiate a new DiscoveryListener
+    private val discoveryListener =
+        object : NsdManager.DiscoveryListener {
+            // Called as soon as service discovery begins.
+            override fun onDiscoveryStarted(regType: String) {
+                logger.debug { "Service discovery started" }
+            }
 
-        override fun onDiscoveryStopped(serviceType: String) {
-            logger.debug("Discovery stopped: $serviceType")
-        }
+            override fun onServiceFound(serviceInfo: NsdServiceInfo) {
+                // A service was found! Do something with it.
+                logger.debug { "Service found: $serviceInfo" }
 
-        override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-            logger.error("Discovery failed: $errorCode")
-            nsdManager.stopServiceDiscovery(this)
-        }
+                if (serviceInfo.serviceType == SERVICE_TYPE) {
+                    // This is IPv8 service
 
-        override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-            logger.error { "Discovery failed: $errorCode" }
-            nsdManager.stopServiceDiscovery(this)
+                    if (serviceInfo.serviceName == serviceName) {
+                        logger.debug { "Found its own service" }
+                    }
+
+                    val serviceId = getServiceId(serviceInfo.serviceName)
+
+                    logger.debug { "Service ID: $serviceId" }
+
+                    if (serviceId == overlay.serviceId) {
+                        @Suppress("DEPRECATION") // TODO: Replace with registerServiceInfoCallback.
+                        nsdManager.resolveService(serviceInfo, createResolveListener())
+                    }
+                }
+            }
+
+            override fun onServiceLost(service: NsdServiceInfo) {
+                // When the network service is no longer available.
+                // Internal bookkeeping code goes here.
+                logger.debug { "Service lost: $service" }
+            }
+
+            override fun onDiscoveryStopped(serviceType: String) {
+                logger.debug("Discovery stopped: $serviceType")
+            }
+
+            override fun onStartDiscoveryFailed(
+                serviceType: String,
+                errorCode: Int,
+            ) {
+                logger.error("Discovery failed: $errorCode")
+                nsdManager.stopServiceDiscovery(this)
+            }
+
+            override fun onStopDiscoveryFailed(
+                serviceType: String,
+                errorCode: Int,
+            ) {
+                logger.error { "Discovery failed: $errorCode" }
+                nsdManager.stopServiceDiscovery(this)
+            }
         }
-    }
 
     private fun createResolveListener(): NsdManager.ResolveListener {
         return object : NsdManager.ResolveListener {
-
-            override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+            override fun onResolveFailed(
+                serviceInfo: NsdServiceInfo,
+                errorCode: Int,
+            ) {
                 // Called when the resolve fails. Use the error code to debug.
                 logger.error("Resolve failed: $errorCode")
             }
@@ -108,7 +125,15 @@ class NetworkServiceDiscovery(
                 logger.info("Service resolved: $serviceInfo")
 
                 val peer = overlay.myPeer
-                val address = IPv4Address(serviceInfo.host.hostAddress!!, serviceInfo.port)
+
+                val hostAddress = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    serviceInfo.hostAddresses.first().hostAddress!!
+                } else {
+                    @Suppress("DEPRECATION") // Deprecated in API 34. So false positive.
+                    serviceInfo.host.hostAddress!!
+                }
+                val address = IPv4Address(hostAddress, serviceInfo.port)
+
 
                 if (overlay.myEstimatedLan != address) {
                     logger.debug { "Discovered address: $address" }
@@ -120,7 +145,10 @@ class NetworkServiceDiscovery(
         }
     }
 
-    private fun registerService(port: Int, serviceName: String) {
+    private fun registerService(
+        port: Int,
+        serviceName: String,
+    ) {
         val serviceInfo = NsdServiceInfo()
         // The name is subject to change based on conflicts
         // with other services advertised on the same network.
@@ -197,7 +225,7 @@ class NetworkServiceDiscovery(
     }
 
     class Factory(
-        private val nsdManager: NsdManager
+        private val nsdManager: NsdManager,
     ) : DiscoveryStrategy.Factory<NetworkServiceDiscovery>() {
         override fun create(): NetworkServiceDiscovery {
             return NetworkServiceDiscovery(nsdManager, getOverlay())

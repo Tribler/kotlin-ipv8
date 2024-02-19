@@ -7,6 +7,7 @@ import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import android.os.IBinder
@@ -73,11 +74,12 @@ open class IPv8Service : Service(), LifecycleObserver {
         // the NotificationChannel class is new and not in the support library
         if (SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_LOW
-            val channel = NotificationChannel(
-                NOTIFICATION_CHANNEL_CONNECTION,
-                getString(R.string.notification_channel_connection_title),
-                importance
-            )
+            val channel =
+                NotificationChannel(
+                    NOTIFICATION_CHANNEL_CONNECTION,
+                    getString(R.string.notification_channel_connection_title),
+                    importance,
+                )
             channel.description = getString(R.string.notification_channel_connection_description)
             // Register the channel with the system; you can't change the importance
             // or other notification behaviors after this
@@ -88,14 +90,18 @@ open class IPv8Service : Service(), LifecycleObserver {
 
     private fun showForegroundNotification() {
         val cancelBroadcastIntent = Intent(this, StopIPv8Receiver::class.java)
-        val flags = when {
-            SDK_INT >= Build.VERSION_CODES.M -> FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE
-            else -> FLAG_UPDATE_CURRENT
-        }
-        val cancelPendingIntent = PendingIntent.getBroadcast(
-            applicationContext,
-            0, cancelBroadcastIntent, flags
-        )
+        val flags =
+            when {
+                SDK_INT >= Build.VERSION_CODES.M -> FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE
+                else -> FLAG_UPDATE_CURRENT
+            }
+        val cancelPendingIntent =
+            PendingIntent.getBroadcast(
+                applicationContext,
+                0,
+                cancelBroadcastIntent,
+                flags,
+            )
 
         val builder = createNotification()
 
@@ -104,10 +110,18 @@ open class IPv8Service : Service(), LifecycleObserver {
             builder.addAction(NotificationCompat.Action(0, "Stop", cancelPendingIntent))
         }
 
-        startForeground(
-            ONGOING_NOTIFICATION_ID,
-            builder.build()
-        )
+        if (SDK_INT > Build.VERSION_CODES.TIRAMISU) {
+            startForeground(
+                ONGOING_NOTIFICATION_ID,
+                builder.build(),
+                FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+            )
+        } else {
+            startForeground(
+                ONGOING_NOTIFICATION_ID,
+                builder.build(),
+            )
+        }
     }
 
     /**

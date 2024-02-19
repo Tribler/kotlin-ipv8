@@ -14,21 +14,24 @@ private val logger = KotlinLogging.logger {}
 class AndroidUdpEndpoint(
     port: Int,
     ip: InetAddress,
-    private val connectivityManager: ConnectivityManager
+    private val connectivityManager: ConnectivityManager,
 ) : UdpEndpoint(port, ip) {
-
-    private val defaultNetworkCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
-            super.onLinkPropertiesChanged(network, linkProperties)
-            logger.debug("onLinkPropertiesChanged " + linkProperties.linkAddresses)
-            for (linkAddress in linkProperties.linkAddresses) {
-                if (linkAddress.address is Inet4Address && !linkAddress.address.isLoopbackAddress) {
-                    val estimatedAddress = IPv4Address(linkAddress.address.hostAddress!!, getSocketPort())
-                    setEstimatedLan(estimatedAddress)
+    private val defaultNetworkCallback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onLinkPropertiesChanged(
+                network: Network,
+                linkProperties: LinkProperties,
+            ) {
+                super.onLinkPropertiesChanged(network, linkProperties)
+                logger.debug("onLinkPropertiesChanged " + linkProperties.linkAddresses)
+                for (linkAddress in linkProperties.linkAddresses) {
+                    if (linkAddress.address is Inet4Address && !linkAddress.address.isLoopbackAddress) {
+                        val estimatedAddress = IPv4Address(linkAddress.address.hostAddress!!, getSocketPort())
+                        setEstimatedLan(estimatedAddress)
+                    }
                 }
             }
         }
-    }
 
     override fun startLanEstimation() {
         if (Build.VERSION.SDK_INT >= 24) {

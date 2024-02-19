@@ -7,7 +7,10 @@ import no.nordicsemi.android.ble.BleManagerCallbacks
 abstract class GattClientCallbacks : BleManagerCallbacks {
     abstract fun onPeerDiscovered(peer: Peer)
 
-    abstract fun onPacketWrite(device: BluetoothDevice, data: ByteArray)
+    abstract fun onPacketWrite(
+        device: BluetoothDevice,
+        data: ByteArray,
+    )
 
     override fun onDeviceDisconnecting(device: BluetoothDevice) {
         // NOOP
@@ -25,7 +28,10 @@ abstract class GattClientCallbacks : BleManagerCallbacks {
         // NOOP
     }
 
-    override fun onServicesDiscovered(device: BluetoothDevice, optionalServicesFound: Boolean) {
+    override fun onServicesDiscovered(
+        device: BluetoothDevice,
+        optionalServicesFound: Boolean,
+    ) {
         // NOOP
     }
 
