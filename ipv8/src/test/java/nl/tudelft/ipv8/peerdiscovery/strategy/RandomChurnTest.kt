@@ -11,7 +11,7 @@ import nl.tudelft.ipv8.peerdiscovery.DiscoveryCommunity
 import nl.tudelft.ipv8.peerdiscovery.Network
 import org.junit.Test
 import java.time.Instant
-import java.util.*
+import java.util.Date
 
 class RandomChurnTest {
     @Test
@@ -23,12 +23,14 @@ class RandomChurnTest {
         every { overlay.network } returns network
         every { network.getRandomPeers(any()) } returns listOf(peer)
 
-        val randomChurn = RandomChurn.Factory(sampleSize = 8)
-            .setOverlay(overlay).create()
+        val randomChurn = RandomChurn.Factory(sampleSize = 8).setOverlay(overlay).create()
         randomChurn.takeStep()
 
-        verify { network.getRandomPeers(8) }
-        confirmVerified()
+        verify(exactly = 1) {
+            network.getRandomPeers(8)
+        }
+
+        confirmVerified(network)
     }
 
     @Test
@@ -41,8 +43,7 @@ class RandomChurnTest {
         every { overlay.network } returns network
         every { network.getRandomPeers(any()) } returns listOf(peer)
 
-        val randomChurn = RandomChurn.Factory(sampleSize = 8)
-            .setOverlay(overlay).create()
+        val randomChurn = RandomChurn.Factory(sampleSize = 8).setOverlay(overlay).create()
         randomChurn.takeStep()
 
         verify { network.getRandomPeers(8) }
@@ -59,9 +60,7 @@ class RandomChurnTest {
         every { overlay.network } returns network
         every { network.getRandomPeers(any()) } returns listOf(peer)
 
-        val randomChurn = RandomChurn.Factory(sampleSize = 8)
-            .setOverlay(overlay)
-            .create()
+        val randomChurn = RandomChurn.Factory(sampleSize = 8).setOverlay(overlay).create()
         randomChurn.takeStep()
 
         verify { network.getRandomPeers(8) }

@@ -1,7 +1,6 @@
 package nl.tudelft.ipv8.messaging.udp
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import mu.KotlinLogging
 import nl.tudelft.ipv8.Community
 import nl.tudelft.ipv8.IPv4Address
@@ -18,7 +17,7 @@ private val logger = KotlinLogging.logger {}
 open class UdpEndpoint(
     private val port: Int,
     private val ip: InetAddress,
-    private val tftpEndpoint: TFTPEndpoint = TFTPEndpoint()
+    private val tftpEndpoint: TFTPEndpoint = TFTPEndpoint(),
 ) : Endpoint<Peer>() {
     private var socket: DatagramSocket? = null
 
@@ -29,24 +28,29 @@ open class UdpEndpoint(
     private var lanEstimationJob: Job? = null
 
     init {
-        tftpEndpoint.addListener(object : EndpointListener {
-            override fun onPacket(packet: Packet) {
-                logger.debug(
-                    "Received TFTP packet (${packet.data.size} B) from ${packet.source}"
-                )
-                notifyListeners(packet)
-            }
+        tftpEndpoint.addListener(
+            object : EndpointListener {
+                override fun onPacket(packet: Packet) {
+                    logger.debug(
+                        "Received TFTP packet (${packet.data.size} B) from ${packet.source}",
+                    )
+                    notifyListeners(packet)
+                }
 
-            override fun onEstimatedLanChanged(address: IPv4Address) {
-            }
-        })
+                override fun onEstimatedLanChanged(address: IPv4Address) {
+                }
+            },
+        )
     }
 
     override fun isOpen(): Boolean {
         return socket?.isBound == true
     }
 
-    override fun send(peer: Peer, data: ByteArray) {
+    override fun send(
+        peer: Peer,
+        data: ByteArray,
+    ) {
         if (!isOpen()) throw IllegalStateException("UDP socket is closed")
 
         val address = peer.address
@@ -58,8 +62,10 @@ open class UdpEndpoint(
                     if (peer.supportsTFTP) {
                         tftpEndpoint.send(address, data)
                     } else {
-                        logger.warn { "The packet is larger then UDP_PAYLOAD_LIMIT and the peer " +
-                            "does not support TFTP" }
+                        logger.warn {
+                            "The packet is larger then UDP_PAYLOAD_LIMIT and the peer " +
+                                "does not support TFTP"
+                        }
                     }
                 } else {
                     send(address, data)
@@ -70,7 +76,10 @@ open class UdpEndpoint(
         }
     }
 
-    fun send(address: IPv4Address, data: ByteArray) = scope.launch(Dispatchers.IO) {
+    fun send(
+        address: IPv4Address,
+        data: ByteArray,
+    ) = scope.launch(Dispatchers.IO) {
         try {
             val datagramPacket = DatagramPacket(data, data.size, address.toSocketAddress())
             socket?.send(datagramPacket)
@@ -123,12 +132,13 @@ open class UdpEndpoint(
     }
 
     open fun startLanEstimation() {
-        lanEstimationJob = scope.launch {
-            while (isActive) {
-                estimateLan()
-                delay(60_000)
+        lanEstimationJob =
+            scope.launch {
+                while (isActive) {
+                    estimateLan()
+                    delay(60_000)
+                }
             }
-        }
     }
 
     private fun estimateLan() {
@@ -153,25 +163,26 @@ open class UdpEndpoint(
         return socket?.localPort ?: port
     }
 
-    private fun bindSocket(socket: DatagramSocket) = scope.launch {
-        try {
-            val receiveData = ByteArray(UDP_PAYLOAD_LIMIT)
-            while (isActive) {
-                val receivePacket = DatagramPacket(receiveData, receiveData.size)
-                withContext(Dispatchers.IO) {
-                    socket.receive(receivePacket)
+    private fun bindSocket(socket: DatagramSocket) =
+        scope.launch {
+            try {
+                val receiveData = ByteArray(UDP_PAYLOAD_LIMIT)
+                while (isActive) {
+                    val receivePacket = DatagramPacket(receiveData, receiveData.size)
+                    withContext(Dispatchers.IO) {
+                        socket.receive(receivePacket)
+                    }
+                    handleReceivedPacket(receivePacket)
                 }
-                handleReceivedPacket(receivePacket)
+            } catch (e: IOException) {
+                e.printStackTrace()
             }
-        } catch (e: IOException) {
-            e.printStackTrace()
         }
-    }
 
     internal fun handleReceivedPacket(receivePacket: DatagramPacket) {
         logger.debug(
             "Received packet (${receivePacket.length} B) from " +
-                "${receivePacket.address.hostAddress}:${receivePacket.port}"
+                "${receivePacket.address.hostAddress}:${receivePacket.port}",
         )
 
         // Check whether prefix is IPv8 or TFTP
@@ -182,7 +193,7 @@ open class UdpEndpoint(
                 val packet =
                     Packet(sourceAddress, receivePacket.data.copyOf(receivePacket.length))
                 logger.debug(
-                    "Received UDP packet (${receivePacket.length} B) from $sourceAddress"
+                    "Received UDP packet (${receivePacket.length} B) from $sourceAddress",
                 )
 
                 notifyListeners(packet)

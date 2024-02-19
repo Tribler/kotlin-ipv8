@@ -1,11 +1,14 @@
 package nl.tudelft.ipv8.attestation.trustchain.store
 
+import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver.Companion.IN_MEMORY
 import com.goterl.lazysodium.LazySodiumJava
 import com.goterl.lazysodium.SodiumJava
-import com.squareup.sqldelight.db.SqlDriver
-import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver
-import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver.Companion.IN_MEMORY
-import nl.tudelft.ipv8.attestation.trustchain.*
+import nl.tudelft.ipv8.attestation.trustchain.ANY_COUNTERPARTY_PK
+import nl.tudelft.ipv8.attestation.trustchain.EMPTY_SIG
+import nl.tudelft.ipv8.attestation.trustchain.GENESIS_HASH
+import nl.tudelft.ipv8.attestation.trustchain.TrustChainBlock
 import nl.tudelft.ipv8.keyvault.LibNaClSK
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
@@ -13,7 +16,7 @@ import nl.tudelft.ipv8.sqldelight.Database
 import nl.tudelft.ipv8.util.hexToBytes
 import org.junit.Assert
 import org.junit.Test
-import java.util.*
+import java.util.Date
 
 private val lazySodium = LazySodiumJava(SodiumJava())
 
@@ -35,41 +38,44 @@ class TrustChainStoreTest {
     fun getBlock() {
         val store = createTrustChainStore()
 
-        val block1 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            getPrivateKey().pub().keyToBin(),
-            1u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block1 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                getPrivateKey().pub().keyToBin(),
+                1u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block2 = TrustChainBlock(
-            "custom2",
-            "hello".toByteArray(Charsets.US_ASCII),
-            getPrivateKey().pub().keyToBin(),
-            2u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block2 =
+            TrustChainBlock(
+                "custom2",
+                "hello".toByteArray(Charsets.US_ASCII),
+                getPrivateKey().pub().keyToBin(),
+                2u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block3 = TrustChainBlock(
-            "custom2",
-            "hello".toByteArray(Charsets.US_ASCII),
-            getPrivateKey().pub().keyToBin(),
-            3u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block3 =
+            TrustChainBlock(
+                "custom2",
+                "hello".toByteArray(Charsets.US_ASCII),
+                getPrivateKey().pub().keyToBin(),
+                3u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
         store.addBlock(block1)
         store.addBlock(block2)
@@ -99,143 +105,175 @@ class TrustChainStoreTest {
     fun getBlockBeforeAfter() {
         val store = createTrustChainStore()
 
-        val block1 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            getPrivateKey().pub().keyToBin(),
-            1u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block1 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                getPrivateKey().pub().keyToBin(),
+                1u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block2 = TrustChainBlock(
-            "custom2",
-            "hello".toByteArray(Charsets.US_ASCII),
-            getPrivateKey().pub().keyToBin(),
-            2u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block2 =
+            TrustChainBlock(
+                "custom2",
+                "hello".toByteArray(Charsets.US_ASCII),
+                getPrivateKey().pub().keyToBin(),
+                2u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
         store.addBlock(block1)
         store.addBlock(block2)
 
-        Assert.assertEquals(block1.sequenceNumber,
-            store.getBlockBefore(block2)?.sequenceNumber)
+        Assert.assertEquals(
+            block1.sequenceNumber,
+            store.getBlockBefore(block2)?.sequenceNumber,
+        )
 
-        Assert.assertEquals(block1.sequenceNumber,
-            store.getBlockBefore(block2, "custom1")?.sequenceNumber)
+        Assert.assertEquals(
+            block1.sequenceNumber,
+            store.getBlockBefore(block2, "custom1")?.sequenceNumber,
+        )
 
-        Assert.assertEquals(block2.sequenceNumber,
-            store.getBlockAfter(block1)?.sequenceNumber)
+        Assert.assertEquals(
+            block2.sequenceNumber,
+            store.getBlockAfter(block1)?.sequenceNumber,
+        )
 
-        Assert.assertEquals(block2.sequenceNumber,
-            store.getBlockAfter(block1, "custom2")?.sequenceNumber)
+        Assert.assertEquals(
+            block2.sequenceNumber,
+            store.getBlockAfter(block1, "custom2")?.sequenceNumber,
+        )
     }
 
     @Test
     fun getLatest() {
         val publicKey = getPrivateKey().pub().keyToBin()
 
-        val block1 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            1u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block1 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                1u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block2 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            2u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block2 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                2u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block3 = TrustChainBlock(
-            "custom2",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            3u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block3 =
+            TrustChainBlock(
+                "custom2",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                3u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
         val store = createTrustChainStore()
         store.addBlock(block1)
         store.addBlock(block2)
         store.addBlock(block3)
 
-        Assert.assertEquals(block3.sequenceNumber,
-            store.getLatest(block2.publicKey)?.sequenceNumber)
+        Assert.assertEquals(
+            block3.sequenceNumber,
+            store.getLatest(block2.publicKey)?.sequenceNumber,
+        )
 
-        Assert.assertEquals(block2.sequenceNumber,
-            store.getLatest(block2.publicKey, "custom1")?.sequenceNumber)
+        Assert.assertEquals(
+            block2.sequenceNumber,
+            store.getLatest(block2.publicKey, "custom1")?.sequenceNumber,
+        )
 
-        Assert.assertEquals(3, store.getLatestBlocks(publicKey, limit = 10,
-            blockTypes = null).size)
+        Assert.assertEquals(
+            3,
+            store.getLatestBlocks(
+                publicKey,
+                limit = 10,
+                blockTypes = null,
+            ).size,
+        )
 
-        Assert.assertEquals(2, store.getLatestBlocks(publicKey, limit = 10,
-            blockTypes = listOf("custom1")).size)
+        Assert.assertEquals(
+            2,
+            store.getLatestBlocks(
+                publicKey,
+                limit = 10,
+                blockTypes = listOf("custom1"),
+            ).size,
+        )
     }
 
     @Test
     fun crawl() {
         val publicKey = getPrivateKey().pub().keyToBin()
 
-        val block1 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            1u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block1 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                1u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block2 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            2u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block2 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                2u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block3 = TrustChainBlock(
-            "custom2",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            10u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block3 =
+            TrustChainBlock(
+                "custom2",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                10u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
         val store = createTrustChainStore()
         store.addBlock(block1)
@@ -250,49 +288,59 @@ class TrustChainStoreTest {
         Assert.assertEquals(3L, store.getLowestSequenceNumberUnknown(publicKey))
         Assert.assertEquals(LongRange(3, 9), store.getLowestRangeUnknown(block1.publicKey))
 
-        Assert.assertEquals(2, store.crawl(publicKey, 1, 5,
-            10).size)
+        Assert.assertEquals(
+            2,
+            store.crawl(
+                publicKey,
+                1,
+                5,
+                10,
+            ).size,
+        )
     }
 
     @Test
     fun getLinked() {
         val publicKey = getPrivateKey().pub().keyToBin()
 
-        val block1 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            1u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block1 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                1u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block2 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            2u,
-            publicKey,
-            1u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block2 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                2u,
+                publicKey,
+                1u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block3 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            10u,
-            publicKey,
-            1u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block3 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                10u,
+                publicKey,
+                1u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
         val store = createTrustChainStore()
         store.addBlock(block1)
@@ -310,41 +358,44 @@ class TrustChainStoreTest {
         val publicKey = getPrivateKey().pub().keyToBin()
         val publicKey2 = defaultCryptoProvider.generateKey().pub().keyToBin()
 
-        val block1 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            1u,
-            ANY_COUNTERPARTY_PK,
-            0u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block1 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                1u,
+                ANY_COUNTERPARTY_PK,
+                0u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block2 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey,
-            2u,
-            publicKey,
-            1u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block2 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey,
+                2u,
+                publicKey,
+                1u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
-        val block3 = TrustChainBlock(
-            "custom1",
-            "hello".toByteArray(Charsets.US_ASCII),
-            publicKey2,
-            10u,
-            publicKey,
-            1u,
-            GENESIS_HASH,
-            EMPTY_SIG,
-            Date()
-        )
+        val block3 =
+            TrustChainBlock(
+                "custom1",
+                "hello".toByteArray(Charsets.US_ASCII),
+                publicKey2,
+                10u,
+                publicKey,
+                1u,
+                GENESIS_HASH,
+                EMPTY_SIG,
+                Date(),
+            )
 
         val store = createTrustChainStore()
         store.addBlock(block1)
