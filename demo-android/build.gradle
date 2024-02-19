@@ -1,18 +1,20 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 33
 
     defaultConfig {
         applicationId "nl.tudelft.ipv8.demo"
         minSdkVersion 22
-        targetSdkVersion 33
-        versionCode 1
-        versionName "0.1"
+        compileSdk 34
+        versionCode 2
+        versionName "0.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        viewBinding true
     }
 
     buildTypes {
@@ -25,21 +27,20 @@ android {
     // To inline the bytecode built with JVM target 1.8 into
     // bytecode that is being built with JVM target 1.6. (e.g. navArgs)
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
         allWarningsAsErrors = true
     }
 
-    viewBinding {
-        enabled = true
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/kotlinx-coroutines-core.kotlin_module']
+        }
     }
 
-    packagingOptions {
-        exclude 'META-INF/kotlinx-coroutines-core.kotlin_module'
-    }
     namespace 'nl.tudelft.trustchain.demo'
 }
 
@@ -89,7 +90,7 @@ dependencies {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions.freeCompilerArgs += [
-        "-opt-in=kotlin.Experimental,kotlin.ExperimentalUnsignedTypes",
+        "-opt-in=kotlin.ExperimentalUnsignedTypes",
         "-opt-in=kotlin.RequiresOptIn"
     ]
 }

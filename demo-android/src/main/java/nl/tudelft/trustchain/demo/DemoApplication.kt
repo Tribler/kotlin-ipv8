@@ -6,7 +6,7 @@ import android.os.Build
 import android.util.Log
 import androidx.core.content.getSystemService
 import androidx.preference.PreferenceManager
-import com.squareup.sqldelight.android.AndroidSqliteDriver
+import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import nl.tudelft.ipv8.IPv8Configuration
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.OverlayConfiguration
@@ -21,7 +21,6 @@ import nl.tudelft.ipv8.attestation.trustchain.validation.TransactionValidator
 import nl.tudelft.ipv8.attestation.trustchain.validation.ValidationResult
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
-import nl.tudelft.ipv8.messaging.tftp.TFTPCommunity
 import nl.tudelft.ipv8.peerdiscovery.DiscoveryCommunity
 import nl.tudelft.ipv8.peerdiscovery.strategy.PeriodicSimilarity
 import nl.tudelft.ipv8.peerdiscovery.strategy.RandomChurn
@@ -34,24 +33,20 @@ import nl.tudelft.trustchain.demo.service.TrustChainService
 class DemoApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-
         defaultCryptoProvider = AndroidCryptoProvider
 
         initIPv8()
     }
 
     private fun initIPv8() {
-        val config = IPv8Configuration(overlays = listOf(
-            createDiscoveryCommunity(),
-            createTrustChainCommunity(),
-            createDemoCommunity()
-        ), walkerInterval = 5.0)
+        val config = IPv8Configuration(
+            overlays = listOf(
+                createDiscoveryCommunity(), createTrustChainCommunity(), createDemoCommunity()
+            ), walkerInterval = 5.0
+        )
 
-        IPv8Android.Factory(this)
-            .setConfiguration(config)
-            .setPrivateKey(getPrivateKey())
-            .setServiceClass(TrustChainService::class.java)
-            .init()
+        IPv8Android.Factory(this).setConfiguration(config).setPrivateKey(getPrivateKey())
+            .setServiceClass(TrustChainService::class.java).init()
 
         initTrustChain()
     }
@@ -62,8 +57,7 @@ class DemoApplication : Application() {
 
         trustchain.registerTransactionValidator(BLOCK_TYPE, object : TransactionValidator {
             override fun validate(
-                block: TrustChainBlock,
-                database: TrustChainStore
+                block: TrustChainBlock, database: TrustChainStore
             ): ValidationResult {
                 if (block.transaction["message"] != null || block.isAgreement) {
                     return ValidationResult.Valid
@@ -92,8 +86,8 @@ class DemoApplication : Application() {
         val periodicSimilarity = PeriodicSimilarity.Factory()
 
         val nsd = NetworkServiceDiscovery.Factory(getSystemService()!!)
-        val bluetoothManager = getSystemService<BluetoothManager>()
-            ?: throw IllegalStateException("BluetoothManager not available")
+        val bluetoothManager =
+            getSystemService<BluetoothManager>() ?: throw IllegalStateException("BluetoothManager not available")
         val strategies = mutableListOf(
             randomWalk, randomChurn, periodicSimilarity, nsd
         )
@@ -103,8 +97,7 @@ class DemoApplication : Application() {
         }
 
         return OverlayConfiguration(
-            DiscoveryCommunity.Factory(),
-            strategies
+            DiscoveryCommunity.Factory(), strategies
         )
     }
 
@@ -114,16 +107,14 @@ class DemoApplication : Application() {
         val store = TrustChainSQLiteStore(Database(driver))
         val randomWalk = RandomWalk.Factory()
         return OverlayConfiguration(
-            TrustChainCommunity.Factory(settings, store),
-            listOf(randomWalk)
+            TrustChainCommunity.Factory(settings, store), listOf(randomWalk)
         )
     }
 
     private fun createDemoCommunity(): OverlayConfiguration<DemoCommunity> {
         val randomWalk = RandomWalk.Factory()
         return OverlayConfiguration(
-            Overlay.Factory(DemoCommunity::class.java),
-            listOf(randomWalk)
+            Overlay.Factory(DemoCommunity::class.java), listOf(randomWalk)
         )
     }
 
@@ -134,9 +125,7 @@ class DemoApplication : Application() {
         return if (privateKey == null) {
             // Generate a new key on the first launch
             val newKey = AndroidCryptoProvider.generateKey()
-            prefs.edit()
-                .putString(PREF_PRIVATE_KEY, newKey.keyToBin().toHex())
-                .apply()
+            prefs.edit().putString(PREF_PRIVATE_KEY, newKey.keyToBin().toHex()).apply()
             newKey
         } else {
             AndroidCryptoProvider.keyFromPrivateBin(privateKey.hexToBytes())

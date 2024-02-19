@@ -1,8 +1,8 @@
 package nl.tudelft.ipv8.jvm.demo
 
-import com.squareup.sqldelight.db.SqlDriver
-import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver
-import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver.Companion.IN_MEMORY
+import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver.Companion.IN_MEMORY
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -13,11 +13,9 @@ import nl.tudelft.ipv8.attestation.trustchain.TrustChainCommunity
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainSettings
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainSQLiteStore
 import nl.tudelft.ipv8.keyvault.JavaCryptoProvider
-import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointAggregator
 import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
 import nl.tudelft.ipv8.peerdiscovery.DiscoveryCommunity
-import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.peerdiscovery.strategy.PeriodicSimilarity
 import nl.tudelft.ipv8.peerdiscovery.strategy.RandomChurn
 import nl.tudelft.ipv8.peerdiscovery.strategy.RandomWalk
@@ -71,11 +69,13 @@ class Application {
         val udpEndpoint = UdpEndpoint(8090, InetAddress.getByName("0.0.0.0"))
         val endpoint = EndpointAggregator(udpEndpoint, null)
 
-        val config = IPv8Configuration(overlays = listOf(
-            createDiscoveryCommunity(),
-            createTrustChainCommunity(),
-            createDemoCommunity()
-        ), walkerInterval = 1.0)
+        val config = IPv8Configuration(
+            overlays = listOf(
+                createDiscoveryCommunity(),
+                createTrustChainCommunity(),
+                createDemoCommunity()
+            ), walkerInterval = 1.0
+        )
 
         val ipv8 = IPv8(endpoint, config, myPeer)
         ipv8.start()

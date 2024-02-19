@@ -11,12 +11,13 @@ private val logger = KotlinLogging.logger {}
  */
 class BluetoothLeDiscovery(
     private val overlay: Overlay,
-    private val peers: Int
+    private val peers: Int,
 ) : DiscoveryStrategy {
     override fun takeStep() {
-        val bluetoothPeers = overlay.network.verifiedPeers.filter {
-            it.bluetoothAddress != null
-        }
+        val bluetoothPeers =
+            overlay.network.verifiedPeers.filter {
+                it.bluetoothAddress != null
+            }
 
         if (bluetoothPeers.size >= peers) return
 
@@ -39,7 +40,7 @@ class BluetoothLeDiscovery(
      * The maximum number of peers we should connect to over Bluetooth.
      */
     class Factory(
-        private val peers: Int = 7
+        private val peers: Int = 7,
     ) : DiscoveryStrategy.Factory<BluetoothLeDiscovery>() {
         override fun create(): BluetoothLeDiscovery {
             return BluetoothLeDiscovery(getOverlay(), peers)

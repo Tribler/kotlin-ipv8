@@ -6,7 +6,10 @@ import android.content.Intent
 import nl.tudelft.ipv8.android.IPv8Android
 
 class StopIPv8Receiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         val serviceIntent = Intent(context, IPv8Android.serviceClass)
         context.stopService(serviceIntent)
     }

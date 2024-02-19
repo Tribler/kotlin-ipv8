@@ -23,7 +23,7 @@ class BluetoothLeEndpoint(
     private val bleAdvertiser: IPv8BluetoothLeAdvertiser,
     private val bleScanner: IPv8BluetoothLeScanner,
     private val network: Network,
-    private val myPeer: Peer
+    private val myPeer: Peer,
 ) : BluetoothEndpoint() {
     /**
      * True if we are currently advertising and sending packets to connected GATT servers.
@@ -32,41 +32,50 @@ class BluetoothLeEndpoint(
 
     private val clients: MutableMap<BluetoothAddress, GattClientManager> = mutableMapOf()
 
-    private val clientCallbacks = object : GattClientCallbacks() {
-        override fun onPeerDiscovered(peer: Peer) {
-            network.addVerifiedPeer(peer)
+    private val clientCallbacks =
+        object : GattClientCallbacks() {
+            override fun onPeerDiscovered(peer: Peer) {
+                network.addVerifiedPeer(peer)
+            }
+
+            override fun onPacketWrite(
+                device: BluetoothDevice,
+                data: ByteArray,
+            ) {
+                notifyListeners(Packet(BluetoothAddress(device.address), data))
+            }
+
+            override fun onDeviceDisconnected(device: BluetoothDevice) {
+                network.removeByAddress(BluetoothAddress(device.address))
+                clients.remove(BluetoothAddress(device.address))
+            }
+
+            override fun onError(
+                device: BluetoothDevice,
+                message: String,
+                errorCode: Int,
+            ) {
+                logger.error { "GATT error: $device $message $errorCode" }
+            }
         }
 
-        override fun onPacketWrite(device: BluetoothDevice, data: ByteArray) {
-            notifyListeners(Packet(BluetoothAddress(device.address), data))
-        }
+    private val serverCallbacks =
+        object : BleServerManagerCallbacks {
+            override fun onDeviceConnectedToServer(device: BluetoothDevice) {
+                // A device has connected to our GATT server. Initiate connection to their GATT server to provide
+                // bidirectional communication.
+                logger.info { "Device connected to server: $device" }
+                connectTo(BluetoothAddress(device.address))
+            }
 
-        override fun onDeviceDisconnected(device: BluetoothDevice) {
-            network.removeByAddress(BluetoothAddress(device.address))
-            clients.remove(BluetoothAddress(device.address))
-        }
+            override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
+                logger.info { "Device disconnected from server: $device" }
+            }
 
-        override fun onError(device: BluetoothDevice, message: String, errorCode: Int) {
-            logger.error { "GATT error: $device $message $errorCode" }
+            override fun onServerReady() {
+                // NOOP
+            }
         }
-    }
-
-    private val serverCallbacks = object : BleServerManagerCallbacks {
-        override fun onDeviceConnectedToServer(device: BluetoothDevice) {
-            // A device has connected to our GATT server. Initiate connection to their GATT server to provide
-            // bidirectional communication.
-            logger.info { "Device connected to server: $device" }
-            connectTo(BluetoothAddress(device.address))
-        }
-
-        override fun onDeviceDisconnectedFromServer(device: BluetoothDevice) {
-            logger.info { "Device disconnected from server: $device" }
-        }
-
-        override fun onServerReady() {
-            // NOOP
-        }
-    }
 
     init {
         gattServer.setManagerCallbacks(serverCallbacks)
@@ -76,7 +85,10 @@ class BluetoothLeEndpoint(
         return isOpen
     }
 
-    override fun send(peer: BluetoothAddress, data: ByteArray) {
+    override fun send(
+        peer: BluetoothAddress,
+        data: ByteArray,
+    ) {
         logger.debug { "Send to $peer: ${data.size} B" }
         val client = clients[peer]
         client?.send(data)

@@ -23,7 +23,10 @@ class GattClientManager(context: Context) : BleManager<GattClientCallbacks>(cont
         return IPv8GattCallback()
     }
 
-    override fun log(priority: Int, message: String) {
+    override fun log(
+        priority: Int,
+        message: String,
+    ) {
         Log.println(priority, "IPv8BleManager", message)
     }
 
@@ -62,10 +65,11 @@ class GattClientManager(context: Context) : BleManager<GattClientCallbacks>(cont
                 .with { device, data ->
                     val value = data.value
                     if (value != null) {
-                        val peer = Peer(
-                            bluetoothAddress = BluetoothAddress(device.address),
-                            key = defaultCryptoProvider.keyFromPublicBin(value)
-                        )
+                        val peer =
+                            Peer(
+                                bluetoothAddress = BluetoothAddress(device.address),
+                                key = defaultCryptoProvider.keyFromPublicBin(value),
+                            )
                         callbacks.onPeerDiscovered(peer)
                     }
                 }
@@ -73,9 +77,10 @@ class GattClientManager(context: Context) : BleManager<GattClientCallbacks>(cont
         }
 
         override fun onServerReady(server: BluetoothGattServer) {
-            serverCharacteristic = server
-                .getService(GattServerManager.SERVICE_UUID)
-                .getCharacteristic(GattServerManager.WRITE_CHARACTERISTIC_UUID)
+            serverCharacteristic =
+                server
+                    .getService(GattServerManager.SERVICE_UUID)
+                    .getCharacteristic(GattServerManager.WRITE_CHARACTERISTIC_UUID)
 
             setWriteCallback(serverCharacteristic)
                 .with { device, data ->

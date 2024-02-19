@@ -1,14 +1,9 @@
 apply plugin: 'kotlin'
-
 apply plugin: 'java-library'
-
 apply plugin: 'jacoco'
-
 apply plugin: 'org.jetbrains.dokka'
-
 apply plugin: 'org.jlleitschuh.gradle.ktlint'
-
-apply plugin: 'com.squareup.sqldelight'
+apply plugin: 'app.cash.sqldelight'
 
 dokka {
     outputFormat = 'html'
@@ -16,10 +11,12 @@ dokka {
 }
 
 sqldelight {
-    Database {
-        packageName = "nl.tudelft.ipv8.sqldelight"
-        sourceFolders = ["sqldelight"]
-        schemaOutputDirectory = file("src/main/sqldelight/databases")
+    databases {
+        Database {
+            packageName = "nl.tudelft.ipv8.sqldelight"
+            srcDirs = files(["src/main/sqldelight"])
+            schemaOutputDirectory = file("src/main/sqldelight/databases")
+        }
     }
 }
 
@@ -28,6 +25,8 @@ ktlint {
     android = true
     outputToConsole = true
     ignoreFailures = false
+    verbose = true
+
     filter {
         // https://github.com/JLLeitschuh/ktlint-gradle/issues/97
         exclude { "**/generated/**" }
@@ -38,9 +37,9 @@ ktlint {
 
 jacocoTestReport {
     reports {
-        xml.enabled true
-        csv.enabled true
-        html.enabled true
+        xml.required = true
+        csv.required = true
+        html.required = true
     }
 
     // TODO: exclude generated files
@@ -74,8 +73,8 @@ dependencies {
 
     // Testing
     testImplementation 'junit:junit:4.12'
-    testImplementation "io.mockk:mockk:1.9.3"
-    testImplementation "com.squareup.sqldelight:sqlite-driver:$sqldelight_version"
+    testImplementation "io.mockk:mockk:$mockk_version"
+    testImplementation "app.cash.sqldelight:sqlite-driver:$sqldelight_version"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
 
 
@@ -87,7 +86,12 @@ dependencies {
 
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
     kotlinOptions.freeCompilerArgs += [
-        "-opt-in=kotlin.Experimental,kotlin.ExperimentalUnsignedTypes",
+        "-opt-in=kotlin.ExperimentalUnsignedTypes",
         "-Werror" // Set Kotlin compiler warnings as errors
     ]
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }

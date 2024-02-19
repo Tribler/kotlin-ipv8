@@ -37,7 +37,6 @@ object IPv8Android {
     class Factory(
         private val application: Application,
     ) {
-
         private var privateKey: PrivateKey? = null
         private var identityPrivateKeySmall: BonehPrivateKey? = null
         private var identityPrivateKeyBig: BonehPrivateKey? = null
@@ -94,46 +93,59 @@ object IPv8Android {
         }
 
         private fun create(): IPv8 {
-            val privateKey = privateKey
-                ?: throw IllegalStateException("Private key is not set")
+            val privateKey = privateKey ?: throw IllegalStateException("Private key is not set")
 
-            val configuration = configuration
-                ?: throw IllegalStateException("Configuration is not set")
+            val configuration =
+                configuration ?: throw IllegalStateException("Configuration is not set")
 
-            val connectivityManager = application.getSystemService<ConnectivityManager>()
-                ?: throw IllegalStateException("ConnectivityManager not found")
+            val connectivityManager =
+                application.getSystemService<ConnectivityManager>()
+                    ?: throw IllegalStateException("ConnectivityManager not found")
 
-            val udpEndpoint = AndroidUdpEndpoint(
-                8090,
-                InetAddress.getByName("0.0.0.0"),
-                connectivityManager
-            )
+            val udpEndpoint =
+                AndroidUdpEndpoint(
+                    8090,
+                    InetAddress.getByName("0.0.0.0"),
+                    connectivityManager,
+                )
 
-            val bluetoothManager = application.getSystemService<BluetoothManager>()
-                ?: throw IllegalStateException("BluetoothManager not found")
+            val bluetoothManager =
+                application.getSystemService<BluetoothManager>()
+                    ?: throw IllegalStateException("BluetoothManager not found")
 
-            val myPeer = Peer(
-                privateKey,
-                identityPrivateKeySmall = this.identityPrivateKeySmall,
-                identityPrivateKeyBig = this.identityPrivateKeyBig,
-                identityPrivateKeyHuge = this.identityPrivateKeyHuge
-            )
+            val myPeer =
+                Peer(
+                    privateKey,
+                    identityPrivateKeySmall = this.identityPrivateKeySmall,
+                    identityPrivateKeyBig = this.identityPrivateKeyBig,
+                    identityPrivateKeyHuge = this.identityPrivateKeyHuge,
+                )
 
             val network = Network()
 
             val gattServer = GattServerManager(application, myPeer)
             val bleAdvertiser = IPv8BluetoothLeAdvertiser(bluetoothManager)
             val bleScanner = IPv8BluetoothLeScanner(bluetoothManager, network)
-            val bluetoothEndpoint = if (
-                bluetoothManager.adapter != null && Build.VERSION.SDK_INT >= 24
-            ) BluetoothLeEndpoint(
-                application, bluetoothManager, gattServer, bleAdvertiser, bleScanner, network, myPeer
-            ) else null
+            val bluetoothEndpoint =
+                if (bluetoothManager.adapter != null) {
+                    BluetoothLeEndpoint(
+                        application,
+                        bluetoothManager,
+                        gattServer,
+                        bleAdvertiser,
+                        bleScanner,
+                        network,
+                        myPeer,
+                    )
+                } else {
+                    null
+                }
 
-            val endpointAggregator = EndpointAggregator(
-                udpEndpoint,
-                bluetoothEndpoint
-            )
+            val endpointAggregator =
+                EndpointAggregator(
+                    udpEndpoint,
+                    bluetoothEndpoint,
+                )
 
             return IPv8(endpointAggregator, configuration, myPeer, network)
         }

@@ -10,9 +10,12 @@ import java.util.*
 
 class GattServerManager(
     context: Context,
-    private val myPeer: Peer
+    private val myPeer: Peer,
 ) : BleServerManager(context) {
-    override fun log(priority: Int, message: String) {
+    override fun log(
+        priority: Int,
+        message: String,
+    ) {
         Log.println(priority, "GattServerManager", message)
     }
 
@@ -23,15 +26,15 @@ class GattServerManager(
                 characteristic(
                     WRITE_CHARACTERISTIC_UUID,
                     BluetoothGattCharacteristic.PROPERTY_WRITE,
-                    BluetoothGattCharacteristic.PERMISSION_WRITE
+                    BluetoothGattCharacteristic.PERMISSION_WRITE,
                 ),
                 characteristic(
                     IDENTITY_CHARACTERISTIC_UUID,
                     BluetoothGattCharacteristic.PROPERTY_READ,
                     BluetoothGattCharacteristic.PERMISSION_READ,
-                    myPeer.publicKey.keyToBin()
-                )
-            )
+                    myPeer.publicKey.keyToBin(),
+                ),
+            ),
         )
     }
 

@@ -7,5 +7,10 @@ dependencies {
 
     implementation "net.java.dev.jna:jna:5.5.0"
     implementation 'org.slf4j:slf4j-simple:2.0.6'
-    implementation "com.squareup.sqldelight:sqlite-driver:$sqldelight_version"
+    implementation "app.cash.sqldelight:sqlite-driver:$sqldelight_version"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
