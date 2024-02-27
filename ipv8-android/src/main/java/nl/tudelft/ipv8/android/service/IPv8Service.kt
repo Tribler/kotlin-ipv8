@@ -24,7 +24,7 @@ import nl.tudelft.ipv8.android.R
 import kotlin.system.exitProcess
 
 open class IPv8Service : Service(), LifecycleObserver {
-    private val scope = CoroutineScope(Dispatchers.Default)
+    protected val scope = CoroutineScope(Dispatchers.Default)
 
     private var isForeground = false
 
@@ -60,13 +60,13 @@ open class IPv8Service : Service(), LifecycleObserver {
     @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
     fun onBackground() {
         isForeground = false
-        showForegroundNotification()
+        updateNotification()
     }
 
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onForeground() {
         isForeground = true
-        showForegroundNotification()
+        updateNotification()
     }
 
     private fun createNotificationChannel() {
@@ -89,25 +89,12 @@ open class IPv8Service : Service(), LifecycleObserver {
     }
 
     private fun showForegroundNotification() {
-        val cancelBroadcastIntent = Intent(this, StopIPv8Receiver::class.java)
-        val flags =
-            when {
-                SDK_INT >= Build.VERSION_CODES.M -> FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE
-                else -> FLAG_UPDATE_CURRENT
-            }
-        val cancelPendingIntent =
-            PendingIntent.getBroadcast(
-                applicationContext,
-                0,
-                cancelBroadcastIntent,
-                flags,
-            )
-
         val builder = createNotification()
 
-        // Allow cancellation when the app is running in background
+        // Allow cancellation when the app is running in background.
+        // Should technically not be triggered.
         if (!isForeground) {
-            builder.addAction(NotificationCompat.Action(0, "Stop", cancelPendingIntent))
+            addStopAction(builder)
         }
 
         if (SDK_INT > Build.VERSION_CODES.TIRAMISU) {
@@ -131,6 +118,42 @@ open class IPv8Service : Service(), LifecycleObserver {
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_CONNECTION)
             .setContentTitle("IPv8")
             .setContentText("Running")
+    }
+
+    /**
+     * Updates the notification to show the current state of the IPv8 service.
+     */
+    protected fun updateNotification() {
+        val builder = createNotification()
+
+        // Allow cancellation when the app is running in background.
+        if (!isForeground) {
+            addStopAction(builder)
+        }
+
+        val mNotificationManager =
+            getSystemService<NotificationManager>()
+        mNotificationManager?.notify(ONGOING_NOTIFICATION_ID, builder.build())
+    }
+
+    /**
+     * Adds a stop action to the notification.
+     */
+    private fun addStopAction(builder: NotificationCompat.Builder) {
+        val cancelBroadcastIntent = Intent(this, StopIPv8Receiver::class.java)
+        val flags =
+            when {
+                SDK_INT >= Build.VERSION_CODES.M -> FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE
+                else -> FLAG_UPDATE_CURRENT
+            }
+        val cancelPendingIntent =
+            PendingIntent.getBroadcast(
+                applicationContext,
+                0,
+                cancelBroadcastIntent,
+                flags,
+            )
+        builder.addAction(NotificationCompat.Action(0, "Stop", cancelPendingIntent))
     }
 
     /**
