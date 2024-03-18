@@ -5,6 +5,7 @@ import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothAddress
 import nl.tudelft.ipv8.messaging.bluetooth.BluetoothEndpoint
 import nl.tudelft.ipv8.messaging.udp.UdpEndpoint
+import nl.tudelft.ipv8.messaging.utp.UtpEndpoint
 import java.util.*
 
 /**
@@ -12,7 +13,8 @@ import java.util.*
  */
 class EndpointAggregator(
     val udpEndpoint: UdpEndpoint?,
-    val bluetoothEndpoint: BluetoothEndpoint?
+    val bluetoothEndpoint: BluetoothEndpoint?,
+    val utpEndpoint: UtpEndpoint? = null,
 ) : Endpoint<Peer>(), EndpointListener {
     private var isOpen: Boolean = false
 
@@ -58,6 +60,9 @@ class EndpointAggregator(
         bluetoothEndpoint?.addListener(this)
         bluetoothEndpoint?.open()
 
+        utpEndpoint?.addListener(this)
+        utpEndpoint?.open()
+
         isOpen = true
     }
 
@@ -67,6 +72,9 @@ class EndpointAggregator(
 
         bluetoothEndpoint?.removeListener(this)
         bluetoothEndpoint?.close()
+
+        utpEndpoint?.removeListener(this)
+        utpEndpoint?.close()
 
         isOpen = false
     }

@@ -22,6 +22,7 @@ import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.BonehPrivateKe
 import nl.tudelft.ipv8.keyvault.PrivateKey
 import nl.tudelft.ipv8.keyvault.defaultCryptoProvider
 import nl.tudelft.ipv8.messaging.EndpointAggregator
+import nl.tudelft.ipv8.messaging.utp.UtpEndpoint
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.defaultEncodingUtils
 import java.net.InetAddress
@@ -109,6 +110,11 @@ object IPv8Android {
                     connectivityManager,
                 )
 
+            val utpEndpoint = UtpEndpoint(
+                13377,
+                InetAddress.getByName("0.0.0.0")
+            )
+
             val bluetoothManager =
                 application.getSystemService<BluetoothManager>()
                     ?: throw IllegalStateException("BluetoothManager not found")
@@ -145,6 +151,7 @@ object IPv8Android {
                 EndpointAggregator(
                     udpEndpoint,
                     bluetoothEndpoint,
+                    utpEndpoint,
                 )
 
             return IPv8(endpointAggregator, configuration, myPeer, network)
