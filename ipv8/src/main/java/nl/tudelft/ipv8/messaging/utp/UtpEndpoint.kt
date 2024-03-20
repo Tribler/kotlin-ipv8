@@ -10,6 +10,7 @@ import mu.KotlinLogging
 import net.utp4j.channels.UtpServerSocketChannel
 import net.utp4j.channels.UtpSocketChannel
 import net.utp4j.channels.futures.UtpReadListener
+import net.utp4j.channels.impl.alg.UtpAlgConfiguration
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Endpoint
@@ -31,11 +32,15 @@ class UtpEndpoint(
 
     var listener = RawResourceListener()
 
-    private var lastTime = 0L
+    var lastTime = 0L
     private val sendBuffer = ByteBuffer.allocate(BUFFER_SIZE)
     private val receiveBuffer = ByteBuffer.allocate(BUFFER_SIZE)
 
     private var serverSocket: UtpServerSocketChannel? = null;
+
+    init {
+        UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000
+    }
 
 
     override fun isOpen(): Boolean {
@@ -46,7 +51,7 @@ class UtpEndpoint(
         // Modify the address to use the open UTP port
         // ???
 
-        send(peer.address, data)
+        send(IPv4Address(peer.wanAddress.ip, 13377), data)
     }
 
     fun send(ipv4Address: IPv4Address, data: ByteArray) {
