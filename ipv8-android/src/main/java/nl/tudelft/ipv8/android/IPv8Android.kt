@@ -110,10 +110,11 @@ object IPv8Android {
                     connectivityManager,
                 )
 
-            val utpEndpoint = UtpEndpoint(
-                13377,
-                InetAddress.getByName("0.0.0.0")
-            )
+            val utpEndpoint =
+                UtpEndpoint(
+                    13377,
+                    InetAddress.getByName("0.0.0.0")
+                )
 
             val bluetoothManager =
                 application.getSystemService<BluetoothManager>()

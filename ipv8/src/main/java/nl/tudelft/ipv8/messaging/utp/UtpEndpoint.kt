@@ -7,14 +7,18 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
-import net.utp4j.channels.UtpServerSocketChannel
 import net.utp4j.channels.UtpSocketChannel
-import net.utp4j.channels.futures.UtpReadListener
+import net.utp4j.channels.UtpSocketState
+import net.utp4j.channels.impl.UtpServerSocketChannelImpl
+import net.utp4j.channels.impl.UtpSocketChannelImpl
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.utp.listener.RawResourceListener
+import java.io.IOException
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -22,7 +26,7 @@ import java.nio.ByteBuffer
 private val logger = KotlinLogging.logger {}
 
 class UtpEndpoint(
-    private val port: Int,
+    val port: Int,
     private val ip: InetAddress,
 ) : Endpoint<Peer>() {
 
@@ -36,22 +40,25 @@ class UtpEndpoint(
     private val sendBuffer = ByteBuffer.allocate(BUFFER_SIZE)
     private val receiveBuffer = ByteBuffer.allocate(BUFFER_SIZE)
 
-    private var serverSocket: UtpServerSocketChannel? = null;
+    private var serverSocket: CustomUtpServerSocket? = null;
+    private var clientSocket: CustomUtpClientSocket? = null;
 
     init {
         UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000
+        logger.error { "THIS IS UTP HERE!!!" }
     }
 
 
     override fun isOpen(): Boolean {
-        return serverSocket != null
+        return serverSocket != null && clientSocket != null
     }
 
     override fun send(peer: Peer, data: ByteArray) {
-        // Modify the address to use the open UTP port
-        // ???
+        send(peer, 13377, data)
+    }
 
-        send(IPv4Address(peer.wanAddress.ip, 13377), data)
+    fun send(peer: Peer, port: Int = 13377, data: ByteArray) {
+        send(IPv4Address(peer.address.ip, port), data)
     }
 
     fun send(ipv4Address: IPv4Address, data: ByteArray) {
@@ -61,25 +68,42 @@ class UtpEndpoint(
         sendBuffer.put(data)
 
         scope.launch(Dispatchers.IO) {
-            UtpSocketChannel.open().let { channel ->
-                val future = channel.connect(InetSocketAddress(ipv4Address.ip, ipv4Address.port))
-                    ?.apply { block() }
-                if (future != null) {
-                    if (future.isSuccessfull) {
-                        channel.write(sendBuffer)?.apply { block() }
-                        logger.debug("Sent buffer")
-                    } else logger.debug("Did not manage to connect to the server!")
-                } else {
-                    logger.debug("Future is null!")
-                }
-                channel.close()
+            val future = clientSocket?.connect(InetSocketAddress(ipv4Address.ip, ipv4Address.port))
+                ?.apply { block() }
+            if (future != null) {
+                if (future.isSuccessfull) {
+                    clientSocket?.write(sendBuffer)?.apply { block() }
+                    logger.debug("Sent buffer")
+                } else logger.debug("Did not manage to connect to the server!")
+            } else {
+                logger.debug("Future is null!")
             }
         }
     }
 
+    fun sendRawClientData(packet: DatagramPacket) {
+        scope.launch(Dispatchers.IO) {
+            clientSocket?.sendRawData(packet)
+        }
+    }
+
+    fun sendServerData(packet: DatagramPacket) {
+        serverSocket?.sendData(packet)
+    }
+
     override fun open() {
-        serverSocket = UtpServerSocketChannel.open()
+        serverSocket = CustomUtpServerSocket()
         serverSocket?.bind(InetSocketAddress(ip, port))
+
+        val c = CustomUtpClientSocket()
+        try {
+            c.dgSocket = DatagramSocket()
+            c.state = UtpSocketState.CLOSED
+        } catch (exp: IOException) {
+            throw IOException("Could not open UtpSocketChannel: " + exp.message)
+        }
+        clientSocket = c
+
         logger.debug("Server started on $ip:$port")
         serverListen()
     }
@@ -88,6 +112,7 @@ class UtpEndpoint(
         logger.debug("Stopping the server!")
         listenerJob.cancel()
         serverSocket?.close()
+        clientSocket?.close()
     }
 
     private fun serverListen() {
@@ -117,6 +142,20 @@ class UtpEndpoint(
 
     companion object {
         const val BUFFER_SIZE = 50_000_000
+    }
+
+    class CustomUtpServerSocket : UtpServerSocketChannelImpl() {
+        fun sendData(packet: DatagramPacket) {
+            socket.send(packet)
+        }
+
+    }
+
+    class CustomUtpClientSocket : UtpSocketChannelImpl() {
+
+        fun sendRawData(packet: DatagramPacket) {
+            dgSocket.send(packet)
+        }
     }
 
 }

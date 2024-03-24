@@ -10,10 +10,10 @@ import nl.tudelft.ipv8.messaging.serializeLong
 import nl.tudelft.ipv8.messaging.serializeUChar
 import nl.tudelft.ipv8.messaging.serializeUInt
 
-class TransferRequestPayload(
+data class TransferRequestPayload(
     val port: Int,
     val status: TransferStatus,
-    var dataSize: Int = 0
+    val dataSize: Int = 0
 ): Serializable {
     override fun serialize(): ByteArray {
         return serializeLong(port.toLong()) + serializeUInt(status.ordinal.toUInt()) + serializeLong(dataSize.toLong())
@@ -44,4 +44,8 @@ class TransferRequestPayload(
         DECLINE
     }
 
+    enum class TransferType {
+        FILE,
+        RANDOM_DATA
+    }
 }
