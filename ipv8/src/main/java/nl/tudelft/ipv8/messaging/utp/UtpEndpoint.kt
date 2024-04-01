@@ -145,10 +145,18 @@ class UtpEndpoint(
     }
 
     class CustomUtpServerSocket : UtpServerSocketChannelImpl() {
+        var packetListener: (DatagramPacket) -> Unit = {};
+
         fun sendData(packet: DatagramPacket) {
             socket.send(packet)
         }
 
+        override fun recievePacket(packet: DatagramPacket?) {
+            // inform packet listener
+            packetListener.invoke(packet!!)
+
+            super.recievePacket(packet)
+        }
     }
 
     class CustomUtpClientSocket : UtpSocketChannelImpl() {
