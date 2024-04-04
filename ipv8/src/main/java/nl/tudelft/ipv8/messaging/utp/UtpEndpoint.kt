@@ -115,8 +115,8 @@ class UtpEndpoint(
         clientSocket?.close()
     }
 
-    fun getUtpServerSocket(): UtpSocket {
-        return utpServerSocket
+    fun getUtpServerSocket(): CustomUtpServerSocket {
+        return serverSocket
     }
 
     private fun serverListen() {
