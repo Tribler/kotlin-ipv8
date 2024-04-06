@@ -46,6 +46,7 @@ class UtpEndpoint(
     init {
         UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000
         logger.error { "THIS IS UTP HERE!!!" }
+        println("THIS IS UTP HERE!!!")
     }
 
 
