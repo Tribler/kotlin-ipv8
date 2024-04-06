@@ -11,6 +11,7 @@ import net.utp4j.channels.UtpSocketChannel
 import net.utp4j.channels.UtpSocketState
 import net.utp4j.channels.impl.UtpServerSocketChannelImpl
 import net.utp4j.channels.impl.UtpSocketChannelImpl
+import net.utp4j.channels.impl.alg.UtpAlgConfiguration
 import net.utp4j.channels.impl.recieve.UtpRecieveRunnable
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.messaging.Endpoint
@@ -41,6 +42,12 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     private var clientUtpSocket: UtpSocket? = null
     private var serverUtpSocket: UtpSocket? = null
 
+    init {
+        UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000
+        UtpAlgConfiguration.MAX_PACKET_SIZE = MAX_UTP_PACKET_SIZE
+        println("Utp IPv8 endpoint initialized!")
+    }
+
     override fun isOpen(): Boolean = serverSocket != null && clientSocket != null
 
     override fun open() {
@@ -70,13 +77,13 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         clientSocket?.close()
     }
 
-    override fun send(address: IPv4Address, data: ByteArray) {
+    override fun send(peer: IPv4Address, data: ByteArray) {
         // Refresh the buffer
         sendBuffer.clear()
         sendBuffer.put(data)
 
         scope.launch(Dispatchers.IO) {
-            val future = clientSocket?.connect(InetSocketAddress(address.ip, address.port))
+            val future = clientSocket?.connect(InetSocketAddress(peer.ip, peer.port))
                 ?.apply { block() }
             if (future != null) {
                 if (future.isSuccessfull) {
@@ -108,9 +115,21 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         }
     }
 
+    fun onPacket(receivePacket: DatagramPacket) {
+        val packet = DatagramPacket(ByteArray(receivePacket.length - 1), receivePacket.length - 1)
+        val data = receivePacket.data.copyOfRange(1, receivePacket.length)
+        packet.setData(data, 0, data.size)
+
+        // Send the packet to the UTP socket on both (???) sides
+        // TODO: Should probably distinguish between client and server connection
+        clientUtpSocket?.buffer?.trySend(packet)?.isSuccess
+        serverUtpSocket?.buffer?.trySend(packet)?.isSuccess
+    }
+
     companion object {
         const val PREFIX_UTP: Byte = 0x42;
-        const val MAX_UTP_PACKET_SIZE = 1472;
+        // 1500 - 20 (IPv4 header) - 8 (UDP header) - 1 (UTP prefix)
+        const val MAX_UTP_PACKET_SIZE = 1471;
         const val BUFFER_SIZE = 50_000_000
     }
 

@@ -215,6 +215,7 @@ open class UdpEndpoint(
                 tftpEndpoint.onPacket(receivePacket)
             }
             UtpIPv8Endpoint.PREFIX_UTP -> {
+                utpIPv8Endpoint.onPacket(receivePacket)
                 println("Received UTP packet")
             }
             else -> {
