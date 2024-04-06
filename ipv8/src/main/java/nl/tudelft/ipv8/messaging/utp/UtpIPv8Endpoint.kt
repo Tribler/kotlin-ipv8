@@ -42,6 +42,8 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     private var clientUtpSocket: UtpSocket? = null
     private var serverUtpSocket: UtpSocket? = null
 
+    var rawPacketListeners: MutableList<(DatagramPacket) -> Unit> = ArrayList()
+
     init {
         UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000
         UtpAlgConfiguration.MAX_PACKET_SIZE = MAX_UTP_PACKET_SIZE
@@ -119,11 +121,18 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         val packet = DatagramPacket(ByteArray(receivePacket.length - 1), receivePacket.length - 1)
         val data = receivePacket.data.copyOfRange(1, receivePacket.length)
         packet.setData(data, 0, data.size)
+        packet.address = receivePacket.address
+        packet.port = receivePacket.port
 
         // Send the packet to the UTP socket on both (???) sides
         // TODO: Should probably distinguish between client and server connection
         clientUtpSocket?.buffer?.trySend(packet)?.isSuccess
         serverUtpSocket?.buffer?.trySend(packet)?.isSuccess
+
+        // send packet to rawPacketListeners
+        for (packetListener in rawPacketListeners) {
+            packetListener.invoke(packet)
+        }
     }
 
     companion object {
@@ -134,8 +143,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     }
 
     class CustomUtpServerSocket : UtpServerSocketChannelImpl() {
-
-        override fun bind(addr: InetSocketAddress?) {
+         override fun bind(addr: InetSocketAddress?) {
             throw BindException("Cannot bind new socket, use existing one!")
         }
 
@@ -143,6 +151,5 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
             this.socket = utpSocket
             listenRunnable = UtpRecieveRunnable(utpSocket, this)
         }
-
     }
 }

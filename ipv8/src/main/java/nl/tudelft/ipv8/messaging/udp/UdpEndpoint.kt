@@ -19,7 +19,7 @@ open class UdpEndpoint(
     private val port: Int,
     private val ip: InetAddress,
     private val tftpEndpoint: TFTPEndpoint = TFTPEndpoint(),
-    private val utpIPv8Endpoint: UtpIPv8Endpoint = UtpIPv8Endpoint(),
+    val utpIPv8Endpoint: UtpIPv8Endpoint = UtpIPv8Endpoint(),
 ) : Endpoint<Peer>() {
     private var socket: DatagramSocket? = null
 
@@ -216,7 +216,6 @@ open class UdpEndpoint(
             }
             UtpIPv8Endpoint.PREFIX_UTP -> {
                 utpIPv8Endpoint.onPacket(receivePacket)
-                println("Received UTP packet")
             }
             else -> {
                 logger.warn { "Invalid packet prefix" }

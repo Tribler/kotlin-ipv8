@@ -44,8 +44,7 @@ class UtpEndpoint(
     private var clientSocket: CustomUtpClientSocket? = null;
 
     init {
-        UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000
-        logger.error { "THIS IS UTP HERE!!!" }
+        UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 30000
         println("THIS IS UTP HERE!!!")
     }
 

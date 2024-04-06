@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import nl.tudelft.ipv8.messaging.utp.UtpIPv8Endpoint.Companion.MAX_UTP_PACKET_SIZE
 import nl.tudelft.ipv8.messaging.utp.UtpIPv8Endpoint.Companion.PREFIX_UTP
+import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.SocketTimeoutException
@@ -30,7 +31,7 @@ class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
     override fun receive(packet: DatagramPacket) {
         runBlocking {
             try {
-                withTimeout(soTimeout.toLong()) {
+                withTimeout(5000) {
                     val received = buffer.receive()
                     packet.address = received.address
                     packet.port = received.port
@@ -38,7 +39,8 @@ class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
                 }
             } catch (e: TimeoutCancellationException) {
                 // Is this just spamming the console if channel is empty?
-                throw SocketTimeoutException()
+                throw IOException()
+//                println("socket timed out")
             }
         }
     }
