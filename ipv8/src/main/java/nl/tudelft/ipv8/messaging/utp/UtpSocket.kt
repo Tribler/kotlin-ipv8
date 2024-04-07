@@ -30,19 +30,23 @@ class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
     }
 
     override fun receive(packet: DatagramPacket) {
-        runBlocking {
-            try {
-                withTimeout(5000) {
-                    val received = buffer.receive()
-                    packet.address = received.address
-                    packet.port = received.port
-                    packet.setData(received.data, received.offset, received.length)
-                }
-            } catch (e: TimeoutCancellationException) {
-                // Is this just spamming the console if channel is empty?
-                throw IOException()
+        try {
+            runBlocking {
+                try {
+                    withTimeout(5000) {
+                        val received = buffer.receive()
+                        packet.address = received.address
+                        packet.port = received.port
+                        packet.setData(received.data, received.offset, received.length)
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    // Is this just spamming the console if channel is empty?
+                    throw IOException()
 //                println("socket timed out")
+                }
             }
+        } catch (e: InterruptedException) {
+            throw IOException("Interrupted while waiting for packet")
         }
     }
 }
