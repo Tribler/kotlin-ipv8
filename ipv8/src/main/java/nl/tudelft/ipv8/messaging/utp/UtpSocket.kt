@@ -22,6 +22,7 @@ class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
 
         if (socket != null) {
             socket.send(packet)
+            println("Sending $packet")
         } else {
             println("UTP socket is missing")
         }

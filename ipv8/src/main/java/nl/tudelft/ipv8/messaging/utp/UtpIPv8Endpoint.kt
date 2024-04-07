@@ -14,6 +14,7 @@ import net.utp4j.channels.impl.UtpSocketChannelImpl
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration
 import net.utp4j.channels.impl.recieve.UtpRecieveRunnable
 import nl.tudelft.ipv8.IPv4Address
+import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.utp.listener.RawResourceListener
 import java.io.IOException
