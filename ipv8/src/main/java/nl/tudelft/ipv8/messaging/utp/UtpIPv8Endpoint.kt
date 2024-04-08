@@ -16,6 +16,7 @@ import net.utp4j.channels.impl.recieve.UtpRecieveRunnable
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Endpoint
+import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.messaging.utp.listener.RawResourceListener
 import java.io.IOException
 import java.net.BindException
@@ -26,11 +27,20 @@ import java.nio.ByteBuffer
 
 class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
 
+    /**
+     * Scope used for network operations
+     */
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
 
+    /**
+     * Job for the UTP server listener
+     */
     private var listenerJob: Job = Job()
 
+    /**
+     * Listener for raw resources used by the UTP server (receiver)
+     */
     var listener = RawResourceListener()
 
     private val sendBuffer = ByteBuffer.allocate(BUFFER_SIZE)
@@ -39,12 +49,18 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     private var serverSocket: CustomUtpServerSocket? = null;
     private var clientSocket: UtpSocketChannel? = null;
 
+    /**
+     * The underlying UDP socket used by IPv8
+     */
     var udpSocket: DatagramSocket? = null
     private var clientUtpSocket: UtpSocket? = null
     private var serverUtpSocket: UtpSocket? = null
 
     var rawPacketListeners: MutableList<(DatagramPacket) -> Unit> = ArrayList()
 
+    /**
+     * Initializes the UTP IPv8 endpoint and the UTP configuration in the library
+     */
     init {
         UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000
         UtpAlgConfiguration.MAX_PACKET_SIZE = MAX_UTP_PACKET_SIZE
@@ -118,6 +134,10 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         }
     }
 
+    /**
+     * This method is called when a packet is received by the IPv8 UDP socket.
+     * It strips the UTP prefix and sends the packet to the UTP socket.
+     */
     fun onPacket(receivePacket: DatagramPacket) {
         val packet = DatagramPacket(ByteArray(receivePacket.length - 1), receivePacket.length - 1)
         val data = receivePacket.data.copyOfRange(1, receivePacket.length)
@@ -140,9 +160,14 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         const val PREFIX_UTP: Byte = 0x42;
         // 1500 - 20 (IPv4 header) - 8 (UDP header) - 1 (UTP prefix)
         const val MAX_UTP_PACKET_SIZE = 1471;
+        // TODO: This is a temporary buffer size, should be adjusted to handle variable sizes
         const val BUFFER_SIZE = 50_000_000
     }
 
+    /**
+     * A custom UTP server socket implementation to change the bind method to use an existing socket.
+     * The original method throws an exception as we don't want to bind a new socket.
+     */
     class CustomUtpServerSocket : UtpServerSocketChannelImpl() {
          override fun bind(addr: InetSocketAddress?) {
             throw BindException("Cannot bind new socket, use existing one!")

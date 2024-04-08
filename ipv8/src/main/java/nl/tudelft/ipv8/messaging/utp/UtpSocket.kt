@@ -11,9 +11,19 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.SocketTimeoutException
 
+/**
+ * A custom UTP socket that wraps around a regular DatagramSocket.
+ *
+ * This socket is used to send raw packets and receive packets from the custom UTP buffer.
+ */
 class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
     val buffer = Channel<DatagramPacket>(Channel.UNLIMITED)
 
+    /**
+     * Sends a packet to the buffer.
+     *
+     * Removes the custom prefix from the packet and sends it to the buffer
+     */
     override fun send(packet: DatagramPacket) {
 
         val data = packet.data.copyOfRange(packet.offset, packet.offset + packet.length)
@@ -29,10 +39,17 @@ class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
 
     }
 
+    /**
+     * Receives a packet from the buffer.
+     *
+     * This coroutine will start each time we successfully send files, thus causing more console spam
+     * TODO: Find the reason and fix it
+     */
     override fun receive(packet: DatagramPacket) {
         try {
             runBlocking {
                 try {
+                    // Timeout required to prevent Android from killing the "stuck" thread
                     withTimeout(5000) {
                         val received = buffer.receive()
                         packet.address = received.address
@@ -40,12 +57,13 @@ class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
                         packet.setData(received.data, received.offset, received.length)
                     }
                 } catch (e: TimeoutCancellationException) {
-                    // Is this just spamming the console if channel is empty?
+                    // We need to throw IO exception to be handled by the libary code
                     throw IOException()
 //                println("socket timed out")
                 }
             }
         } catch (e: InterruptedException) {
+            // This exception is thrown when the connection is not established
             throw IOException("Interrupted while waiting for packet")
         }
     }
