@@ -9,6 +9,7 @@ import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.tftp.TFTPEndpoint
+import nl.tudelft.ipv8.messaging.utp.UtpIPv8Endpoint
 import java.io.IOException
 import java.net.*
 
@@ -18,6 +19,7 @@ open class UdpEndpoint(
     private val port: Int,
     private val ip: InetAddress,
     private val tftpEndpoint: TFTPEndpoint = TFTPEndpoint(),
+    val utpIPv8Endpoint: UtpIPv8Endpoint = UtpIPv8Endpoint(),
 ) : Endpoint<Peer>() {
     private var socket: DatagramSocket? = null
 
@@ -88,12 +90,22 @@ open class UdpEndpoint(
         }
     }
 
+    fun sendUtp(
+        address: IPv4Address,
+        data: ByteArray,
+    ) {
+        utpIPv8Endpoint.send(address, data)
+    }
+
     override fun open() {
         val socket = getDatagramSocket()
         this.socket = socket
 
         tftpEndpoint.socket = socket
         tftpEndpoint.open()
+
+        utpIPv8Endpoint.udpSocket = socket
+        utpIPv8Endpoint.open()
 
         logger.info { "Opened UDP socket on port ${socket.localPort}" }
 
@@ -126,6 +138,7 @@ open class UdpEndpoint(
         bindJob = null
 
         tftpEndpoint.close()
+        utpIPv8Endpoint.close()
 
         socket?.close()
         socket = null
@@ -185,7 +198,7 @@ open class UdpEndpoint(
                 "${receivePacket.address.hostAddress}:${receivePacket.port}",
         )
 
-        // Check whether prefix is IPv8 or TFTP
+        // Check whether prefix is IPv8 or TFTP or UTP
         when (receivePacket.data[0]) {
             Community.PREFIX_IPV8 -> {
                 val sourceAddress =
@@ -200,6 +213,9 @@ open class UdpEndpoint(
             }
             TFTPEndpoint.PREFIX_TFTP -> {
                 tftpEndpoint.onPacket(receivePacket)
+            }
+            UtpIPv8Endpoint.PREFIX_UTP -> {
+                utpIPv8Endpoint.onPacket(receivePacket)
             }
             else -> {
                 logger.warn { "Invalid packet prefix" }
