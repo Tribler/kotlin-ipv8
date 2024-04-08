@@ -5,6 +5,11 @@ import net.utp4j.channels.futures.UtpReadListener
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * A listener for raw resources such as text files.
+ * Currently, it only prints the received data.
+ * The exact data should be saved to some internal storage.
+ */
 class RawResourceListener : UtpReadListener() {
 
     val queue: ArrayDeque<ByteArray> = ArrayDeque()

@@ -7,6 +7,12 @@ import java.security.MessageDigest
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * A listener for random hashed data.
+ * It expects a SHA256 hash at the end of the received data to check for integrity.
+ *
+ * Used for testing purposes.
+ */
 class BaseDataListener : UtpReadListener() {
     override fun actionAfterReading() {
         if (exception == null && byteBuffer != null) {

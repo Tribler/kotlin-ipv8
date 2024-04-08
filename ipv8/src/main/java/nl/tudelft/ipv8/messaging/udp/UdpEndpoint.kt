@@ -90,6 +90,9 @@ open class UdpEndpoint(
         }
     }
 
+    /**
+     * Send whole binary data to the given address using UTP.
+     */
     fun sendUtp(
         address: IPv4Address,
         data: ByteArray,
