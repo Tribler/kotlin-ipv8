@@ -2,8 +2,6 @@ package nl.tudelft.ipv8.messaging.utp.listener
 
 import mu.KotlinLogging
 import net.utp4j.channels.futures.UtpReadListener
-import nl.tudelft.ipv8.messaging.utp.UtpEndpoint.Companion.BUFFER_SIZE
-import java.nio.Buffer
 
 private val logger = KotlinLogging.logger {}
 

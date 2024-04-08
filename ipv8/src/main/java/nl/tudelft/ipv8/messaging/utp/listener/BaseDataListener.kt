@@ -2,7 +2,7 @@ package nl.tudelft.ipv8.messaging.utp.listener
 
 import mu.KotlinLogging
 import net.utp4j.channels.futures.UtpReadListener
-import nl.tudelft.ipv8.messaging.utp.UtpEndpoint.Companion.BUFFER_SIZE
+import nl.tudelft.ipv8.messaging.utp.UtpIPv8Endpoint.Companion.BUFFER_SIZE
 import java.security.MessageDigest
 
 private val logger = KotlinLogging.logger {}
