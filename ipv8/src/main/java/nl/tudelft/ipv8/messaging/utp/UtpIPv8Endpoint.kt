@@ -17,6 +17,7 @@ import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointListener
+import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload
 import nl.tudelft.ipv8.messaging.utp.listener.RawResourceListener
 import java.io.IOException
 import java.net.BindException
@@ -57,6 +58,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     private var serverUtpSocket: UtpSocket? = null
 
     var rawPacketListeners: MutableList<(DatagramPacket) -> Unit> = ArrayList()
+    val permittedTransfers = mutableMapOf<IPv4Address, TransferRequestPayload?>()
 
     /**
      * Initializes the UTP IPv8 endpoint and the UTP configuration in the library
@@ -128,6 +130,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
                         }
                         println("Finished receiving data!")
                     }
+                    permittedTransfers.clear()
                     channel.close()
                 }
             }
@@ -148,7 +151,22 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         // Send the packet to the UTP socket on both (???) sides
         // TODO: Should probably distinguish between client and server connection
         clientUtpSocket?.buffer?.trySend(packet)?.isSuccess
-        serverUtpSocket?.buffer?.trySend(packet)?.isSuccess
+
+        // Only allow transfers for accepted files
+        if (permittedTransfers.containsKey(IPv4Address(receivePacket.address.hostAddress, receivePacket.port))) {
+            val payload = permittedTransfers[IPv4Address(receivePacket.address.hostAddress, receivePacket.port)]
+            if (payload != null) {
+                assert(payload.dataSize + MAX_UTP_PACKET_SIZE < BUFFER_SIZE)
+                assert(payload.status == TransferRequestPayload.TransferStatus.ACCEPT)
+                receiveBuffer.limit(payload.dataSize + MAX_UTP_PACKET_SIZE)
+                permittedTransfers[IPv4Address(receivePacket.address.hostAddress, receivePacket.port)] = null
+            }
+            if (receiveBuffer.remaining() < packet.length) {
+                println("Buffer overflow!")
+                return
+            }
+            serverUtpSocket?.buffer?.trySend(packet)?.isSuccess
+        }
 
         // send packet to rawPacketListeners
         for (packetListener in rawPacketListeners) {
@@ -160,7 +178,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         const val PREFIX_UTP: Byte = 0x42;
         // 1500 - 20 (IPv4 header) - 8 (UDP header) - 1 (UTP prefix)
         const val MAX_UTP_PACKET_SIZE = 1471;
-        // TODO: This is a temporary buffer size, should be adjusted to handle variable sizes
+        // Hardcoded maximum buffer size of 50 MB
         const val BUFFER_SIZE = 50_000_000
     }
 

@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.messaging.payload
 
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload.TransferStatus.*
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload.TransferType.*
+import nl.tudelft.ipv8.messaging.serializeInt
 import nl.tudelft.ipv8.messaging.serializeLong
 import nl.tudelft.ipv8.messaging.serializeUInt
 import nl.tudelft.ipv8.messaging.serializeVarLen
@@ -20,7 +21,7 @@ class TransferRequestPayloadTest {
         val filename = serializeVarLen(payload.filename.toByteArray())
         val status = serializeUInt(REQUEST.ordinal.toUInt())
         val type = serializeUInt(FILE.ordinal.toUInt())
-        val dataSize = serializeLong(payload.dataSize.toLong())
+        val dataSize = serializeInt(payload.dataSize)
 
         assertEquals((filename + status + type + dataSize).toHex(), serialized.toHex())
     }
@@ -34,7 +35,7 @@ class TransferRequestPayloadTest {
         val filename = serializeVarLen(payload.filename.toByteArray())
         val status = serializeUInt(payload.status.ordinal.toUInt())
         val type = serializeUInt(payload.type.ordinal.toUInt())
-        val dataSize = serializeLong(payload.dataSize.toLong())
+        val dataSize = serializeInt(payload.dataSize)
 
         assertEquals(serialized.toHex(), (filename + status + type + dataSize).toHex())
     }
