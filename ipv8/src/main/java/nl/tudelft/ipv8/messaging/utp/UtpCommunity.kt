@@ -19,6 +19,7 @@ class UtpCommunity : Community() {
 
     val lastHeartbeat = mutableMapOf<String, Date>()
     val transferRequests = mutableMapOf<String, TransferRequestPayload>()
+    val utpHelper = UtpHelper(this)
 
     object MessageId {
         const val UTP_HEARTBEAT = 1
