@@ -19,7 +19,9 @@ import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointListener
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload
+import nl.tudelft.ipv8.messaging.utp.listener.BaseDataListener
 import nl.tudelft.ipv8.messaging.utp.listener.RawResourceListener
+import nl.tudelft.ipv8.messaging.utp.listener.TransferListener
 import java.io.IOException
 import java.net.BindException
 import java.net.DatagramPacket
@@ -43,7 +45,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
     /**
      * Listener for raw resources used by the UTP server (receiver)
      */
-    var listener = RawResourceListener()
+    var listener: TransferListener = RawResourceListener()
 
     private val sendBuffer = ByteBuffer.allocate(BUFFER_SIZE)
     private val receiveBuffer = ByteBuffer.allocate(BUFFER_SIZE)
@@ -165,6 +167,14 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
                 assert(payload.dataSize + MAX_UTP_PACKET_SIZE < BUFFER_SIZE)
                 assert(payload.status == TransferRequestPayload.TransferStatus.ACCEPT)
                 receiveBuffer.limit(payload.dataSize + MAX_UTP_PACKET_SIZE)
+                listener = when (payload.type) {
+                    TransferRequestPayload.TransferType.FILE -> {
+                        RawResourceListener()
+                    }
+                    TransferRequestPayload.TransferType.RANDOM_DATA -> {
+                        BaseDataListener()
+                    }
+                }
                 permittedTransfers[receiverIp] = null
             }
             if (receiveBuffer.remaining() < packet.length) {

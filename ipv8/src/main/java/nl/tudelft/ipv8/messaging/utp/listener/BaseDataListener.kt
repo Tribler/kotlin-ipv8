@@ -13,7 +13,9 @@ private val logger = KotlinLogging.logger {}
  *
  * Used for testing purposes.
  */
-class BaseDataListener : UtpReadListener() {
+class BaseDataListener : TransferListener() {
+
+    override val queue: ArrayDeque<ByteArray> = ArrayDeque()
     override fun actionAfterReading() {
         if (exception == null && byteBuffer != null) {
             try {
@@ -28,9 +30,9 @@ class BaseDataListener : UtpReadListener() {
                 val hash = MessageDigest.getInstance("SHA-256").digest(data)
 
                 if (MessageDigest.isEqual(hash, receivedHashData)) {
-                    logger.debug("Correct hash received")
+                    println("Correct hash received")
                 } else {
-                    logger.debug("Invalid hash received!")
+                    println("Invalid hash received!")
                 }
 
                 // Display the received data
