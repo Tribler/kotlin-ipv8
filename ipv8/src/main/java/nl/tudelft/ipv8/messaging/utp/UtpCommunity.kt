@@ -39,7 +39,7 @@ class UtpCommunity : Community() {
         }
     }
 
-    fun onHeartbeat(p: Packet) {
+    private fun onHeartbeat(p: Packet) {
         val peer = getPeers().find { it.address == p.source }
         val payload = p.getPayload(UtpHeartbeatPayload.Deserializer)
 

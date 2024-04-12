@@ -3,6 +3,9 @@ package nl.tudelft.ipv8.messaging.utp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -20,6 +23,16 @@ class UtpHelper(
      */
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
+
+    init {
+        scope.launch(Dispatchers.IO) {
+            while (isActive) {
+                utpCommunity.sendHeartbeat()
+                delay(5000)
+                if (utpCommunity.endpoint.udpEndpoint?.utpIPv8Endpoint?.isOpen() == false) this.cancel()
+            }
+        }
+    }
 
     fun sendFileData(peer: Peer, metadata: NamedResource, data: ByteArray) {
         scope.launch(Dispatchers.IO) {
@@ -48,7 +61,12 @@ class UtpHelper(
                 return@launch
             }
             println("Sending data to $peer")
-            utpCommunity.endpoint.udpEndpoint?.sendUtp(IPv4Address(peer.address.ip, peer.address.port), data)
+            utpCommunity.endpoint.udpEndpoint?.sendUtp(
+                IPv4Address(
+                    peer.address.ip,
+                    peer.address.port
+                ), data
+            )
         }
     }
 
