@@ -114,6 +114,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
             } else {
                 println("Future is null!")
             }
+            clientSocket?.close()
         }
     }
 
