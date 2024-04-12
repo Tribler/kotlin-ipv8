@@ -17,6 +17,7 @@ import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointListener
+import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload
 import nl.tudelft.ipv8.messaging.utp.listener.RawResourceListener
 import java.io.IOException
@@ -26,7 +27,7 @@ import java.net.DatagramSocket
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 
-class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
+class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
 
     /**
      * Scope used for network operations
@@ -59,6 +60,8 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
 
     var rawPacketListeners: MutableList<(DatagramPacket) -> Unit> = ArrayList()
     val permittedTransfers = mutableMapOf<IPv4Address, TransferRequestPayload?>()
+
+    private var currentLan: IPv4Address? = null
 
     /**
      * Initializes the UTP IPv8 endpoint and the UTP configuration in the library
@@ -149,18 +152,20 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         packet.address = receivePacket.address
         packet.port = receivePacket.port
 
+        val receiverIp = IPv4Address(receivePacket.address.hostAddress, receivePacket.port)
+
         // Send the packet to the UTP socket on both (???) sides
         // TODO: Should probably distinguish between client and server connection
         clientUtpSocket?.buffer?.trySend(packet)?.isSuccess
 
         // Only allow transfers for accepted files
-        if (permittedTransfers.containsKey(IPv4Address(receivePacket.address.hostAddress, receivePacket.port))) {
-            val payload = permittedTransfers[IPv4Address(receivePacket.address.hostAddress, receivePacket.port)]
+        if (permittedTransfers.containsKey(receiverIp) || receiverIp == currentLan) {
+            val payload = permittedTransfers[receiverIp]
             if (payload != null) {
                 assert(payload.dataSize + MAX_UTP_PACKET_SIZE < BUFFER_SIZE)
                 assert(payload.status == TransferRequestPayload.TransferStatus.ACCEPT)
                 receiveBuffer.limit(payload.dataSize + MAX_UTP_PACKET_SIZE)
-                permittedTransfers[IPv4Address(receivePacket.address.hostAddress, receivePacket.port)] = null
+                permittedTransfers[receiverIp] = null
             }
             if (receiveBuffer.remaining() < packet.length) {
                 println("Buffer overflow!")
@@ -196,5 +201,11 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
             this.socket = utpSocket
             listenRunnable = UtpRecieveRunnable(utpSocket, this)
         }
+    }
+
+    override fun onPacket(packet: Packet) {}
+
+    override fun onEstimatedLanChanged(address: IPv4Address) {
+        currentLan = address
     }
 }
