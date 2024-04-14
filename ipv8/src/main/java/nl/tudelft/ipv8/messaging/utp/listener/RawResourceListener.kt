@@ -10,9 +10,9 @@ private val logger = KotlinLogging.logger {}
  * Currently, it only prints the received data.
  * The exact data should be saved to some internal storage.
  */
-class RawResourceListener : UtpReadListener() {
+class RawResourceListener : TransferListener() {
 
-    val queue: ArrayDeque<ByteArray> = ArrayDeque()
+    override val queue: ArrayDeque<ByteArray> = ArrayDeque()
 
     override fun actionAfterReading() {
         if (exception == null && byteBuffer != null) {
@@ -24,7 +24,7 @@ class RawResourceListener : UtpReadListener() {
                     while (byteBuffer.hasRemaining()) {
                         append(byteBuffer.get().toInt().toChar())
                     }
-                    logger.debug("Received data: $this")
+                    println("Received data: ${this.substring(0..minOf(200, this.length - 1))}")
                 }
 
                 byteBuffer.clear()
