@@ -48,6 +48,7 @@ class UtpCommunity : Community() {
         }
 
         println("Received heartbeat from $peer: $payload")
+        println("Last heartbeat: ${lastHeartbeat[peer?.mid]}")
     }
 
     fun sendTransferRequest(peer: Peer, filename: String, dataSize: Int, dataType: TransferType) {
