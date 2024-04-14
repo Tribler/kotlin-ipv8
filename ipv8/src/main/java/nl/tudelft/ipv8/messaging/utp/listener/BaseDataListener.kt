@@ -22,8 +22,9 @@ class BaseDataListener : TransferListener() {
                 byteBuffer.flip()
                 // Unpack received hash
                 val receivedHashData = ByteArray(32)
-                val data = ByteArray(BUFFER_SIZE + 32)
-                byteBuffer.get(data, 0, BUFFER_SIZE)
+                val dataLength = byteBuffer.remaining()
+                val data = ByteArray(dataLength)
+                byteBuffer.get(data, 0, dataLength - 32)
                 byteBuffer.get(receivedHashData)
 
                 // Hash the received data
@@ -31,8 +32,10 @@ class BaseDataListener : TransferListener() {
 
                 if (MessageDigest.isEqual(hash, receivedHashData)) {
                     println("Correct hash received")
+                    queue.add(data)
                 } else {
                     println("Invalid hash received!")
+                    queue.add(ByteArray (32) {_ -> 0x00})
                 }
 
                 // Display the received data

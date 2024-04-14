@@ -61,7 +61,7 @@ class UtpHelper(
             utpCommunity.sendTransferRequest(
                 peer,
                 "random.tmp",
-                UtpIPv8Endpoint.BUFFER_SIZE,
+                size,
                 TransferRequestPayload.TransferType.RANDOM_DATA
             )
             waitForTransferResponse(peer)
@@ -70,7 +70,7 @@ class UtpHelper(
                 IPv4Address(
                     peer.address.ip,
                     peer.address.port
-                ), Companion.generateRandomDataBuffer(size)
+                ), generateRandomDataBuffer(size)
             )
         }
     }
