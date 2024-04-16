@@ -164,9 +164,10 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
         if (permittedTransfers.containsKey(receiverIp) || receiverIp == currentLan) {
             val payload = permittedTransfers[receiverIp]
             if (payload != null) {
-                assert(payload.dataSize + MAX_UTP_PACKET_SIZE < BUFFER_SIZE)
-                assert(payload.status == TransferRequestPayload.TransferStatus.ACCEPT)
-                receiveBuffer.limit(payload.dataSize + MAX_UTP_PACKET_SIZE)
+                // Ensure if the transfer is accepted and the data size is within the buffer size
+                if (payload.dataSize > BUFFER_SIZE || payload.status != TransferRequestPayload.TransferStatus.ACCEPT)
+                    return
+                receiveBuffer.limit(payload.dataSize)
                 listener = when (payload.type) {
                     TransferRequestPayload.TransferType.FILE -> {
                         RawResourceListener()
@@ -191,11 +192,11 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
     }
 
     companion object {
-        const val PREFIX_UTP: Byte = 0x42;
+        const val PREFIX_UTP: Byte = 0x42
         // 1500 - 20 (IPv4 header) - 8 (UDP header) - 1 (UTP prefix)
-        const val MAX_UTP_PACKET_SIZE = 1471;
-        // Hardcoded maximum buffer size of 50 MB
-        const val BUFFER_SIZE = 50_000_000
+        const val MAX_UTP_PACKET_SIZE = 1471
+        // Hardcoded maximum buffer size of 50 MB + UTP packet size (for processing)
+        const val BUFFER_SIZE = 50_000_000 + MAX_UTP_PACKET_SIZE
     }
 
     /**
