@@ -9,6 +9,7 @@ import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload.TransferStatus
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload.TransferType
 import nl.tudelft.ipv8.messaging.payload.UtpHeartbeatPayload
+import nl.tudelft.ipv8.util.toHex
 import java.util.Date
 
 /**
@@ -28,18 +29,21 @@ class UtpCommunity : Community() {
     init {
         messageHandlers[MessageId.UTP_HEARTBEAT] = ::onHeartbeat
         messageHandlers[MessageId.UTP_TRANSFER_REQUEST] = ::onTransferRequest
+        utpHelper.startHeartbeat()
     }
 
     fun sendHeartbeat() {
         val payload = UtpHeartbeatPayload()
-        val packet = serializePacket(MessageId.UTP_HEARTBEAT, payload)
+        val packet = serializePacket(MessageId.UTP_HEARTBEAT, payload, sign = false)
+
+        println("Sending heartbeat ${packet.toHex()}")
 
         for (peer in getPeers()) {
-            endpoint.send(peer.address, packet)
+            send(peer, packet)
         }
     }
 
-    private fun onHeartbeat(p: Packet) {
+    internal fun onHeartbeat(p: Packet) {
         val peer = getPeers().find { it.address == p.source }
         val payload = p.getPayload(UtpHeartbeatPayload.Deserializer)
 
@@ -55,18 +59,18 @@ class UtpCommunity : Community() {
         val payload = TransferRequestPayload(filename, TransferStatus.REQUEST, dataType, dataSize)
         val packet = serializePacket(MessageId.UTP_TRANSFER_REQUEST, payload)
 
-        endpoint.send(peer, packet)
+        send(peer, packet)
     }
 
     fun sendTransferResponse(peer: Peer, payload: TransferRequestPayload) {
         val packet = serializePacket(MessageId.UTP_TRANSFER_REQUEST, payload)
-        endpoint.send(peer.address, packet)
+        send(peer, packet)
     }
 
     /**
      * Allows the user to accept or decline a transfer request, or handle any custom logic.
      */
-    private fun onTransferRequest(p: Packet) {
+    internal fun onTransferRequest(p: Packet) {
         try {
             val (peer, payload) = p.getAuthPayload(TransferRequestPayload.Deserializer)
             if (payload.status == TransferStatus.REQUEST) {
