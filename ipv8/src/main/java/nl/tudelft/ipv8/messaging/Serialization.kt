@@ -90,7 +90,7 @@ inline fun <reified U> simpleDeserialize(buffer: ByteArray, offset: Int = 0): Pa
 
         Boolean::class -> Pair(deserializeBool(buffer, offset) as U, 1)
         else -> {
-            println("Enum: ${U::class.qualifiedName}")
+//            println("Enum: ${U::class.qualifiedName}")
             if (U::class.isSubclassOf(Enum::class)) {
                 val ordinal = deserializeUInt(buffer, offset).toInt()
                 val values = U::class.java.enumConstants
