@@ -47,7 +47,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     private val receiveBuffer = ByteBuffer.allocate(BUFFER_SIZE)
 
     private var serverSocket: CustomUtpServerSocket? = null;
-    private var clientSocket: UtpSocketChannel? = null;
+    var clientSocket: CustomUtpSocket? = null;
 
     /**
      * The underlying UDP socket used by IPv8
@@ -56,7 +56,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     private var clientUtpSocket: UtpSocket? = null
     private var serverUtpSocket: UtpSocket? = null
 
-    var rawPacketListeners: MutableList<(DatagramPacket) -> Unit> = ArrayList()
+    var rawPacketListeners: MutableList<(DatagramPacket, Boolean) -> Unit> = ArrayList()
 
     /**
      * Initializes the UTP IPv8 endpoint and the UTP configuration in the library
@@ -76,7 +76,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         serverSocket = CustomUtpServerSocket()
         serverSocket?.bind(serverUtpSocket!!)
 
-        val c = UtpSocketChannelImpl()
+        val c = CustomUtpSocket()
         try {
             c.dgSocket = clientUtpSocket
             c.state = UtpSocketState.CLOSED
@@ -151,9 +151,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         serverUtpSocket?.buffer?.trySend(packet)?.isSuccess
 
         // send packet to rawPacketListeners
-        for (packetListener in rawPacketListeners) {
-            packetListener.invoke(packet)
-        }
+        rawPacketListeners.forEach { listener -> listener.invoke(packet, true)}
     }
 
     companion object {
@@ -176,6 +174,15 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         fun bind(utpSocket: DatagramSocket) {
             this.socket = utpSocket
             listenRunnable = UtpRecieveRunnable(utpSocket, this)
+        }
+    }
+
+    class CustomUtpSocket: UtpSocketChannelImpl() {
+        var rawPacketListeners: MutableList<(DatagramPacket, Boolean) -> Unit> = ArrayList()
+
+        override fun sendPacket(pkt: DatagramPacket?) {
+            rawPacketListeners.forEach{listener -> listener.invoke(pkt!!, false)}
+            super.sendPacket(pkt)
         }
     }
 }
