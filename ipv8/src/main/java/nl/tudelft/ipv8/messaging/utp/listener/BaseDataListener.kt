@@ -26,6 +26,7 @@ class BaseDataListener : TransferListener() {
                 val data = ByteArray(dataLength)
                 byteBuffer.get(data, 0, dataLength - 32)
                 byteBuffer.get(receivedHashData)
+                byteBuffer.clear()
 
                 // Hash the received data
                 val hash = MessageDigest.getInstance("SHA-256").digest(data)

@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.messaging.utp
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -13,6 +14,7 @@ import kotlinx.coroutines.yield
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload
+import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload.TransferType
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import kotlin.random.Random
@@ -26,26 +28,42 @@ class UtpHelper(
      */
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
+    private lateinit var heartbeatJob : Job
 
-    init {
-        scope.launch(Dispatchers.IO) {
+    fun startHeartbeat() {
+        heartbeatJob = scope.launch(Dispatchers.IO) {
             while (isActive) {
-                utpCommunity.sendHeartbeat()
-                delay(5000)
-                if (utpCommunity.endpoint.udpEndpoint?.utpIPv8Endpoint?.isOpen() == false) this.cancel()
+                if (utpCommunity.endpoint.udpEndpoint?.utpIPv8Endpoint?.isOpen() == true) {
+                    utpCommunity.sendHeartbeat()
+                    delay(5000)
+                } else {
+                    this.cancel()
+                }
             }
         }
     }
 
+    fun stopHeartbeat() {
+        heartbeatJob.cancel()
+    }
+
     fun sendFileData(peer: Peer, metadata: NamedResource, data: ByteArray) {
+        sendData(peer, metadata, data, TransferType.FILE)
+    }
+
+    fun sendRandomData(peer: Peer, size: Int = UtpIPv8Endpoint.BUFFER_SIZE) {
+        sendData(peer, NamedResource("random.tmp", 0, size), generateRandomDataBuffer(size), TransferType.RANDOM_DATA)
+    }
+
+    private fun sendData(peer: Peer, metadata: NamedResource, data: ByteArray, type: TransferType) {
         scope.launch(Dispatchers.IO) {
             utpCommunity.sendTransferRequest(
                 peer,
                 metadata.name,
                 metadata.size,
-                TransferRequestPayload.TransferType.FILE
+                type
             )
-            waitForTransferResponse(peer)
+            if (!waitForTransferResponse(peer)) return@launch
             println("Sending data to $peer")
             utpCommunity.endpoint.udpEndpoint?.sendUtp(
                 IPv4Address(
@@ -56,26 +74,7 @@ class UtpHelper(
         }
     }
 
-    fun sendRandomData(peer: Peer, size: Int = UtpIPv8Endpoint.BUFFER_SIZE) {
-        scope.launch(Dispatchers.IO) {
-            utpCommunity.sendTransferRequest(
-                peer,
-                "random.tmp",
-                size,
-                TransferRequestPayload.TransferType.RANDOM_DATA
-            )
-            waitForTransferResponse(peer)
-            println("Sending data to $peer")
-            utpCommunity.endpoint.udpEndpoint?.sendUtp(
-                IPv4Address(
-                    peer.address.ip,
-                    peer.address.port
-                ), generateRandomDataBuffer(size)
-            )
-        }
-    }
-
-    private suspend fun waitForTransferResponse(peer: Peer) {
+    private suspend fun waitForTransferResponse(peer: Peer): Boolean {
         // Wait for response or timeout
         // TODO: This should be handled with a proper pattern instead of a timeout
         println("Waiting for response from $peer")
@@ -88,12 +87,13 @@ class UtpHelper(
         }
         if (payload == null) {
             println("No response from $peer, aborting transfer")
-            return
+            return false
         }
         if (payload.status == TransferRequestPayload.TransferStatus.DECLINE) {
             println("Peer $peer declined transfer")
-            return
+            return false
         }
+        return true
     }
 
     data class NamedResource(
