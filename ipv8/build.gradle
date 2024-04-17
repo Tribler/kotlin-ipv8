@@ -35,6 +35,11 @@ ktlint {
     }
 }
 
+test {
+    minHeapSize = "512M"
+    maxHeapSize = "2048M"
+}
+
 jacocoTestReport {
     reports {
         xml.required = true
