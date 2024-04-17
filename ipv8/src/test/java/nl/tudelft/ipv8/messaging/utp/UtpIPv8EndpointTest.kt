@@ -105,6 +105,7 @@ class UtpIPv8EndpointTest {
         val socket = mockk<DatagramSocket>(relaxed = true)
         endpoint.udpSocket = socket
         endpoint.open()
+        endpoint.permittedTransfers.put(IPv4Address("127.0.0.2", 8090), null)
 
         // capture all sent datagrams
         val datagramsSent = mutableListOf<DatagramPacket>()
