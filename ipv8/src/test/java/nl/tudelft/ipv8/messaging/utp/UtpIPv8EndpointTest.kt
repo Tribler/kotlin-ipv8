@@ -13,9 +13,9 @@ import org.junit.Assert
 import org.junit.Test
 import java.net.DatagramPacket
 import java.net.DatagramSocket
-import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.SocketAddress
-import java.util.Arrays
+import kotlin.time.Duration
 
 class UtpIPv8EndpointTest {
     @Test
@@ -97,6 +97,73 @@ class UtpIPv8EndpointTest {
         Assert.assertTrue(dataPacket.windowSize == 0)
         // verify that payload is as expected
         Assert.assertArrayEquals(payload, dataPacket.payload)
+    }
+
+    @Test
+    fun fileReceivingTest() = runTest(timeout = Duration.parse("10s")){
+        val endpoint = UtpIPv8Endpoint()
+        val socket = mockk<DatagramSocket>(relaxed = true)
+        endpoint.udpSocket = socket
+        endpoint.open()
+
+        // capture all sent datagrams
+        val datagramsSent = mutableListOf<DatagramPacket>()
+        every {
+            socket.send(capture(datagramsSent))
+        } answers {
+            Unit
+        }
+
+        val senderSocketAddress = InetSocketAddress("127.0.0.2", 8090)
+        val payload = "Hello World".toByteArray(Charsets.US_ASCII)
+        val connectionIdSend: Short = 43
+        val connectionIdReceive: Short = 42
+
+        // send syn packet to endpoint
+        val synPacket = UtpPacket()
+        synPacket.sequenceNumber = 1
+        synPacket.timestampDifference = 0
+        synPacket.timestamp = 0
+        synPacket.connectionId = connectionIdReceive
+        synPacket.typeVersion = UtpPacketUtils.SYN
+        synPacket.windowSize = 60000
+
+        endpoint.onPacket(createDatagramPacket(synPacket, senderSocketAddress))
+
+        // wait until ack packet is sent
+        runBlocking { while(datagramsSent.isEmpty()){ delay(1)} }
+        val ackPacket = extractUtpPacket(datagramsSent.get(0));
+
+        // verify this packet acknowledges start of connection with id 42
+        Assert.assertEquals(connectionIdReceive, ackPacket.connectionId)
+        Assert.assertEquals(1.toShort(), ackPacket.ackNumber)
+
+
+        // send data packet containing entire payload to endpoint
+        val dataPacket = UtpPacket()
+        dataPacket.sequenceNumber = 2
+        dataPacket.ackNumber = 1
+        dataPacket.timestampDifference = 10
+        dataPacket.timestamp = 100
+        dataPacket.connectionId = connectionIdSend
+        dataPacket.typeVersion = UtpPacketUtils.DATA
+        // only data packet, so set windowsize to 0 to indicate this is final packet
+        dataPacket.windowSize = 0
+        dataPacket.payload = payload
+
+        // Utp uses selective acks, so we need to send datapacket twice before ack is produced
+        // This can be considered a bug in utp4j, as we should probably directly acknowledge
+        // the final data packet
+        endpoint.onPacket(createDatagramPacket(dataPacket, senderSocketAddress))
+        endpoint.onPacket(createDatagramPacket(dataPacket, senderSocketAddress))
+
+        // wait until ack packet is sent
+        runBlocking { while(datagramsSent.size == 1){ delay(1)} }
+        val ackPacket2 = extractUtpPacket(datagramsSent.get(1));
+
+        // verify this packet acknowledges the previous data packet
+        Assert.assertEquals(connectionIdReceive, ackPacket2.connectionId)
+        Assert.assertEquals(2.toShort(), ackPacket2.ackNumber)
     }
 
     private fun extractUtpPacket(prefixedPacket: DatagramPacket): UtpPacket {
