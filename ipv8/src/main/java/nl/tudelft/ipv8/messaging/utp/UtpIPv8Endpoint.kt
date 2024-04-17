@@ -47,8 +47,8 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
      */
     var listener: TransferListener = RawResourceListener()
 
-    private val sendBuffer = ByteBuffer.allocate(BUFFER_SIZE)
-    private val receiveBuffer = ByteBuffer.allocate(BUFFER_SIZE)
+    private val sendBuffer = ByteBuffer.allocate(getBufferSize())
+    private val receiveBuffer = ByteBuffer.allocate(getBufferSize())
 
     private var serverSocket: CustomUtpServerSocket? = null;
     private var clientSocket: UtpSocketChannel? = null;
@@ -165,7 +165,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
             val payload = permittedTransfers[receiverIp]
             if (payload != null) {
                 // Ensure if the transfer is accepted and the data size is within the buffer size
-                if (payload.dataSize > BUFFER_SIZE || payload.status != TransferRequestPayload.TransferStatus.ACCEPT)
+                if (payload.dataSize > getBufferSize() || payload.status != TransferRequestPayload.TransferStatus.ACCEPT)
                     return
                 receiveBuffer.limit(payload.dataSize)
                 listener = when (payload.type) {
@@ -196,8 +196,14 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
         // 1500 - 20 (IPv4 header) - 8 (UDP header) - 1 (UTP prefix)
         const val MAX_UTP_PACKET_SIZE = 1471
         // Hardcoded maximum buffer size of 50 MB + UTP packet size (for processing)
-        const val BUFFER_SIZE = 50_000_000 + MAX_UTP_PACKET_SIZE
+        private const val BUFFER_SIZE = 50_000_000 + MAX_UTP_PACKET_SIZE
+
+        fun getBufferSize(): Int {
+            return BUFFER_SIZE
+        }
     }
+
+
 
     /**
      * A custom UTP server socket implementation to change the bind method to use an existing socket.

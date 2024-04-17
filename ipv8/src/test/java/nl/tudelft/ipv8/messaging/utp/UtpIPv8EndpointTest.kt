@@ -10,6 +10,7 @@ import net.utp4j.data.bytes.UnsignedTypesUtil
 import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.messaging.utp.UtpIPv8Endpoint.Companion.PREFIX_UTP
 import org.junit.Assert
+import org.junit.Before
 import org.junit.Test
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -18,6 +19,14 @@ import java.net.SocketAddress
 import kotlin.time.Duration
 
 class UtpIPv8EndpointTest {
+
+    @Before
+    fun setUp() {
+        mockkObject(UtpIPv8Endpoint.Companion)
+        every { UtpIPv8Endpoint.Companion.getBufferSize() } returns 10_000
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Test
     fun connectionTest() = runTest{
         val endpoint = UtpIPv8Endpoint()
@@ -58,6 +67,7 @@ class UtpIPv8EndpointTest {
         endpoint.close()
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Test
     fun fileSendingTest() = runTest{
         val endpoint = UtpIPv8Endpoint()
@@ -99,8 +109,9 @@ class UtpIPv8EndpointTest {
         Assert.assertArrayEquals(payload, dataPacket.payload)
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     @Test
-    fun fileReceivingTest() = runTest(timeout = Duration.parse("10s")){
+    fun fileReceivingTest() = runTest {
         val endpoint = UtpIPv8Endpoint()
         val socket = mockk<DatagramSocket>(relaxed = true)
         endpoint.udpSocket = socket

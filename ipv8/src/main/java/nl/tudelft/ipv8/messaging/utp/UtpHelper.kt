@@ -51,7 +51,7 @@ class UtpHelper(
         sendData(peer, metadata, data, TransferType.FILE)
     }
 
-    fun sendRandomData(peer: Peer, size: Int = UtpIPv8Endpoint.BUFFER_SIZE) {
+    fun sendRandomData(peer: Peer, size: Int = UtpIPv8Endpoint.getBufferSize()) {
         sendData(peer, NamedResource("random.tmp", 0, size), generateRandomDataBuffer(size), TransferType.RANDOM_DATA)
     }
 
@@ -105,11 +105,11 @@ class UtpHelper(
     }
 
     companion object {
-        fun generateRandomDataBuffer(size: Int = UtpIPv8Endpoint.BUFFER_SIZE): ByteArray {
+        fun generateRandomDataBuffer(size: Int = UtpIPv8Endpoint.getBufferSize()): ByteArray {
             if (size < 32) {
                 throw IllegalArgumentException("Buffer size must be at least 32 bytes")
-            } else if (size > UtpIPv8Endpoint.BUFFER_SIZE) {
-                throw IllegalArgumentException("Buffer size must be at most ${UtpIPv8Endpoint.BUFFER_SIZE} bytes")
+            } else if (size > UtpIPv8Endpoint.getBufferSize()) {
+                throw IllegalArgumentException("Buffer size must be at most ${UtpIPv8Endpoint.getBufferSize()} bytes")
             }
             val rngByteArray = ByteArray(size)
             Random.nextBytes(rngByteArray, 0, size - 32)

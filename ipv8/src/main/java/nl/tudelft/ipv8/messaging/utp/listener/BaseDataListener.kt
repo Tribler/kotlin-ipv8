@@ -1,8 +1,6 @@
 package nl.tudelft.ipv8.messaging.utp.listener
 
 import mu.KotlinLogging
-import net.utp4j.channels.futures.UtpReadListener
-import nl.tudelft.ipv8.messaging.utp.UtpIPv8Endpoint.Companion.BUFFER_SIZE
 import java.security.MessageDigest
 
 private val logger = KotlinLogging.logger {}
@@ -36,7 +34,7 @@ class BaseDataListener : TransferListener() {
                     queue.add(data)
                 } else {
                     println("Invalid hash received!")
-                    queue.add(ByteArray (32) {_ -> 0x00})
+                    queue.add(ByteArray(32) { _ -> 0x00 })
                 }
 
                 // Display the received data

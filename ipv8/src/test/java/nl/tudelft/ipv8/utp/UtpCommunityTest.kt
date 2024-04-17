@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.utp
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.spyk
 import io.mockk.verify
 import nl.tudelft.ipv8.BaseCommunityTest
@@ -18,17 +19,18 @@ import nl.tudelft.ipv8.messaging.payload.UtpHeartbeatPayload
 import nl.tudelft.ipv8.messaging.utp.UtpCommunity
 import nl.tudelft.ipv8.messaging.utp.UtpCommunity.MessageId.UTP_HEARTBEAT
 import nl.tudelft.ipv8.messaging.utp.UtpCommunity.MessageId.UTP_TRANSFER_REQUEST
+import nl.tudelft.ipv8.messaging.utp.UtpIPv8Endpoint
 import nl.tudelft.ipv8.peerdiscovery.Network
 import nl.tudelft.ipv8.util.hexToBytes
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
 class UtpCommunityTest : BaseCommunityTest() {
 
-    private lateinit var community: UtpCommunity
-    private lateinit var peer1: Peer
-    private lateinit var peer2: Peer
+    private val peer1: Peer = Peer(defaultCryptoProvider.generateKey(), IPv4Address("5.2.3.4", 5234))
+    private val peer2: Peer = Peer(defaultCryptoProvider.generateKey(), IPv4Address("1.2.3.4", 2342))
 
     private fun getCommunity(): UtpCommunity {
         val myPrivateKey = getPrivateKey()
@@ -44,15 +46,15 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Before
     fun setup() {
-        community = spyk(getCommunity(), recordPrivateCalls = true)
-
-        peer1 = Peer(defaultCryptoProvider.generateKey(), IPv4Address("5.2.3.4", 5234))
-        peer2 = Peer(defaultCryptoProvider.generateKey(), IPv4Address("1.2.3.4", 2342))
-        every { community.getPeers() } returns listOf(peer1, peer2)
+        mockkObject(UtpIPv8Endpoint.Companion)
+        every { UtpIPv8Endpoint.Companion.getBufferSize() } returns 10_000
     }
 
     @Test
     fun sendHeartbeatTest() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+        every { community.getPeers() } returns listOf(peer1, peer2)
+
         community.sendHeartbeat()
 
         verify {
@@ -71,6 +73,10 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Test
     fun heartbeatUpdatesLastHeartbeatForPeer() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+        every { community.getPeers() } returns listOf(peer1, peer2)
+
+
         val payload = "0002450ded7389134595dadb6b2549f431ad60156931010000000000000001"
         val packet = Packet(peer1.address, payload.hexToBytes())
         community.onHeartbeat(packet)
@@ -79,6 +85,8 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Test
     fun heartbeatDoesNotUpdateLastHeartbeatForUnknownPeer() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+
         val payload = "0002450ded7389134595dadb6b2549f431ad60156931010000000000000001"
         val unknownPeer = Peer(defaultCryptoProvider.generateKey(), IPv4Address("1.1.1.1", 1111))
         val packet = Packet(unknownPeer.address, payload.hexToBytes())
@@ -88,6 +96,8 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Test
     fun onHeartbeatPacketTest() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+
         val payload = "0002450ded7389134595dadb6b2549f431ad60156931010000000000000001"
         val handler = mockk<(Packet) -> Unit>(relaxed = true)
         community.messageHandlers[UTP_HEARTBEAT] = handler
@@ -98,6 +108,8 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Test
     fun sendTransferRequestTest() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+
         community.sendTransferRequest(peer1, "test.txt", 100, FILE)
 
         verify {
@@ -116,6 +128,8 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Test
     fun sendTransferRequestResponseTest() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+
         val payload = TransferRequestPayload("test.txt", REQUEST, FILE, 100)
         community.sendTransferResponse(peer1, payload)
 
@@ -134,6 +148,8 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Test
     fun onTransferRequestPacketTest() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+
         val payload = "0002450ded7389134595dadb6b2549f431ad60156931020000000000000001"
         val handler = mockk<(Packet) -> Unit>(relaxed = true)
         community.messageHandlers[UTP_TRANSFER_REQUEST] = handler
@@ -144,6 +160,8 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Test
     fun transferRequestUpdatesTransferRequestsForPeer() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+
         val packet = mockk<Packet>()
         val payload = TransferRequestPayload("test.txt", REQUEST, FILE, 100)
 
@@ -157,6 +175,8 @@ class UtpCommunityTest : BaseCommunityTest() {
 
     @Test
     fun transferRequestDoesNotUpdateTransferRequestsForUnknownPeer() {
+        val community = spyk(getCommunity(), recordPrivateCalls = true)
+
         val packet = mockk<Packet>()
 
         every { packet.source } returns peer2.address

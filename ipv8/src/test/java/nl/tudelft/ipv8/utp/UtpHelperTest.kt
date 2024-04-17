@@ -2,6 +2,7 @@ package nl.tudelft.ipv8.utp
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.verify
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -31,6 +32,8 @@ class UtpHelperTest {
 
     @Before
     fun setup() {
+        mockkObject(UtpIPv8Endpoint)
+        every { UtpIPv8Endpoint.Companion.getBufferSize() } returns 10_000
         every { community.sendHeartbeat() } returns Unit
     }
 
@@ -115,7 +118,7 @@ class UtpHelperTest {
         every { peer.address } returns IPv4Address("1.1.1.1",1111)
         every { community.transferRequests } returns mutableMapOf(("test_mid" to TransferRequestPayload("test", ACCEPT, FILE, 10)))
 
-        val size = 25_000
+        val size = 5_000
         val metadata = UtpHelper.NamedResource("random.tmp", 0, size)
 
         utpHelper.sendRandomData(peer, size)
@@ -133,7 +136,7 @@ class UtpHelperTest {
         every { peer.address } returns IPv4Address("1.1.1.1",1111)
         every { community.transferRequests } returns mutableMapOf(("test_mid" to TransferRequestPayload("test", ACCEPT, FILE, 10)))
 
-        val metadata = UtpHelper.NamedResource("random.tmp", 0, UtpIPv8Endpoint.BUFFER_SIZE)
+        val metadata = UtpHelper.NamedResource("random.tmp", 0, UtpIPv8Endpoint.getBufferSize())
 
         utpHelper.sendRandomData(peer)
 
@@ -149,7 +152,7 @@ class UtpHelperTest {
         every { peer.mid } returns "test_mid"
         every { community.transferRequests } returns mutableMapOf()
 
-        val size = 25_000
+        val size = 5_000
         val metadata = UtpHelper.NamedResource("random.tmp", 0, size)
 
         utpHelper.sendRandomData(peer, size)
@@ -165,7 +168,7 @@ class UtpHelperTest {
         every { peer.mid } returns "test_mid"
         every { community.transferRequests } returns mutableMapOf(("test_mid" to TransferRequestPayload("test", DECLINE, FILE, 10)))
 
-        val size = 25_000
+        val size = 5_000
         val metadata = UtpHelper.NamedResource("random.tmp", 0, size)
 
         utpHelper.sendRandomData(peer, size)
@@ -206,7 +209,7 @@ class UtpHelperTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun generateRandomDataBufferThrowsExceptionForSizeGreaterThanBufferSize() {
-        UtpHelper.generateRandomDataBuffer(UtpIPv8Endpoint.BUFFER_SIZE + 1)
+        UtpHelper.generateRandomDataBuffer(UtpIPv8Endpoint.getBufferSize() + 1)
     }
 
     @Test
