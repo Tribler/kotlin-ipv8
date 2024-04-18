@@ -86,7 +86,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk15to18', version: '1.63'
 
-    api 'com.github.PieterCarton:utp4j:master-SNAPSHOT'
+    api 'com.github.PieterCarton:utp4j:7bd348b8ca'
 
 }
 
