@@ -7,12 +7,12 @@ class UtpHeartbeatPayload(
 
 ) : Serializable {
     override fun serialize(): ByteArray {
-        TODO("Not yet implemented")
+        return byteArrayOf()
     }
 
     companion object Deserializer : Deserializable<UtpHeartbeatPayload> {
         override fun deserialize(buffer: ByteArray, offset: Int): Pair<UtpHeartbeatPayload, Int> {
-            TODO("Not yet implemented")
+            return Pair(UtpHeartbeatPayload(), 0)
         }
     }
 }

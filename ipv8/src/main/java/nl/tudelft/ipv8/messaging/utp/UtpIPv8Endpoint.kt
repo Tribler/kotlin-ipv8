@@ -17,7 +17,11 @@ import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.messaging.Endpoint
 import nl.tudelft.ipv8.messaging.EndpointListener
+import nl.tudelft.ipv8.messaging.Packet
+import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload
+import nl.tudelft.ipv8.messaging.utp.listener.BaseDataListener
 import nl.tudelft.ipv8.messaging.utp.listener.RawResourceListener
+import nl.tudelft.ipv8.messaging.utp.listener.TransferListener
 import java.io.IOException
 import java.net.BindException
 import java.net.DatagramPacket
@@ -25,7 +29,7 @@ import java.net.DatagramSocket
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 
-class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
+class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
 
     /**
      * Scope used for network operations
@@ -41,10 +45,10 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     /**
      * Listener for raw resources used by the UTP server (receiver)
      */
-    var listener = RawResourceListener()
+    var listener: TransferListener = RawResourceListener()
 
-    private val sendBuffer = ByteBuffer.allocate(BUFFER_SIZE)
-    private val receiveBuffer = ByteBuffer.allocate(BUFFER_SIZE)
+    private val sendBuffer = ByteBuffer.allocate(getBufferSize())
+    private val receiveBuffer = ByteBuffer.allocate(getBufferSize())
 
     private var serverSocket: CustomUtpServerSocket? = null;
     var clientSocket: CustomUtpSocket? = null;
@@ -57,6 +61,9 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
     private var serverUtpSocket: UtpSocket? = null
 
     var rawPacketListeners: MutableList<(DatagramPacket, Boolean) -> Unit> = ArrayList()
+    val permittedTransfers = mutableMapOf<IPv4Address, TransferRequestPayload?>()
+
+    private var currentLan: IPv4Address? = null
 
     /**
      * Initializes the UTP IPv8 endpoint and the UTP configuration in the library
@@ -112,6 +119,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
             } else {
                 println("Future is null!")
             }
+            clientSocket?.close()
         }
     }
 
@@ -128,6 +136,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
                         }
                         println("Finished receiving data!")
                     }
+                    permittedTransfers.clear()
                     channel.close()
                 }
             }
@@ -145,22 +154,54 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         packet.address = receivePacket.address
         packet.port = receivePacket.port
 
+        val receiverIp = IPv4Address(receivePacket.address.hostAddress, receivePacket.port)
+
         // Send the packet to the UTP socket on both (???) sides
         // TODO: Should probably distinguish between client and server connection
         clientUtpSocket?.buffer?.trySend(packet)?.isSuccess
-        serverUtpSocket?.buffer?.trySend(packet)?.isSuccess
+
+        // Only allow transfers for accepted files
+        if (permittedTransfers.containsKey(receiverIp) || receiverIp == currentLan) {
+            val payload = permittedTransfers[receiverIp]
+            if (payload != null) {
+                // Ensure if the transfer is accepted and the data size is within the buffer size
+                if (payload.dataSize > getBufferSize() || payload.status != TransferRequestPayload.TransferStatus.ACCEPT)
+                    return
+                receiveBuffer.limit(payload.dataSize)
+                listener = when (payload.type) {
+                    TransferRequestPayload.TransferType.FILE -> {
+                        RawResourceListener()
+                    }
+                    TransferRequestPayload.TransferType.RANDOM_DATA -> {
+                        BaseDataListener()
+                    }
+                }
+                permittedTransfers[receiverIp] = null
+            }
+            if (receiveBuffer.remaining() < packet.length) {
+                println("Buffer overflow!")
+                return
+            }
+            serverUtpSocket?.buffer?.trySend(packet)?.isSuccess
+        }
 
         // send packet to rawPacketListeners
         rawPacketListeners.forEach { listener -> listener.invoke(packet, true)}
     }
 
     companion object {
-        const val PREFIX_UTP: Byte = 0x42;
+        const val PREFIX_UTP: Byte = 0x42
         // 1500 - 20 (IPv4 header) - 8 (UDP header) - 1 (UTP prefix)
-        const val MAX_UTP_PACKET_SIZE = 1471;
-        // TODO: This is a temporary buffer size, should be adjusted to handle variable sizes
-        const val BUFFER_SIZE = 50_000_000
+        const val MAX_UTP_PACKET_SIZE = 1471
+        // Hardcoded maximum buffer size of 50 MB + UTP packet size (for processing)
+        private const val BUFFER_SIZE = 50_000_000 + MAX_UTP_PACKET_SIZE
+
+        fun getBufferSize(): Int {
+            return BUFFER_SIZE
+        }
     }
+
+
 
     /**
      * A custom UTP server socket implementation to change the bind method to use an existing socket.
@@ -181,8 +222,15 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>() {
         var rawPacketListeners: MutableList<(DatagramPacket, Boolean) -> Unit> = ArrayList()
 
         override fun sendPacket(pkt: DatagramPacket?) {
-            rawPacketListeners.forEach{listener -> listener.invoke(pkt!!, false)}
+            rawPacketListeners.forEach { listener -> listener.invoke(pkt!!, false) }
             super.sendPacket(pkt)
         }
+    }
+
+    override fun onPacket(packet: Packet) {}
+
+    override fun onEstimatedLanChanged(address: IPv4Address) {
+        currentLan = address
+
     }
 }

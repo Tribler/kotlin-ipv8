@@ -1,12 +1,15 @@
 package nl.tudelft.ipv8.messaging.utp
 
 import nl.tudelft.ipv8.Community
+import nl.tudelft.ipv8.IPv4Address
 import nl.tudelft.ipv8.Peer
+import nl.tudelft.ipv8.exception.PacketDecodingException
 import nl.tudelft.ipv8.messaging.Packet
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload.TransferStatus
 import nl.tudelft.ipv8.messaging.payload.TransferRequestPayload.TransferType
 import nl.tudelft.ipv8.messaging.payload.UtpHeartbeatPayload
+import nl.tudelft.ipv8.util.toHex
 import java.util.Date
 
 /**
@@ -16,6 +19,8 @@ class UtpCommunity : Community() {
     override val serviceId = "450ded7389134595dadb6b2549f431ad60156931"
 
     val lastHeartbeat = mutableMapOf<String, Date>()
+    val transferRequests = mutableMapOf<String, TransferRequestPayload>()
+    val utpHelper = UtpHelper(this)
 
     object MessageId {
         const val UTP_HEARTBEAT = 1
@@ -24,18 +29,21 @@ class UtpCommunity : Community() {
     init {
         messageHandlers[MessageId.UTP_HEARTBEAT] = ::onHeartbeat
         messageHandlers[MessageId.UTP_TRANSFER_REQUEST] = ::onTransferRequest
+        utpHelper.startHeartbeat()
     }
 
     fun sendHeartbeat() {
         val payload = UtpHeartbeatPayload()
-        val packet = serializePacket(MessageId.UTP_HEARTBEAT, payload)
+        val packet = serializePacket(MessageId.UTP_HEARTBEAT, payload, sign = false)
+
+        println("Sending heartbeat ${packet.toHex()}")
 
         for (peer in getPeers()) {
-            endpoint.send(peer.address, packet)
+            send(peer, packet)
         }
     }
 
-    fun onHeartbeat(p: Packet) {
+    internal fun onHeartbeat(p: Packet) {
         val peer = getPeers().find { it.address == p.source }
         val payload = p.getPayload(UtpHeartbeatPayload.Deserializer)
 
@@ -43,28 +51,40 @@ class UtpCommunity : Community() {
             lastHeartbeat[peer.mid] = Date()
         }
 
-        TODO("Process the heartbeat message $payload")
+        println("Received heartbeat from $peer: $payload")
+        println("Last heartbeat: ${lastHeartbeat[peer?.mid]}")
     }
 
     fun sendTransferRequest(peer: Peer, filename: String, dataSize: Int, dataType: TransferType) {
         val payload = TransferRequestPayload(filename, TransferStatus.REQUEST, dataType, dataSize)
         val packet = serializePacket(MessageId.UTP_TRANSFER_REQUEST, payload)
 
-        endpoint.send(peer.address, packet)
+        send(peer, packet)
     }
 
     fun sendTransferResponse(peer: Peer, payload: TransferRequestPayload) {
         val packet = serializePacket(MessageId.UTP_TRANSFER_REQUEST, payload)
-
-        endpoint.send(peer.address, packet)
-
+        send(peer, packet)
     }
 
-    fun onTransferRequest(p: Packet) {
-        val peer = getPeers().find { it.address == p.source }
-        val payload = p.getPayload(TransferRequestPayload)
+    /**
+     * Allows the user to accept or decline a transfer request, or handle any custom logic.
+     */
+    internal fun onTransferRequest(p: Packet) {
+        try {
+            val (peer, payload) = p.getAuthPayload(TransferRequestPayload.Deserializer)
+            if (payload.status == TransferStatus.REQUEST) {
+                // Accept the transfer request by default
+                val acceptedPayload = payload.copy(status = TransferStatus.ACCEPT)
+                sendTransferResponse(peer, acceptedPayload)
+                endpoint.udpEndpoint?.utpIPv8Endpoint!!.permittedTransfers[peer.address] = acceptedPayload
+            }
+            transferRequests[peer.mid] = payload
 
-        TODO("Not yet implemented $peer, $payload")
+            println("Received transfer request from $peer: $payload")
+        } catch (e: PacketDecodingException) {
+            println("Failed to handle transfer request: ${e.message}")
+        }
     }
 
 }

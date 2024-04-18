@@ -32,7 +32,7 @@ class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
 
         if (socket != null) {
             socket.send(packet)
-            println("Sending $packet")
+//            println("Sending $packet")
         } else {
             println("UTP socket is missing")
         }
@@ -41,26 +41,14 @@ class UtpSocket(private val socket: DatagramSocket?) : DatagramSocket() {
 
     /**
      * Receives a packet from the buffer.
-     *
-     * This coroutine will start each time we successfully send files, thus causing more console spam
-     * TODO: Find the reason and fix it
      */
     override fun receive(packet: DatagramPacket) {
         try {
             runBlocking {
-                try {
-                    // Timeout required to prevent Android from killing the "stuck" thread
-                    withTimeout(5000) {
-                        val received = buffer.receive()
-                        packet.address = received.address
-                        packet.port = received.port
-                        packet.setData(received.data, received.offset, received.length)
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    // We need to throw IO exception to be handled by the libary code
-                    throw IOException()
-//                println("socket timed out")
-                }
+                val received = buffer.receive()
+                packet.address = received.address
+                packet.port = received.port
+                packet.setData(received.data, received.offset, received.length)
             }
         } catch (e: InterruptedException) {
             // This exception is thrown when the connection is not established

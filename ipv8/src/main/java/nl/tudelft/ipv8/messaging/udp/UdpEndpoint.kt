@@ -43,6 +43,7 @@ open class UdpEndpoint(
                 }
             },
         )
+        this.addListener(utpIPv8Endpoint)
     }
 
     override fun isOpen(): Boolean {
