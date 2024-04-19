@@ -156,7 +156,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
 
         val receiverIp = IPv4Address(receivePacket.address.hostAddress, receivePacket.port)
 
-        // Send the packet to the UTP socket on both (???) sides
+        // Send the packet to the UTP socket on both sides
         // TODO: Should probably distinguish between client and server connection
         clientUtpSocket?.buffer?.trySend(packet)?.isSuccess
 
@@ -178,6 +178,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
                 }
                 permittedTransfers[receiverIp] = null
             }
+            // TODO: In some cases this check is printed, but the buffer should have space (needs more investigation)
             if (receiveBuffer.remaining() < packet.length) {
                 println("Buffer overflow!")
                 return
@@ -218,6 +219,9 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
         }
     }
 
+    /**
+     * A custom UTP socket implementation to allow for logging of raw packets.
+     */
     class CustomUtpSocket: UtpSocketChannelImpl() {
         var rawPacketListeners: MutableList<(DatagramPacket, Boolean) -> Unit> = ArrayList()
 
@@ -231,6 +235,5 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
 
     override fun onEstimatedLanChanged(address: IPv4Address) {
         currentLan = address
-
     }
 }
