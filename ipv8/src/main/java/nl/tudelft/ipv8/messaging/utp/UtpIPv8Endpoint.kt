@@ -69,7 +69,7 @@ class UtpIPv8Endpoint : Endpoint<IPv4Address>(), EndpointListener {
      * Initializes the UTP IPv8 endpoint and the UTP configuration in the library
      */
     init {
-        UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 3000
+        UtpAlgConfiguration.MAX_CWND_INCREASE_PACKETS_PER_RTT = 30000
         UtpAlgConfiguration.MAX_PACKET_SIZE = MAX_UTP_PACKET_SIZE
         println("Utp IPv8 endpoint initialized!")
     }
