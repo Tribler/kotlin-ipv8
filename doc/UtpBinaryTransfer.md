@@ -51,4 +51,5 @@ The main improvements would be:
 - code structure
 - missing listener API (which would allow for displaying transfer data progress)
 - more robust handshake architecture
+- test code seems to be flaky due to OutOfMemory errors when run in bulk
 
