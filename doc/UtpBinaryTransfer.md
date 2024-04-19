@@ -53,3 +53,13 @@ The main improvements would be:
 - more robust handshake architecture
 - test code seems to be flaky due to OutOfMemory errors when run in bulk
 
+# See also
+
+
+| Name | Link |
+| :-: | :-: |
+|  Main project issue   |  https://github.com/Tribler/tribler/issues/7911  |
+| Main app description | https://github.com/Eragoneq/trustchain-superapp/blob/master/doc/BlockchainNetworkingProject/UtpTesting.md |
+| Benchmarking done over 10 weeks | https://github.com/Eragoneq/trustchain-superapp/blob/master/doc/BlockchainNetworkingProject/Benchmarking.md |
+| utp4j changes and benchmarks | https://github.com/PieterCarton/utp4j/blob/master/CHANGES.md |
+| kotlin-ipv8 changes | https://github.com/Eragoneq/kotlin-ipv8/blob/master/doc/UtpBinaryTransfer.md |
