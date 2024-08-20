@@ -1,6 +1,9 @@
 package nl.tudelft.ipv8
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import mu.KotlinLogging
 import nl.tudelft.ipv8.exception.PacketDecodingException
 import nl.tudelft.ipv8.keyvault.PrivateKey
@@ -182,7 +185,7 @@ abstract class Community : Overlay {
     /**
      * Introduction and puncturing requests creation
      */
-    internal fun createIntroductionRequest(
+    fun createIntroductionRequest(
         socketAddress: IPv4Address,
         extraBytes: ByteArray = byteArrayOf()
     ): ByteArray {
