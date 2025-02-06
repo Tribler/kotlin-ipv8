@@ -3,6 +3,7 @@ package nl.tudelft.ipv8.messaging.tftp
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
 import nl.tudelft.ipv8.IPv4Address
 import org.apache.commons.net.tftp.TFTP
 import org.apache.commons.net.tftp.TFTPAckPacket
@@ -17,7 +18,7 @@ import java.net.InetAddress
 class TFTPEndpointTest {
     @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
-    fun send() = runBlockingTest {
+    fun send() = runTest {
         val tftpClient = spyk<TFTPClient>()
         val socket = mockk<DatagramSocket>(relaxed = true)
         val tftpEndpoint = TFTPEndpoint(tftpClient)
@@ -42,7 +43,7 @@ class TFTPEndpointTest {
 
     @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     /* @Test */
-    fun onPacket_forServer() = runBlockingTest {
+    fun onPacket_forServer() = runTest {
         val tftpClient = mockk<TFTPClient>(relaxed = true)
         val socket = mockk<DatagramSocket>(relaxed = true)
         val tftpEndpoint = TFTPEndpoint(tftpClient)
@@ -73,7 +74,7 @@ class TFTPEndpointTest {
 
     @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
-    fun onPacket_forClient() = runBlockingTest {
+    fun onPacket_forClient() = runTest {
         val tftpClient = TFTPClient()
         val socket = mockk<DatagramSocket>(relaxed = true)
         val tftpEndpoint = TFTPEndpoint(tftpClient)
