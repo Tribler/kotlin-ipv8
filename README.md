@@ -49,10 +49,10 @@ file needs to define these variables and dependencies, too. A working template w
 folder's `build.gradle` file.
 - Don't forget to `include ':ipv8'` into your own `settings.gradle`,
 as well as the module that you're going to use, presumably `ipv8-android` or `ipv8-jvm`.
-- This repository currently uses Gradle version `6.1.1`. Ensure that your `gradle-wrapper.properties` uses the same version.
-- This repository currently uses Java version `1.8`. Ensure that your Gradle builds with this, too.
-  - By default, Gradle looks at the `JAVA_HOME` variable, which might not point to `1.8`.
-- This repository currently uses Kotlin version `1.4.21`. Ensure that your Gradle builds with this Kotlin version.
+- This repository currently uses Gradle version `8.8.0`. Ensure that your `gradle-wrapper.properties` uses the same version.
+- This repository currently uses Java version `17`. Ensure that your Gradle builds with this, too.
+  - By default, Gradle looks at the `JAVA_HOME` variable, which might not point to `17`.
+- This repository currently uses Kotlin version `2.1.10`. Ensure that your Gradle builds with this Kotlin version.
 
 For an example of a project that uses this repository, refer to
 [the Trustchain app](https://github.com/Tribler/trustchain-superapp/).
