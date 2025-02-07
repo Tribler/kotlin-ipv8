@@ -1,22 +1,18 @@
 name: build
 
 on:
-  pull_request_target:  # Runs on PRs from forks, safely (no secrets)
+  pull_request_target:
   push:
-    branches: master  # Runs on direct pushes to master
+    branches: master
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout PR Code Securely
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Debug - Print GitHub Event
-        run: echo "Triggered by ${{ github.event_name }}"
 
       - name: Setup Java
         uses: actions/setup-java@v2
@@ -34,19 +30,46 @@ jobs:
       - name: Run Jacoco (No Secrets)
         run: ./gradlew jacocoTestReport
 
-      - name: Upload Test Report (No Secrets)
-        uses: 'actions/upload-artifact@v4'
+      - name: Debug - Verify Coverage Report Exists
+        run: ls -la ${{ github.workspace }}/ipv8/build/reports/jacoco/test/
+
+      - name: Upload Test Coverage Report
+        uses: actions/upload-artifact@v4
         with:
-          name: report.xml
+          name: coverage-report
           path: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/jacocoTestReport.xml
 
-  secure-tasks:
+  manual-approval:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == false  # Runs only if merged or trusted contributor
+    if: github.event.pull_request.head.repo.fork == true
+    steps:
+      - name: Request Maintainer Approval
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pause for Maintainer Approval
+        run: |
+          echo "A maintainer must approve this job before secrets are used."
+          exit 1
+
+  secure-tasks:
+    needs: [test, manual-approval]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == false
     steps:
       - name: Checkout Latest Code
         uses: actions/checkout@v3
+
+      - name: Download Test Coverage Report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/
+
+      - name: Debug - Verify Coverage Report Exists After Download
+        run: ls -la ${{ github.workspace }}/ipv8/build/reports/jacoco/test/
 
       - name: Upload Coverage to Codecov (Requires Secrets)
         uses: codecov/codecov-action@v1
