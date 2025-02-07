@@ -8,7 +8,7 @@ import io.mockk.mockk
 import io.mockk.spyk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import nl.tudelft.ipv8.keyvault.LibNaClSK
@@ -22,7 +22,7 @@ private val lazySodium = LazySodiumJava(SodiumJava())
 
 @OptIn(ExperimentalCoroutinesApi::class)
 abstract class BaseCommunityTest {
-    private val testDispatcher = TestCoroutineDispatcher()
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setUp() {
@@ -32,7 +32,6 @@ abstract class BaseCommunityTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain() // reset main dispatcher to the original Main dispatcher
-        testDispatcher.cleanupTestCoroutines()
     }
 
     protected fun getPrivateKey(): PrivateKey {

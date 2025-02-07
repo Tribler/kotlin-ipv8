@@ -6,6 +6,7 @@ import io.mockk.coEvery
 import io.mockk.spyk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
 import nl.tudelft.ipv8.BaseCommunityTest
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.trustchain.store.TrustChainSQLiteStore
@@ -39,7 +40,7 @@ class TrustChainCrawlerTest : BaseCommunityTest() {
     @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
     fun crawlChain_noop() =
-        runBlockingTest {
+        runTest {
             val crawler = TrustChainCrawler()
             val trustChainCommunity = spyk(getCommunity())
             crawler.trustChainCommunity = trustChainCommunity
@@ -71,7 +72,7 @@ class TrustChainCrawlerTest : BaseCommunityTest() {
     @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
     fun crawlChain_singleBlock() =
-        runBlockingTest {
+        runTest {
             val crawler = TrustChainCrawler()
             val trustChainCommunity = spyk(getCommunity())
             crawler.trustChainCommunity = trustChainCommunity
@@ -124,7 +125,7 @@ class TrustChainCrawlerTest : BaseCommunityTest() {
     @Suppress("DEPRECATION") // TODO: rewrite usage of coroutines in testing.
     @Test
     fun crawlChain_fillGap() =
-        runBlockingTest {
+        runTest {
             val crawler = TrustChainCrawler()
             val trustChainCommunity = spyk(getCommunity())
             crawler.trustChainCommunity = trustChainCommunity

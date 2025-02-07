@@ -1,16 +1,16 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext.kotlin_version = '1.9.22'
-    ext.coroutines_version = '1.6.4'
-    ext.ktlint_version = '1.1.1'
-    ext.ktlint_gradle_version = '12.1.0'
+    ext.kotlin_version = '2.1.10'
+    ext.coroutines_version = '1.10.1'
+    ext.ktlint_version = '1.5.0'
+    ext.ktlint_gradle_version = '12.1.2'
     ext.sqldelight_version = '2.0.1'
-    ext.nav_version = '2.5.3'
-    ext.fragment_version = '1.5.4'
-    ext.lifecycle_version = '2.5.1'
+    ext.nav_version = '2.8.6'
+    ext.fragment_version = '1.8.5'
+    ext.lifecycle_version = '2.8.7'
     ext.dokka_version = '0.10.1'
-    ext.mockk_version = '1.13.9'
+    ext.mockk_version = '1.13.16'
     repositories {
         google()
         mavenCentral()
@@ -18,7 +18,7 @@ buildscript {
         maven { url 'https://jitpack.io' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.0'
+        classpath 'com.android.tools.build:gradle:8.8.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlint_gradle_version"
         classpath "app.cash.sqldelight:gradle-plugin:$sqldelight_version"

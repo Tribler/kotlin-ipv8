@@ -30,10 +30,8 @@ fun String.hexToBytes(): ByteArray {
     val result = ByteArray(length / 2)
 
     for (i in 0 until length step 2) {
-        @Suppress("DEPRECATION")
-        val firstIndex = HEX_CHARS.indexOf(this[i].toLowerCase())
-        @Suppress("DEPRECATION")
-        val secondIndex = HEX_CHARS.indexOf(this[i + 1].toLowerCase())
+        val firstIndex = HEX_CHARS.indexOf(this[i].lowercaseChar())
+        val secondIndex = HEX_CHARS.indexOf(this[i + 1].lowercaseChar())
 
         val octet = firstIndex.shl(4).or(secondIndex)
         result[i.shr(1)] = octet.toByte()
