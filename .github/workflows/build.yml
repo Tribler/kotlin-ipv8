@@ -29,14 +29,14 @@ jobs:
         run: ./gradlew jacocoTestReport
 
       - name: Upload Report
-        uses: 'actions/upload-artifact@v2'
+        uses: 'actions/upload-artifact@v4'
         with:
           name: report.xml
           path: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/jacocoTestReport.xml
 
       - name: Add coverage to PR
         id: jacoco
-        uses: madrapps/jacoco-report@v1.3
+        uses: madrapps/jacoco-report@v1.7.1
         with:
           paths: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
