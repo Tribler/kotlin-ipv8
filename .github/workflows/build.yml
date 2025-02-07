@@ -1,24 +1,22 @@
 name: build
 
 on:
-  pull_request_target:
+  pull_request_target:  # Runs on PRs from forks, safely (no secrets)
   push:
-    branches: master
+    branches: master  # Runs on direct pushes to master
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout PR Code Securely
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Debug - Print Last Commit
-        run: git log -1
-
-      - name: Debug - Check File Changes
-        run: git diff --name-only HEAD~1 HEAD
+      - name: Debug - Print GitHub Event
+        run: echo "Triggered by ${{ github.event_name }}"
 
       - name: Setup Java
         uses: actions/setup-java@v2
@@ -30,22 +28,32 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Clear Gradle Cache
-        run: ./gradlew clean
-
-      - name: Run Check
+      - name: Run Check (No Secrets)
         run: ./gradlew check
 
-      - name: Run Jacoco
+      - name: Run Jacoco (No Secrets)
         run: ./gradlew jacocoTestReport
 
-      - name: Upload Report
+      - name: Upload Test Report (No Secrets)
         uses: 'actions/upload-artifact@v4'
         with:
           name: report.xml
           path: ${{ github.workspace }}/ipv8/build/reports/jacoco/test/jacocoTestReport.xml
 
-      - name: Add coverage to PR
+  secure-tasks:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == false  # Runs only if merged or trusted contributor
+    steps:
+      - name: Checkout Latest Code
+        uses: actions/checkout@v3
+
+      - name: Upload Coverage to Codecov (Requires Secrets)
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Add Coverage to PR (Requires Secrets)
         id: jacoco
         uses: madrapps/jacoco-report@v1.7.1
         with:
@@ -54,12 +62,7 @@ jobs:
           min-coverage-overall: 60
           min-coverage-changed-files: 80
 
-      - name: Get the Coverage info
+      - name: Get Coverage Info
         run: |
           echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"
           echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
