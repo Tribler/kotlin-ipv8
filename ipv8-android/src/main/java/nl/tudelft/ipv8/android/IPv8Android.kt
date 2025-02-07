@@ -109,6 +109,7 @@ object IPv8Android {
                     connectivityManager,
                 )
 
+
             val bluetoothManager =
                 application.getSystemService<BluetoothManager>()
                     ?: throw IllegalStateException("BluetoothManager not found")

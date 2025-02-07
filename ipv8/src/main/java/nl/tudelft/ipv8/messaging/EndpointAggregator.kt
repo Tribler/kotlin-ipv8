@@ -12,7 +12,7 @@ import java.util.*
  */
 class EndpointAggregator(
     val udpEndpoint: UdpEndpoint?,
-    val bluetoothEndpoint: BluetoothEndpoint?
+    val bluetoothEndpoint: BluetoothEndpoint?,
 ) : Endpoint<Peer>(), EndpointListener {
     private var isOpen: Boolean = false
 

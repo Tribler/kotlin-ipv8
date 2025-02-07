@@ -2,11 +2,15 @@ package nl.tudelft.ipv8.messaging
 
 import java.nio.Buffer
 import java.nio.ByteBuffer
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.primaryConstructor
 
 const val SERIALIZED_USHORT_SIZE = 2
 const val SERIALIZED_UINT_SIZE = 4
+const val SERIALIZED_INT_SIZE = 4
 const val SERIALIZED_ULONG_SIZE = 8
-const val SERIALIZED_LONG_SIZE = 4
+const val SERIALIZED_LONG_SIZE = 8
 const val SERIALIZED_UBYTE_SIZE = 1
 
 const val SERIALIZED_PUBLIC_KEY_SIZE = 74
@@ -20,6 +24,80 @@ interface Serializable {
 
 interface Deserializable<T> {
     fun deserialize(buffer: ByteArray, offset: Int = 0): Pair<T, Int>
+
+}
+
+/**
+ * Serializes the object and returns the buffer.
+ * Alternative to manually defining the serialize function.
+ */
+interface AutoSerializable : Serializable {
+    override fun serialize(): ByteArray {
+        return this::class.primaryConstructor!!.parameters.map { param ->
+            val value =
+                this.javaClass.kotlin.memberProperties.find { it.name == param.name }!!.get(this)
+            simpleSerialize(value)
+        }.reduce { acc, bytes -> acc + bytes }
+    }
+}
+
+///**
+// * Deserializes the object from the buffer and returns the object and the new offset.
+// * Alternative to manually defining the deserialize function.
+// */
+//inline fun <reified T> Deserializable<T>.autoDeserialize(buffer: ByteArray, offset: Int = 0): Pair<T, Int> {
+//    TODO()
+//}
+
+fun <U> simpleSerialize(data: U): ByteArray {
+    return when (data) {
+        is Int -> serializeInt(data)
+        is Long -> serializeLong(data)
+        is UByte -> serializeUChar(data)
+        is UInt -> serializeUInt(data)
+        is UShort -> serializeUShort(data.toInt())
+        is ULong -> serializeULong(data)
+        is String -> serializeVarLen(data.toByteArray())
+        is ByteArray -> serializeVarLen(data)
+        is Boolean -> serializeBool(data)
+        is Enum<*> -> serializeUInt(data.ordinal.toUInt())
+        is Serializable -> data.serialize()
+        else -> throw IllegalArgumentException("Unsupported serialization type")
+    }
+}
+
+inline fun <reified U> simpleDeserialize(buffer: ByteArray, offset: Int = 0): Pair<U, Int> {
+    val (value, off) = when (U::class) {
+        Int::class -> Pair(deserializeInt(buffer, offset) as U, SERIALIZED_INT_SIZE)
+        Long::class -> Pair(deserializeLong(buffer, offset) as U, SERIALIZED_LONG_SIZE)
+        UByte::class -> Pair(deserializeUChar(buffer, offset) as U, SERIALIZED_UBYTE_SIZE)
+        UShort::class -> Pair(
+            deserializeUShort(buffer, offset).toUShort() as U,
+            SERIALIZED_USHORT_SIZE
+        )
+
+        UInt::class -> Pair(deserializeUInt(buffer, offset) as U, SERIALIZED_UINT_SIZE)
+        ULong::class -> Pair(deserializeULong(buffer, offset) as U, SERIALIZED_ULONG_SIZE)
+        String::class -> {
+            val (data, len) = deserializeVarLen(buffer, offset)
+            Pair(data.decodeToString() as U, len)
+        }
+
+        ByteArray::class -> {
+            val (data, len) = deserializeVarLen(buffer, offset)
+            Pair(data as U, len)
+        }
+
+        Boolean::class -> Pair(deserializeBool(buffer, offset) as U, 1)
+        else -> {
+            if (U::class.isSubclassOf(Enum::class)) {
+                val ordinal = deserializeUInt(buffer, offset).toInt()
+                val values = U::class.java.enumConstants
+                Pair(values[ordinal] as U, SERIALIZED_UINT_SIZE)
+            } else throw IllegalArgumentException("Unsupported deserialization type")
+        }
+    }
+    return (value to (offset + off))
 }
 
 fun serializeBool(data: Boolean): ByteArray {
@@ -40,8 +118,19 @@ fun serializeUShort(value: Int): ByteArray {
     return bytes
 }
 
+fun serializeUShort(value: UShort): ByteArray {
+    val bytes = ByteBuffer.allocate(SERIALIZED_USHORT_SIZE)
+    bytes.putShort(value.toShort())
+    return bytes.array()
+}
+
 fun deserializeUShort(buffer: ByteArray, offset: Int = 0): Int {
     return (((buffer[offset].toInt() and 0xFF) shl 8) or (buffer[offset + 1].toInt() and 0xFF))
+}
+
+fun deserializeRealUShort(buffer: ByteArray, offset: Int = 0): UShort {
+    val buf = ByteBuffer.wrap(buffer, offset, SERIALIZED_USHORT_SIZE)
+    return buf.short.toUShort()
 }
 
 fun serializeUInt(value: UInt): ByteArray {
@@ -80,7 +169,7 @@ fun deserializeULong(buffer: ByteArray, offset: Int = 0): ULong {
 
 fun serializeLong(value: Long): ByteArray {
     val buffer = ByteBuffer.allocate(SERIALIZED_LONG_SIZE)
-    buffer.putInt(value.toInt())
+    buffer.putLong(value)
     return buffer.array()
 }
 
@@ -89,7 +178,20 @@ fun deserializeLong(bytes: ByteArray, offset: Int = 0): Long {
     buffer.put(bytes.copyOfRange(offset, offset + SERIALIZED_LONG_SIZE))
     // In JDK 8 this returns a Buffer.
     (buffer as Buffer).flip()
-    return buffer.int.toLong()
+    return buffer.long
+}
+
+fun serializeInt(value: Int): ByteArray {
+    val buffer = ByteBuffer.allocate(SERIALIZED_INT_SIZE)
+    buffer.putInt(value)
+    return buffer.array()
+}
+
+fun deserializeInt(bytes: ByteArray, offset: Int = 0): Int {
+    val buffer = ByteBuffer.allocate(SERIALIZED_INT_SIZE)
+    buffer.put(bytes.copyOfRange(offset, offset + SERIALIZED_INT_SIZE))
+    buffer.flip()
+    return buffer.int
 }
 
 fun serializeUChar(char: UByte): ByteArray {
@@ -107,8 +209,10 @@ fun serializeVarLen(bytes: ByteArray): ByteArray {
 
 fun deserializeVarLen(buffer: ByteArray, offset: Int = 0): Pair<ByteArray, Int> {
     val len = deserializeUInt(buffer, offset).toInt()
-    val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
-        offset + SERIALIZED_UINT_SIZE + len)
+    val payload = buffer.copyOfRange(
+        offset + SERIALIZED_UINT_SIZE,
+        offset + SERIALIZED_UINT_SIZE + len
+    )
     return Pair(payload, SERIALIZED_UINT_SIZE + len)
 }
 
@@ -117,19 +221,31 @@ fun deserializeRecursively(buffer: ByteArray, offset: Int = 0): Array<ByteArray>
         return arrayOf()
     }
     val len = deserializeUInt(buffer, offset).toInt()
-    val payload = buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE,
-        offset + SERIALIZED_UINT_SIZE + len)
-    return arrayOf(payload) + deserializeRecursively(buffer.copyOfRange(offset + SERIALIZED_UINT_SIZE + len,
-        buffer.size), offset)
+    val payload = buffer.copyOfRange(
+        offset + SERIALIZED_UINT_SIZE,
+        offset + SERIALIZED_UINT_SIZE + len
+    )
+    return arrayOf(payload) + deserializeRecursively(
+        buffer.copyOfRange(
+            offset + SERIALIZED_UINT_SIZE + len,
+            buffer.size
+        ), offset
+    )
 }
 
-fun deserializeAmount(buffer: ByteArray, amount: Int, offset: Int = 0): Pair<Array<ByteArray>, ByteArray> {
+fun deserializeAmount(
+    buffer: ByteArray,
+    amount: Int,
+    offset: Int = 0
+): Pair<Array<ByteArray>, ByteArray> {
     val returnValues = arrayListOf<ByteArray>()
     var localOffset = offset
     for (i in 0 until amount) {
         val len = deserializeUInt(buffer, localOffset).toInt()
-        val payload = buffer.copyOfRange(localOffset + SERIALIZED_UINT_SIZE,
-            localOffset + SERIALIZED_UINT_SIZE + len)
+        val payload = buffer.copyOfRange(
+            localOffset + SERIALIZED_UINT_SIZE,
+            localOffset + SERIALIZED_UINT_SIZE + len
+        )
         localOffset += SERIALIZED_UINT_SIZE + len
         returnValues.add(payload)
     }
