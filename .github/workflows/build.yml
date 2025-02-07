@@ -11,6 +11,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Debug - Print Last Commit
+        run: git log -1
+
+      - name: Debug - Check File Changes
+        run: git diff --name-only HEAD~1 HEAD
 
       - name: Setup Java
         uses: actions/setup-java@v2
@@ -21,6 +29,9 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Clear Gradle Cache
+        run: ./gradlew clean
 
       - name: Run Check
         run: ./gradlew check
